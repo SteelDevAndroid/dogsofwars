@@ -54,3 +54,13 @@ func test_tile_index_refuses_coordinates_off_the_map() -> void:
 	assert_int(state.tile_index(5, 3)).is_equal(3 * StateFactory.MINIMAL_SIZE + 5)
 	assert_int(state.tile_index(StateFactory.MINIMAL_SIZE, 0)).is_equal(-1)
 	assert_int(state.tile_index(0, -1)).is_equal(-1)
+
+
+func test_a_neutral_dormant_is_valid_but_a_neutral_awake_unit_is_not() -> void:
+	var dormant := StateFactory.minimal()
+	GameStateSetup.add_unit(dormant, 1, Faction.NONE, dormant.tile_index(4, 4), StateFactory.FULL_HP, true)
+	var awake := StateFactory.minimal()
+	GameStateSetup.add_unit(awake, 1, Faction.NONE, awake.tile_index(4, 4), StateFactory.FULL_HP, false)
+
+	assert_array(dormant.validate()).is_empty()
+	assert_array(awake.validate()).has_size(1)

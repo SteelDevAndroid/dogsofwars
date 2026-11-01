@@ -29,6 +29,22 @@ static func set_moved(state: GameState, unit_id: int) -> void:
 	state.units._unit_moved[state.units.find_row(unit_id)] = 1
 
 
+## modifier_pv (GDD 6 rule 9): `delta` < 0 damages, > 0 heals, the result is bounded
+## to 0..PV_max and a unit at 0 is destroyed in the same call. Computes no damage and
+## draws nothing; the unit must be a live, awake unit.
+static func modify_hp(state: GameState, unit_id: int, delta: int, units: UnitTypes) -> HpChange:
+	var row := state.units.find_row(unit_id)
+	assert(row >= 0 and state.units.is_alive(row) and not state.units.is_asleep(row),
+			"modify_hp on an unknown, destroyed or sleeping unit")
+	var before := state.units.hp_of(row)
+	var after := clampi(before + delta, 0, units.hp(state.units.type_of(row)))
+	if after != before:
+		state.units._unit_hp[row] = after
+	if after == 0:
+		destroy(state, unit_id)
+	return HpChange.new(before, after)
+
+
 ## Marks a unit destroyed; its row stays until the end-of-turn compaction and its
 ## id is never reused. False when the id is unknown or already destroyed.
 static func destroy(state: GameState, unit_id: int) -> bool:

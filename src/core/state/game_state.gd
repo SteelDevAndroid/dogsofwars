@@ -334,7 +334,9 @@ func validate() -> PackedStringArray:
 			errors.append("units %d and %d share tile %d" % [occupied[tile], units.id_of(row), tile])
 		else:
 			occupied[tile] = units.id_of(row)
-		if units.faction_of(row) >= nf:
+		# A dormant is neutral until woken (GDD 6 rule 3).
+		var neutral_dormant := units.is_asleep(row) and units.faction_of(row) == Faction.NONE
+		if units.faction_of(row) >= nf and not neutral_dormant:
 			errors.append("unit %d: faction %d" % [units.id_of(row), units.faction_of(row)])
 	for row in nodes.row_count():
 		if nodes.tile_of(row) < 0 or nodes.tile_of(row) >= tiles:

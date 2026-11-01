@@ -78,12 +78,12 @@ func test_cross_checks_refuse_out_of_order_ids_and_duplicate_keys() -> void:
 func test_missing_unknown_and_unparsable_files_are_refused() -> void:
 	var docs := CatalogFactory.documents()
 	docs.erase("noeuds.json")
-	docs["combat.json"] = {"schema_version": 1}
+	docs["magie.json"] = {"schema_version": 1}
 	docs["units.json"] = "{\"schema_version\": 1,"
 
 	var errors := _errors_of(docs)
 
-	assert_array(errors).contains(["noeuds.json: (file): missing data file", "combat.json: (file): unknown data file"])
+	assert_array(errors).contains(["noeuds.json: (file): missing data file", "magie.json: (file): unknown data file"])
 	assert_bool(errors[errors.size() - 1].begins_with("units.json: ")).is_true()
 
 

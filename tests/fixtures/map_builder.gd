@@ -15,10 +15,11 @@ static func state(rows: PackedStringArray) -> GameState:
 	return GameStateSetup.create(rows[0].length(), rows.size(), StateFactory.FACTIONS, 1, cells)
 
 
-## Adds a unit at (x, y) and returns its id.
-static func unit(at_state: GameState, type: int, faction: int, x: int, y: int, asleep: bool = false) -> int:
+## Adds a unit at (x, y) and returns its id; `hp` -1 means full HP.
+static func unit(at_state: GameState, type: int, faction: int, x: int, y: int, asleep: bool = false,
+		hp: int = -1) -> int:
 	return GameStateSetup.add_unit(at_state, type, faction, at_state.tile_index(x, y),
-			CatalogFactory.standard().units.hp(type), asleep)
+			hp if hp >= 0 else CatalogFactory.standard().units.hp(type), asleep)
 
 
 ## Vision set up: call after the units and nodes are placed.

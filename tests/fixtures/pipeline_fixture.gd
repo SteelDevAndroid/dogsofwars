@@ -45,6 +45,11 @@ func end_turn() -> ValidationResult:
 	return pipeline.submit(EndTurnCommand.new())
 
 
+func attack(attacker_id: int, target_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
+	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
+	return pipeline.submit(AttackCommand.new(faction, emitter, attacker_id, target_id))
+
+
 func capture(unit_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
 	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
 	return pipeline.submit(CaptureCommand.new(faction, emitter, unit_id))

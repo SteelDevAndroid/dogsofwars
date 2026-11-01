@@ -28,6 +28,11 @@ const TYPE_CANNOT_CAPTURE := &"TYPE_NON_CAPABLE"
 const ALREADY_ACTED := &"DÉJÀ_AGI"
 const NOT_ON_A_NODE := &"PAS_SUR_UN_NŒUD"
 const NODE_ALREADY_OWNED := &"NŒUD_DÉJÀ_POSSÉDÉ"
+const ATTACKER_WITHOUT_ATTACK := &"ATTAQUANT_SANS_ATTAQUE"
+## Same code, no parameter, for a hidden, unknown, destroyed or stale target (GDD 5 rule 18).
+const TARGET_NOT_VISIBLE := &"CIBLE_NON_VISIBLE"
+const TARGET_NOT_HOSTILE := &"CIBLE_NON_HOSTILE"
+const TARGET_OUT_OF_RANGE := &"CIBLE_HORS_DE_PORTÉE"
 ## Internal turn commands out of their sequence (GDD 3, States and Transitions).
 const WRONG_PHASE := &"PHASE_INCORRECTE"
 ## COMMENCER_LE_TOUR beyond T_MAX: the match must end instead (GDD 3 rule 6).

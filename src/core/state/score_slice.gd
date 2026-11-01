@@ -22,6 +22,10 @@ func length_error(_tiles: int, factions: int) -> String:
 	return error if not error.is_empty() else _sized_error(&"_score_units_destroyed", factions)
 
 
+func units_destroyed_of(faction: int) -> int:
+	return _score_units_destroyed[faction]
+
+
 func setup(factions: int) -> void:
 	_score_nodes_held.resize(factions)
 	_score_units_destroyed.resize(factions)
