@@ -25,3 +25,7 @@ func columns() -> Array:
 
 func length_error(_tiles: int, _factions: int) -> String:
 	return _parallel_error()
+
+
+func faction_of(row: int) -> int:
+	return _jrn_faction[row]

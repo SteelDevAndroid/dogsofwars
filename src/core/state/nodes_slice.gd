@@ -36,9 +36,17 @@ func append(id: int, tile: int, owner: int, level: int) -> void:
 	_node_level.append(level)
 
 
+func id_of(row: int) -> int:
+	return _node_id[row]
+
+
 func tile_of(row: int) -> int:
 	return _node_tile[row]
 
 
 func owner_of(row: int) -> int:
 	return _node_owner[row]
+
+
+func level_of(row: int) -> int:
+	return _node_level[row]

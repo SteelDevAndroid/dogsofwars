@@ -74,3 +74,11 @@ func hp_of(row: int) -> int:
 
 func id_of(row: int) -> int:
 	return _unit_id[row]
+
+
+func type_of(row: int) -> int:
+	return _unit_type[row]
+
+
+func is_asleep(row: int) -> bool:
+	return _unit_asleep[row] == 1

@@ -26,3 +26,7 @@ func length_error(_tiles: int, _factions: int) -> String:
 func append(faction: int, fragment_id: int) -> void:
 	_chron_faction.append(faction)
 	_chron_fragment.append(fragment_id)
+
+
+func faction_of(row: int) -> int:
+	return _chron_faction[row]

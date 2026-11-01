@@ -19,6 +19,11 @@ func columns() -> Array:
 	return COLUMNS
 
 
+## Recalls of what the player lost, for the HUD only: not the AI's knowledge.
+func private_to() -> int:
+	return Faction.PLAYER
+
+
 func length_error(_tiles: int, _factions: int) -> String:
 	var n := _recall_unit_tile.size()
 	return "" if _recall_unit_side.size() == n else "_recall_unit_side: %d rows, expected %d" % [_recall_unit_side.size(), n]

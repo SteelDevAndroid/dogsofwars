@@ -1,7 +1,8 @@
 # Game states for tests (ADR-0011 §4): named minimal states, and seeded random
 # states drawn with GameState.hash32 (never randi()), built only through the setup
-# and the owners' write functions. Intentions, AI data, visibility and journals stay
-# empty until their systems exist.
+# and the owners' write functions, then VisionService.setup (rule 22 of GDD 5): the
+# Visibility slice is filled and the view cache valid. Intentions, AI data and
+# journals stay empty until their systems exist.
 class_name StateFactory
 extends RefCounted
 
@@ -16,6 +17,14 @@ const TERRAIN_CODES := 4
 ## One live unit in DESTROY_ONE_IN is destroyed, to leave dead rows.
 const DESTROY_ONE_IN := 5
 const EXTRA_DRAWS := 8
+## View radius by unit type 0..2 (Éclaireur 4, Assaut 2, Rempart 2, GDD 5 rule 7).
+const UNIT_VIEW_RADIUS := [4, 2, 2]
+## View radius by node level 0..3: max(2, RAYON_NIVEAU), level 0 unused.
+const NODE_VIEW_RADIUS := [0, 2, 2, 3]
+
+
+static func vision_context(state: GameState) -> VisionContext:
+	return VisionContext.for_map(state, PackedInt32Array(UNIT_VIEW_RADIUS), PackedInt32Array(NODE_VIEW_RADIUS))
 
 
 ## 8 x 8 plains, two factions, one player unit at (1, 1), one AI unit at (6, 6).
@@ -23,6 +32,7 @@ static func minimal(seed_value: int = 1) -> GameState:
 	var state := _plains(MINIMAL_SIZE, MINIMAL_SIZE, seed_value)
 	GameStateSetup.add_unit(state, 0, Faction.PLAYER, state.tile_index(1, 1), FULL_HP)
 	GameStateSetup.add_unit(state, 0, Faction.AI, state.tile_index(MINIMAL_SIZE - 2, MINIMAL_SIZE - 2), FULL_HP)
+	VisionService.setup(state, vision_context(state))
 	return state
 
 
@@ -35,6 +45,7 @@ static func with_units(per_faction: int, seed_value: int = 1) -> GameState:
 		GameStateSetup.add_unit(state, 0, Faction.PLAYER, k, FULL_HP)
 	for k in per_faction:
 		GameStateSetup.add_unit(state, 0, Faction.AI, state.tile_count() - 1 - k, FULL_HP)
+	VisionService.setup(state, vision_context(state))
 	return state
 
 
@@ -81,6 +92,7 @@ static func _random_state(dice: _Dice) -> GameState:
 	GameStateSetup.set_turn(state, dice.roll(GameState.MAX_TURN + 1))
 	for k in dice.roll(EXTRA_DRAWS):
 		state.draw(GameState.DRAW_MAX)
+	VisionService.setup(state, vision_context(state))
 	return state
 
 

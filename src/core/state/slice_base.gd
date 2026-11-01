@@ -95,14 +95,23 @@ func compact() -> void:
 	if alive_column() == &"":
 		return
 	var keep := live_rows()
-	if keep.size() == row_count():
-		return
+	if keep.size() != row_count():
+		keep_rows(keep)
+
+
+## Keeps only `rows` (ascending) in every column; used by compaction and filtered copies.
+func keep_rows(rows: PackedInt32Array) -> void:
 	for spec: Array in columns():
 		var source: Variant = get(spec[0])
 		var kept: Variant = source.slice(0, 0)
-		for r in keep:
+		for r in rows:
 			kept.append(source[r])
 		set(spec[0], kept)
+
+
+## Back to an empty slice of the same kind (filtered copy of a private slice).
+func clear() -> void:
+	copy_from(get_script().new())
 
 
 ## Row of an entity id by binary search, or -1.

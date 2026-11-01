@@ -30,6 +30,10 @@ func length_error(_tiles: int, factions: int) -> String:
 	return ""
 
 
+func is_eliminated(faction: int) -> bool:
+	return _fac_eliminated[faction] == 1
+
+
 func setup(factions: int) -> void:
 	_fac_energy.resize(factions)
 	_fac_research_id.resize(factions)

@@ -1,5 +1,6 @@
 # owner: src/core/state/ src/core/ai/
 # AI tracks (GDD 1, GDD 9 rule 9): at most MAX_TRACKS last sightings of player units.
+# Knowledge of the AI: only filtered_copy(AI) keeps it (ADR-0005 §2).
 class_name AiTracksSlice
 extends SliceBase
 
@@ -18,6 +19,10 @@ var _track_kind := PackedByteArray()
 
 func columns() -> Array:
 	return COLUMNS
+
+
+func private_to() -> int:
+	return Faction.AI
 
 
 func length_error(_tiles: int, _factions: int) -> String:

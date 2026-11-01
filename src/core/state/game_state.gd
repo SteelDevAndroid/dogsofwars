@@ -156,6 +156,96 @@ func restore_from(snapshot: GameState) -> void:
 	view_cache = snapshot.view_cache.duplicate()
 
 
+## The state rebuilt from the view of `faction` (GDD 1 rule 11, ADR-0007 §5), base of
+## every AI simulation and of the player's previews. Every visibility decision goes
+## through VisionService; the view cache must be valid.
+## - units: own units and units on VISIBLE tiles only (no hidden unit, AC-IA14);
+## - nodes: on discovered tiles only; out of view, last owner seen and no level;
+## - ruins: kept for the player (drawn ruins are marked from turn 1, GDD 5 rule 15),
+##   absent for the AI (ADR-0005 §6);
+## - tiles out of view: last owner seen, no change history; undiscovered tiles:
+##   no anchor nor point of interest, and a terrain of its own where they are plains;
+## - other factions: their Visibility rows and view-cache rows at zero, their energy
+##   and research hidden, their chronicle and journal rows absent;
+## - slices private to another faction emptied; authors of intentions out of view
+##   lose their tile (GDD 5 rule 21).
+func filtered_copy(faction: int) -> GameState:
+	assert(view_cache.valid, "filtered_copy needs a rebuilt view cache")
+	var copy := duplicate_state()
+	var tiles := tile_count()
+	var base := faction * tiles
+	var cache := view_cache
+
+	var kept_units := PackedInt32Array()
+	for row in units.row_count():
+		if VisionService.can_see_unit(self, cache, faction, units.id_of(row)):
+			kept_units.append(row)
+	copy.units.keep_rows(kept_units)
+
+	var kept_nodes := PackedInt32Array()
+	for row in nodes.row_count():
+		var tile := nodes.tile_of(row)
+		if nodes.owner_of(row) == faction or visibility._vis_discovered[base + tile] == 1:
+			kept_nodes.append(row)
+			if not VisionService.can_see_node(self, cache, faction, nodes.id_of(row)):
+				copy.nodes._node_owner[row] = visibility._vis_last_owner_seen[base + tile]
+				copy.nodes._node_level[row] = 0
+	copy.nodes.keep_rows(kept_nodes)
+
+	if faction != Faction.PLAYER:
+		copy.ruins.clear()
+
+	var cells := PackedByteArray()
+	for tile in tiles:
+		var discovered := visibility._vis_discovered[base + tile] == 1
+		cells.append(terrain.at(tile) if discovered else TerrainGrid.PLAIN)
+		if not VisionService.can_see(cache, faction, tile):
+			copy.map._tile_owner[tile] = visibility._vis_last_owner_seen[base + tile]
+			copy.map._tile_change_turn[tile] = -1
+			copy.map._tile_prev_owner[tile] = Faction.NONE
+			copy.map._tile_change_cause[tile] = MapSlice.CAUSE_NONE
+		var ruin_hidden := faction != Faction.PLAYER and map.anchor_at(tile) == MapSlice.ANCHOR_RUIN
+		if not discovered or ruin_hidden:
+			copy.map._tile_anchor[tile] = MapSlice.ANCHOR_NONE
+		if not discovered:
+			copy.map._tile_poi[tile] = 0
+	copy.terrain = TerrainGrid.new(cells)
+
+	for f in faction_count():
+		if f == faction:
+			continue
+		for tile in tiles:
+			copy.visibility._vis_discovered[f * tiles + tile] = 0
+			copy.visibility._vis_last_owner_seen[f * tiles + tile] = Faction.NONE
+			copy.visibility._vis_dormant_memo[f * tiles + tile] = 0
+		var unseen := PackedByteArray()
+		unseen.resize(tiles)
+		copy.view_cache.seen[f] = unseen
+		copy.factions._fac_energy[f] = 0
+		copy.factions._fac_research_id[f] = -1
+		copy.factions._fac_research_turns[f] = 0
+
+	copy.chronicle.keep_rows(_rows_of_faction(chronicle, faction))
+	copy.ruin_journal.keep_rows(_rows_of_faction(ruin_journal, faction))
+	for slice in copy.slices():
+		if slice.private_to() >= 0 and slice.private_to() != faction:
+			slice.clear()
+	if faction != Faction.AI:
+		for row in intentions.row_count():
+			if not VisionService.can_see(cache, faction, intentions.author_tile_of(row)):
+				copy.intentions._int_author_tile[row] = -1
+	return copy
+
+
+## Rows of a slice with a faction_of(row) reader (chronicle, ruin journal).
+static func _rows_of_faction(slice: Variant, faction: int) -> PackedInt32Array:
+	var rows := PackedInt32Array()
+	for row in slice.row_count():
+		if slice.faction_of(row) == faction:
+			rows.append(row)
+	return rows
+
+
 ## End-of-turn compaction (GDD 1 rule 12): dead rows dropped, id order kept.
 func compact() -> void:
 	for slice in slices():
