@@ -1,0 +1,22 @@
+name: tests
+
+# Self-tests of the CI checks, then the checks on the repository
+# (ADR-0011 §8 and §9; layers: ADR-0008 §7; data files: ADR-0009 §8).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Self-tests of the CI checks
+        run: |
+          bash tests/unit/ci/test_check_layer_deps.sh
+          bash tests/unit/ci/test_check_json_duplicate_keys.sh
+      - name: Core never depends on presentation or app, no autoload
+        run: bash tools/ci/check-layer-deps.sh src project.godot
+      - name: No duplicated key in data files
+        run: python3 tools/ci/check-json-duplicate-keys.py assets/data

@@ -46,7 +46,7 @@ expect "another system writes a private field" 1 "$t"
 rm -rf "$t"
 
 t=$(mktemp -d); mk "$t"
-printf 'extends GutTest\nfunc test_x(): assert_eq(UnitsSlice.new()._hp.size(), 0)\n' > "$t/tests/test_units.gd"
+printf 'extends GdUnitTestSuite\nfunc test_x(): assert_eq(UnitsSlice.new()._hp.size(), 0)\n' > "$t/tests/test_units.gd"
 expect "tests may read private fields" 0 "$t"
 rm -rf "$t"
 
@@ -56,7 +56,7 @@ expect "slice without an owner line is refused" 2 "$t"
 rm -rf "$t"
 
 t=$(mktemp -d); mk "$t"
-printf 'extends GutTest\nfunc test_x(): UnitsSlice.new()._hp[0] = 5\n' > "$t/tests/test_write.gd"
+printf 'extends GdUnitTestSuite\nfunc test_x(): UnitsSlice.new()._hp[0] = 5\n' > "$t/tests/test_write.gd"
 expect "tests may not write private fields" 1 "$t"
 rm -rf "$t"
 

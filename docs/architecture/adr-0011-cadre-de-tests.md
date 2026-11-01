@@ -23,7 +23,7 @@ La revue d'architecture a relevé qu'aucun ADR ne choisit le cadre de tests, alo
 | **Domain** | Core |
 | **Layer** | Foundation |
 | **Knowledge Risk** | MEDIUM (extension tierce ; API moteur utilisées : `SceneTree`, `OS`, `Time`) |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`, ADR-0002 à 0010 |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`, ADR-0002 à 0010. Ces sources sont **externes au dépôt** ; leur contenu normatif (commande, nommage, code 101, preuve par capture) est recopié dans cet ADR : `docs/architecture/references-externes.md` |
 | **Post-Cutoff APIs Used** | Aucune dans le jeu ; gdUnit4 6.2.2 est postérieur à la connaissance du modèle : comportement à confirmer à l'installation |
 | **Verification Required** | (1) installer gdUnit4 6.2.2 et exécuter la commande du projet sur un test témoin (exit 0 puis exit non nul sur un test rouge) ; (2) détection des orphelins sur un `Node` oublié et **code de sortie exact** (101 selon `.claude/rules/test-standards.md`, NOT SOURCEABLE ici : peut être un code d'avertissement distinct de l'échec, à confirmer à l'installation) ; les fuites `RefCounted` par cycle ne sont **pas** vues par ce détecteur ; (3) durée de la suite complète sur le runner CI ; (4) lancement headless de la suite avec un Godot épinglé et vérifié par empreinte dans la CI |
 
@@ -175,7 +175,7 @@ Foundational — no direct GDD requirement. Enables : tous les critères d'accep
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun test existant en GDScript. À faire via `/test-setup` : installer `addons/gdUnit4` (6.2.2), créer `tests/`, les fabriques et doublures, le workflow `tests` (auto-tests shell puis gdUnit4), renseigner `testing.framework` dans `project.yaml`, retirer toute mention de GUT dans les fixtures de `tests/unit/ci/`.
+Aucun test existant en GDScript. À faire via `/test-setup` : installer `addons/gdUnit4` (6.2.2), créer `tests/`, les fabriques et doublures, l'étape gdUnit4 du workflow `tests`, créer `project.yaml` avec `testing.framework: gdunit4` et la commande du §2. **Fait** (2026-11-01) : le workflow `tests` (auto-tests shell et contrôles de couches et de données) ; plus aucune mention de GUT dans les fixtures de `tests/unit/ci/`.
 
 **Rollback plan**: si gdUnit4 devient incompatible avec le moteur, basculer vers GUT en gardant les fabriques et doublures (elles ne dépendent pas du cadre).
 

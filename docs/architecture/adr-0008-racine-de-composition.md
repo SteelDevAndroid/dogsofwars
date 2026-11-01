@@ -190,7 +190,7 @@ static func build(app: AppContext, state: GameState, vision: VisionContext, port
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun code existant. À créer : `Bootstrap`, `AppContext`, `GameSession`, `SessionFactory`, `MatchScreen` (avec `bind`), `AiRunnerPort`, `tools/ci/check-layer-deps`. Registre : interfaces `GameSession`, `SessionPorts`, `AppContext` ; motifs interdits `autoload_or_service_locator`, `core_references_presentation`.
+Aucun code existant. À créer : `Bootstrap`, `AppContext`, `GameSession`, `SessionFactory`, `MatchScreen` (avec `bind`), `AiRunnerPort`. **Fait** (2026-11-01) : `tools/ci/check-layer-deps.sh`, avec son auto-test `tests/unit/ci/test_check_layer_deps.sh`, exécuté par le workflow `tests` (il contrôle aussi l'absence de section `[autoload]`). Registre : interfaces `GameSession`, `SessionPorts`, `AppContext` ; motifs interdits `autoload_or_service_locator`, `core_references_presentation`.
 
 À amender : ADR-0005 (`resume`, `cancel` ajoutés, fait), ADR-0002 (`CameraHandler`, `ClockSource`, fait), ADR-0011 (`TestSessionFactory`).
 

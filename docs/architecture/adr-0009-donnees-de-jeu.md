@@ -182,9 +182,9 @@ var errors: Array[DataError]                       # fichier, chemin du champ, m
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun code existant. À créer (et amender ADR-0004 : `CommandLog.content_hash`, fait ; ADR-0002 : chemin `assets/data/presentation.json`, fait) : `DataCatalog`, `DataSchema` par domaine, `tools/ci/check-json-duplicate-keys`, le test CI qui charge `assets/data/` réel, l'entrée `*.json` du filtre d'export.
+Aucun code existant. À créer (et amender ADR-0004 : `CommandLog.content_hash`, fait ; ADR-0002 : chemin `assets/data/presentation.json`, fait) : `DataCatalog`, `DataSchema` par domaine, le test CI qui charge `assets/data/` réel, l'entrée `*.json` du filtre d'export.
 
-Le projet n'a pas encore d'`export_presets.cfg` : le preset Android **doit** porter `include_filter="assets/data/*.json"` (vérifié : aucun importeur pour `.json`, le fichier n'est exporté que par ce filtre). Ajouter `.gitattributes` (`assets/data/*.json text eol=lf`).
+Le projet n'a pas encore d'`export_presets.cfg` : le preset Android **doit** porter `include_filter="assets/data/*.json"` (vérifié : aucun importeur pour `.json`, le fichier n'est exporté que par ce filtre). **Fait** (2026-11-01) : `.gitattributes` (`assets/data/*.json text eol=lf`) et `tools/ci/check-json-duplicate-keys.py`, avec son auto-test, exécuté par le workflow `tests`.
 
 **Rollback plan**: repli sur des `.tres` typés par domaine (Alternative 1) si l'export JSON pose problème sur Android.
 
