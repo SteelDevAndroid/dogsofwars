@@ -24,6 +24,7 @@ static func standard(p_catalog: DataCatalog, p_vision: VisionContext) -> RuleTab
 	handlers[CommandType.BEGIN_TURN] = BeginTurnHandler.new()
 	handlers[CommandType.END_TURN] = EndTurnHandler.new()
 	handlers[CommandType.RESEARCH] = ResearchHandler.new()
+	handlers[CommandType.ABANDON] = AbandonHandler.new()
 	return RuleTable.new(p_catalog, p_vision, handlers)
 
 

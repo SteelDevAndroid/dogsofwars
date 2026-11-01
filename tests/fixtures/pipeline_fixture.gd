@@ -45,6 +45,10 @@ func end_turn() -> ValidationResult:
 	return pipeline.submit(EndTurnCommand.new())
 
 
+func abandon() -> ValidationResult:
+	return pipeline.submit(AbandonCommand.new())
+
+
 func undo_move() -> ValidationResult:
 	return pipeline.submit(UndoMoveCommand.new())
 
