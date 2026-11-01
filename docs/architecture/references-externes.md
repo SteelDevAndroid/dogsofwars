@@ -24,5 +24,5 @@ Les ADR citent, dans **References Consulted** et ailleurs, des sources qui ne so
 | `addons/gdUnit4` 6.2.2, `project.godot` racine, `project.yaml` | ADR-0011 §1, §2 | Fait (2026-11-01) ; `project.yaml` est désormais versionné |
 | Doublures des ports `DataSource`, `FileStore`, `EventSink`, `PacingGate`, `ClockSource` (`tests/fixtures/`) | ADR-0011 §4 | Fait (2026-11-01) |
 | `StateFactory`, `StatePayload` | ADR-0011 §4 | Fait (2026-11-01) |
-| `NullProfilePort`, `RecordingProfilePort` | ADR-0011 §4 | Avec `ProfilePort` (ADR-0004) |
+| `NullProfilePort`, `RecordingProfilePort` | ADR-0011 §4 | Fait (2026-11-01) |
 | `export_presets.cfg` (preset Android, `include_filter="assets/data/*.json"`) | ADR-0009 §9 | À faire avec le premier export Android |

@@ -109,6 +109,7 @@ func on_state_loaded() -> void
 func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array   # délègue à la méthode d'instance RuleTable.check_move_range : tuiles où validate(Move) est permis (ADR-0010)
 class_name PostCommitPort extends RefCounted            # on_commit(state, command, result) ; réel, nul
 class_name ProfilePort extends RefCounted               # apply(effect) -> bool (écriture réussie) ; réel, nul (rejeu)
+class_name ProfileEffect extends RefCounted             # effet rendu par une règle, données pures ; RecordFragmentEffect(faction, fragment_id), idempotent par fragment (src/core/commands/, 2026-11-01)
 class_name CommandCodec extends RefCounted             # identifiants de type entiers stables
 ```
 
