@@ -4,6 +4,9 @@
 class_name CatalogFactory
 extends RefCounted
 
+## Pack types with view 2 (GDD 12: Veille élargie, Cadence de marche).
+const LOURDS := ["assaut", "rempart", "ouvrier"]
+
 static var _standard: DataCatalog
 
 
@@ -40,20 +43,22 @@ static func documents() -> Dictionary:
 		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0]},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
 		"protocoles.json": {"schema_version": 1, "protocols": [
-			_protocol(0, "veille_elargie", "reseau", 1, 15, 2),
-			_protocol(1, "reveil_sobre", "reseau", 2, 20, 2),
-			_protocol(2, "cadence_de_marche", "reseau", 3, 30, 3),
-			_protocol(3, "repos_reglementaire", "meute", 1, 15, 2),
-			_protocol(4, "blindage_appoint", "meute", 2, 25, 2),
-			_protocol(5, "rempart_arme", "meute", 3, 35, 3),
+			_protocol(0, "veille_elargie", "reseau", 1, 15, 2, "vision", 1, LOURDS),
+			_protocol(1, "reveil_sobre", "reseau", 2, 20, 2, "wake_price", -1, []),
+			_protocol(2, "cadence_de_marche", "reseau", 3, 30, 3, "move", 1, LOURDS),
+			_protocol(3, "repos_reglementaire", "meute", 1, 15, 2, "rest_heal", 1, []),
+			_protocol(4, "blindage_appoint", "meute", 2, 25, 2, "defense", 1, []),
+			_protocol(5, "rempart_arme", "meute", 3, 35, 3, "attack", 1, ["rempart"]),
 		]},
 		"ai.json": {"schema_version": 1, "protocol_calendar": [
 			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
 	}
 
 
-static func _protocol(id: int, key: String, branch: String, level: int, price: int, duration: int) -> Dictionary:
-	return {"id": id, "key": key, "branch": branch, "level": level, "price": price, "duration": duration}
+static func _protocol(id: int, key: String, branch: String, level: int, price: int, duration: int,
+		stat: String, delta: int, types: Array) -> Dictionary:
+	return {"id": id, "key": key, "branch": branch, "level": level, "price": price, "duration": duration,
+		"effects": [{"stat": stat, "delta": delta, "types": types}]}
 
 
 static func _unit(id: int, key: String, side: String, hp: int, attack: int, defense: int,

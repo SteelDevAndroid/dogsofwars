@@ -2,7 +2,8 @@
 # stored phases: CRÉÉE or EXÉCUTION_ENNEMIE -> player n + 1; FIN_DE_TOUR -> enemy n.
 # Then, in the order of GDD 3 rule 2: the faction's units get their move and action
 # back (6), its income is paid (10), its research advances (12); the AI receives its
-# calendar protocols (12, rule 15). The vision does not change (GDD 5 rule 9).
+# calendar protocols (12, rule 15). The vision is recomputed only when a protocol
+# was acquired (GDD 12 rule 14, amending GDD 5 rule 9).
 class_name BeginTurnHandler
 extends CommandHandler
 
@@ -28,7 +29,13 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	UnitWrites.start_turn(state, command.faction)
 	result.events.append(TurnStartedEvent.new(state.turn(), command.faction, phase))
 	EnergyRules.pay_income(state, command.faction, rules.catalog.energy, result.events)
+	var before_research := state.protocols.row_count()
 	ResearchRules.advance(state, command.faction, result.events)
 	if not player:
 		ResearchRules.receive_calendar(state, state.turn(), rules.catalog.ai, result.events)
+	if state.protocols.row_count() != before_research:
+		# GDD 12 rule 14: a new protocol may widen the view (Veille élargie).
+		result.vision = VisionService.recompute(state, rules.vision)
+		if not result.vision.discovered_tiles.is_empty():
+			result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))
 	return result

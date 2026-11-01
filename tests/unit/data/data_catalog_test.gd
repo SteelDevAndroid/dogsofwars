@@ -134,10 +134,9 @@ func test_vision_context_takes_radii_from_the_catalog() -> void:
 
 	var ctx := VisionContext.for_map(CatalogFactory.standard(), state)
 
-	assert_array(ctx.view_radius).is_equal(PackedInt32Array([4, 2, 2, 2, 3, 3, 2]))
 	assert_array(ctx.node_radius).is_equal(PackedInt32Array([0, 2, 2, 3]))
 	assert_int(ctx.mountain_bonus).is_equal(1)
-	assert_int(ctx.fields.max_radius()).is_equal(5)
+	assert_int(ctx.fields.max_radius()).is_equal(4 + 1 + 1)
 
 
 func test_cross_domain_references_are_checked() -> void:

@@ -23,16 +23,18 @@ class Search:
 	var enterable := PackedByteArray()
 
 
-## GDD 6 formula 1: 0 once moved, MVT otherwise.
-static func remaining_points(view: StateView, unit_id: int, units: UnitTypes) -> int:
-	return 0 if view.unit_moved(unit_id) else units.move(view.unit_type(unit_id))
+## GDD 6 formula 1: 0 once moved, the effective MVT otherwise (GDD 12 rule 11).
+static func remaining_points(view: StateView, unit_id: int, catalog: DataCatalog) -> int:
+	if view.unit_moved(unit_id):
+		return 0
+	return ProtocolEffects.unit_stat(view, view.unit_faction(unit_id), view.unit_type(unit_id), ProtocolEffects.MOVE, catalog)
 
 
 static func search(view: StateView, unit_id: int, catalog: DataCatalog) -> Search:
 	var found := Search.new()
 	var tiles := view.tile_count()
 	found.start = view.unit_tile(unit_id)
-	found.points = remaining_points(view, unit_id, catalog.units)
+	found.points = remaining_points(view, unit_id, catalog)
 	found.full_points = not view.unit_moved(unit_id)
 	found.passable.resize(tiles)
 	for tile in tiles:

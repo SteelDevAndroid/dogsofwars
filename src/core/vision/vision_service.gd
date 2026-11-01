@@ -206,8 +206,11 @@ static func _sources_view(state: GameState, ctx: VisionContext, f: int) -> Packe
 	return seen
 
 
+## Effective vision of the unit's type for its owner (GDD 12 rule 11), +1 on a mountain.
 static func _unit_radius(state: GameState, ctx: VisionContext, row: int, tile: int) -> int:
-	return ctx.view_radius[state.units.type_of(row)] + (ctx.mountain_bonus if state.terrain.is_mountain(tile) else 0)
+	var vision := ProtocolEffects.unit_stat(state.view(), state.units.faction_of(row), state.units.type_of(row),
+			ProtocolEffects.VISION, ctx.catalog)
+	return vision + (ctx.mountain_bonus if state.terrain.is_mountain(tile) else 0)
 
 
 ## Writes what faction f learns from its new view `seen` (previous view `before`):

@@ -74,6 +74,12 @@ static func _cross_check(built: Dictionary, errors: Array[DataError]) -> void:
 		errors.append(DataError.new("energie.json", "income_by_level",
 			"%d levels, noeuds.json has %d" % [energy.level_count(), nodes.max_level()]))
 	var tree: ProtocolTree = built["protocoles.json"]
+	var units: UnitTypes = built["units.json"]
+	for effect in tree.effect_count():
+		for key in tree.effect_types(effect):
+			if units.type_of_key(key) < 0:
+				errors.append(DataError.new("protocoles.json", "protocols[%d].effects" % tree.effect_protocol(effect),
+					"unknown unit type %s" % key))
 	var calendar := (built["ai.json"] as AiParams).calendar_ids()
 	for k in calendar.size():
 		if calendar[k] >= tree.count():

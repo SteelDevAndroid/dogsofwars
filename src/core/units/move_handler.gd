@@ -56,6 +56,6 @@ static func unit_error(view: StateView, faction: int, unit_id: int, catalog: Dat
 		return Refusal.UNIT_ASLEEP
 	if view.unit_moved(unit_id):
 		return Refusal.ALREADY_MOVED
-	if catalog.units.move(view.unit_type(unit_id)) == 0:
+	if ProtocolEffects.unit_stat(view, faction, view.unit_type(unit_id), ProtocolEffects.MOVE, catalog) == 0:
 		return Refusal.UNIT_IMMOBILE
 	return &""

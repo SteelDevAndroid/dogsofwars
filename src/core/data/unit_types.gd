@@ -57,6 +57,11 @@ func count() -> int:
 	return _keys.size()
 
 
+## Type id of a key, -1 when unknown.
+func type_of_key(type_key: String) -> int:
+	return _keys.find(type_key)
+
+
 func key(type: int) -> String:
 	return _keys[type]
 

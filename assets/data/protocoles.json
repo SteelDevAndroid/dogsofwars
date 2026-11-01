@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "protocols": [
-    {"id": 0, "key": "veille_elargie", "branch": "reseau", "level": 1, "price": 15, "duration": 2},
-    {"id": 1, "key": "reveil_sobre", "branch": "reseau", "level": 2, "price": 20, "duration": 2},
-    {"id": 2, "key": "cadence_de_marche", "branch": "reseau", "level": 3, "price": 30, "duration": 3},
-    {"id": 3, "key": "repos_reglementaire", "branch": "meute", "level": 1, "price": 15, "duration": 2},
-    {"id": 4, "key": "blindage_appoint", "branch": "meute", "level": 2, "price": 25, "duration": 2},
-    {"id": 5, "key": "rempart_arme", "branch": "meute", "level": 3, "price": 35, "duration": 3}
+    {"id": 0, "key": "veille_elargie", "branch": "reseau", "level": 1, "price": 15, "duration": 2, "effects": [{"stat": "vision", "delta": 1, "types": ["assaut", "rempart", "ouvrier"]}]},
+    {"id": 1, "key": "reveil_sobre", "branch": "reseau", "level": 2, "price": 20, "duration": 2, "effects": [{"stat": "wake_price", "delta": -1, "types": []}]},
+    {"id": 2, "key": "cadence_de_marche", "branch": "reseau", "level": 3, "price": 30, "duration": 3, "effects": [{"stat": "move", "delta": 1, "types": ["assaut", "rempart", "ouvrier"]}]},
+    {"id": 3, "key": "repos_reglementaire", "branch": "meute", "level": 1, "price": 15, "duration": 2, "effects": [{"stat": "rest_heal", "delta": 1, "types": []}]},
+    {"id": 4, "key": "blindage_appoint", "branch": "meute", "level": 2, "price": 25, "duration": 2, "effects": [{"stat": "defense", "delta": 1, "types": []}]},
+    {"id": 5, "key": "rempart_arme", "branch": "meute", "level": 3, "price": 35, "duration": 3, "effects": [{"stat": "attack", "delta": 1, "types": ["rempart"]}]}
   ]
 }
