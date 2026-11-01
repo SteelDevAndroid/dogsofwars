@@ -12,5 +12,11 @@ static func begin_phase(state: GameState, faction: int, phase: int, next_turn: b
 	state.header._header[HeaderSlice.ACTIVE_FACTION] = faction
 
 
+## The match is over (GDD 3 rule 9): no command is accepted afterwards.
+static func finish(state: GameState, status: int) -> void:
+	state.header._header[HeaderSlice.PHASE] = HeaderSlice.PHASE_FINISHED
+	state.header._header[HeaderSlice.END_STATUS] = status
+
+
 static func end_phase(state: GameState) -> void:
 	state.header._header[HeaderSlice.PHASE] = HeaderSlice.PHASE_END_OF_TURN

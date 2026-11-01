@@ -15,6 +15,7 @@ var terrain: TerrainParams
 var energy: EnergyParams
 var protocols: ProtocolTree
 var ai: AiParams
+var score: ScoreParams
 
 
 ## Domain files expected at the data root, with the class that checks (SCHEMA) and
@@ -22,7 +23,7 @@ var ai: AiParams
 static func domains() -> Dictionary:
 	return {
 		"ai.json": AiParams, "brouillard.json": FogParams, "energie.json": EnergyParams, "noeuds.json": NodeParams,
-		"protocoles.json": ProtocolTree, "terrain.json": TerrainParams, "units.json": UnitTypes,
+		"protocoles.json": ProtocolTree, "score.json": ScoreParams, "terrain.json": TerrainParams, "units.json": UnitTypes,
 	}
 
 
@@ -58,6 +59,7 @@ static func load_all(source: DataSource) -> DataCatalogResult:
 	catalog.ai = built["ai.json"]
 	catalog.energy = built["energie.json"]
 	catalog.protocols = built["protocoles.json"]
+	catalog.score = built["score.json"]
 	catalog.fog = built["brouillard.json"]
 	catalog.nodes = built["noeuds.json"]
 	catalog.terrain = built["terrain.json"]

@@ -31,6 +31,15 @@ const PHASE_ENEMY_EXECUTION := 2
 const PHASE_END_OF_TURN := 3
 const PHASE_FINISHED := 4
 
+## End status (GDD 3 rule 9), from the player's side.
+const END_NONE := 0
+const END_DOMINATION := 1
+const END_ELIMINATED := 2
+const END_TURNS_WON := 3
+const END_TURNS_LOST := 4
+const END_TURNS_DRAW := 5
+const END_ABANDONED := 6
+
 const COLUMNS := [[&"_header", TYPE_PACKED_INT64_ARRAY]]
 
 var _header := PackedInt64Array()

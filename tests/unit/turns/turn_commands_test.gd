@@ -69,10 +69,9 @@ func test_internal_turn_commands_out_of_sequence_are_refused() -> void:
 	assert_str(fx.begin_turn(Faction.PLAYER).code).is_equal(Refusal.WRONG_PHASE)
 
 
-func test_no_turn_beyond_t_max() -> void:
+func test_no_turn_beyond_t_max_from_a_created_state() -> void:
 	var fx := _created()
 	GameStateSetup.set_turn(fx.state, GameState.MAX_TURN)
-	GameStateSetup.set_phase(fx.state, HeaderSlice.PHASE_ENEMY_EXECUTION, Faction.AI)
 
 	var result := fx.begin_turn(Faction.PLAYER)
 

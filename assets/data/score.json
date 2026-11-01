@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "w_tiles": 1,
+  "w_nodes": 8,
+  "w_levels": 4,
+  "w_protocols": 0,
+  "w_units": 2,
+  "unit_cap": 20,
+  "w_fragments": 60,
+  "w_domination": 8
+}

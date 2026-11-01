@@ -1,9 +1,11 @@
-# COMMENCER_LE_TOUR (GDD 3 rules 1 to 3), owned by the turn system. Sequence of the
-# stored phases: CRÉÉE or EXÉCUTION_ENNEMIE -> player n + 1; FIN_DE_TOUR -> enemy n.
-# Then, in the order of GDD 3 rule 2: the faction's units get their move and action
-# back (6), its income is paid (10), its research advances (12); the AI receives its
-# calendar protocols (12, rule 15). The vision is recomputed only when a protocol
-# was acquired (GDD 12 rule 14, amending GDD 5 rule 9).
+# COMMENCER_LE_TOUR (GDD 3 rules 1 to 3, 6 and 9), owned by the turn system.
+# Sequence of the stored phases: CRÉÉE or EXÉCUTION_ENNEMIE -> player n + 1;
+# FIN_DE_TOUR -> enemy n. The faction's units get their move and action back (6),
+# its income is paid (10), its research advances (12); the AI receives its calendar
+# protocols (12, rule 15). The vision is recomputed only when a protocol was
+# acquired (GDD 12 rule 14, amending GDD 5 rule 9).
+# After the enemy phase of turn T_MAX, the end-of-phase check (GDD 3 rule 11) ends
+# the match on the decisive scores instead of opening turn T_MAX + 1 (rule 6).
 class_name BeginTurnHandler
 extends CommandHandler
 
@@ -11,7 +13,9 @@ extends CommandHandler
 func validate(view: StateView, command: Command, _rules: RuleTable) -> ValidationResult:
 	var phase := view.phase()
 	if command.faction == Faction.PLAYER:
-		if phase != HeaderSlice.PHASE_CREATED and phase != HeaderSlice.PHASE_ENEMY_EXECUTION:
+		if phase == HeaderSlice.PHASE_ENEMY_EXECUTION:
+			return ValidationResult.ok()
+		if phase != HeaderSlice.PHASE_CREATED:
 			return ValidationResult.refused(Refusal.WRONG_PHASE, PackedInt64Array([phase]))
 		if view.turn() >= view.max_turn():
 			return ValidationResult.refused(Refusal.TURN_LIMIT, PackedInt64Array([view.max_turn()]))
@@ -24,6 +28,11 @@ func validate(view: StateView, command: Command, _rules: RuleTable) -> Validatio
 func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	var result := ApplyResult.new()
 	var player := command.faction == Faction.PLAYER
+	if player and state.turn() >= state.header.value(HeaderSlice.T_MAX):
+		var status := ScoreRules.turn_limit_status(state, rules.catalog.score)
+		TurnWrites.finish(state, status)
+		result.events.append(MatchEndedEvent.new(status))
+		return result
 	var phase := HeaderSlice.PHASE_PLAYER if player else HeaderSlice.PHASE_ENEMY_EXECUTION
 	TurnWrites.begin_phase(state, command.faction, phase, player)
 	UnitWrites.start_turn(state, command.faction)

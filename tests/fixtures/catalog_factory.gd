@@ -1,5 +1,5 @@
 # Data catalogs for tests (ADR-0011 §4): the standard documents below hold the GDD
-# values (GDD 2, 5, 6, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
+# values (GDD 2, 3, 5, 6, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
 # variants from documents().
 class_name CatalogFactory
 extends RefCounted
@@ -50,6 +50,8 @@ static func documents() -> Dictionary:
 			_protocol(4, "blindage_appoint", "meute", 2, 25, 2, "defense", 1, []),
 			_protocol(5, "rempart_arme", "meute", 3, 35, 3, "attack", 1, ["rempart"]),
 		]},
+		"score.json": {"schema_version": 1, "w_tiles": 1, "w_nodes": 8, "w_levels": 4, "w_protocols": 0,
+			"w_units": 2, "unit_cap": 20, "w_fragments": 60, "w_domination": 8},
 		"ai.json": {"schema_version": 1, "protocol_calendar": [
 			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
 	}
