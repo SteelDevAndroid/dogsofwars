@@ -1,6 +1,6 @@
 # Read-only facade on the state (ADR-0003): scalars or copies, never a raw column
 # (typed arrays are passed by reference, a reader could write through them).
-# FactionView (ADR-0004, ADR-0007) will answer the same queries through the fog.
+# FactionView (ADR-0004, ADR-0007) answers the same queries through the fog.
 class_name StateView
 extends RefCounted
 
@@ -71,8 +71,27 @@ func unit_hp(unit_id: int) -> int:
 	return 0 if row < 0 else _state.units.hp_of(row)
 
 
+func tile_anchor(tile: int) -> int:
+	return _state.map.anchor_at(tile)
+
+
 func node_ids() -> PackedInt32Array:
 	return _state.nodes._node_id.duplicate()
+
+
+## Level of a node, -1 when the id is unknown.
+func node_level(node_id: int) -> int:
+	var row := _state.nodes.find_row(node_id)
+	return -1 if row < 0 else _state.nodes.level_of(row)
+
+
+func ruin_ids() -> PackedInt32Array:
+	return _state.ruins._ruin_id.duplicate()
+
+
+func ruin_tile(ruin_id: int) -> int:
+	var row := _state.ruins.find_row(ruin_id)
+	return -1 if row < 0 else _state.ruins.tile_of(row)
 
 
 func node_tile(node_id: int) -> int:

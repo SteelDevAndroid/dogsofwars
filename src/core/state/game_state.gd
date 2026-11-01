@@ -173,7 +173,6 @@ func filtered_copy(faction: int) -> GameState:
 	assert(view_cache.valid, "filtered_copy needs a rebuilt view cache")
 	var copy := duplicate_state()
 	var tiles := tile_count()
-	var base := faction * tiles
 	var cache := view_cache
 
 	var kept_units := PackedInt32Array()
@@ -184,30 +183,26 @@ func filtered_copy(faction: int) -> GameState:
 
 	var kept_nodes := PackedInt32Array()
 	for row in nodes.row_count():
-		var tile := nodes.tile_of(row)
-		if nodes.owner_of(row) == faction or visibility._vis_discovered[base + tile] == 1:
+		var node_id := nodes.id_of(row)
+		if VisionService.knows_node(self, faction, node_id):
 			kept_nodes.append(row)
-			if not VisionService.can_see_node(self, cache, faction, nodes.id_of(row)):
-				copy.nodes._node_owner[row] = visibility._vis_last_owner_seen[base + tile]
-				copy.nodes._node_level[row] = 0
+			copy.nodes._node_owner[row] = VisionService.known_node_owner(self, faction, node_id)
+			copy.nodes._node_level[row] = VisionService.known_node_level(self, faction, node_id)
 	copy.nodes.keep_rows(kept_nodes)
 
-	if faction != Faction.PLAYER:
+	if not VisionService.knows_ruins(faction):
 		copy.ruins.clear()
 
 	var cells := PackedByteArray()
 	for tile in tiles:
-		var discovered := visibility._vis_discovered[base + tile] == 1
-		cells.append(terrain.at(tile) if discovered else TerrainGrid.PLAIN)
+		cells.append(VisionService.known_terrain(self, faction, tile))
+		copy.map._tile_owner[tile] = VisionService.known_tile_owner(self, faction, tile)
+		copy.map._tile_anchor[tile] = VisionService.known_anchor(self, faction, tile)
 		if not VisionService.can_see(cache, faction, tile):
-			copy.map._tile_owner[tile] = visibility._vis_last_owner_seen[base + tile]
 			copy.map._tile_change_turn[tile] = -1
 			copy.map._tile_prev_owner[tile] = Faction.NONE
 			copy.map._tile_change_cause[tile] = MapSlice.CAUSE_NONE
-		var ruin_hidden := faction != Faction.PLAYER and map.anchor_at(tile) == MapSlice.ANCHOR_RUIN
-		if not discovered or ruin_hidden:
-			copy.map._tile_anchor[tile] = MapSlice.ANCHOR_NONE
-		if not discovered:
+		if VisionService.tile_state(self, faction, tile) == VisionService.UNKNOWN:
 			copy.map._tile_poi[tile] = 0
 	copy.terrain = TerrainGrid.new(cells)
 

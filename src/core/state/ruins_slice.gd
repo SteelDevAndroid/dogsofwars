@@ -48,3 +48,7 @@ func append(id: int, tile: int, zone: int, memory_faction: int) -> void:
 
 func tile_of(row: int) -> int:
 	return _ruin_tile[row]
+
+
+func id_of(row: int) -> int:
+	return _ruin_id[row]

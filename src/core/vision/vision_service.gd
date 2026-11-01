@@ -93,13 +93,72 @@ static func can_see_node(state: GameState, cache: ViewCache, faction: int, node_
 	return state.nodes.owner_of(row) == faction or can_see(cache, faction, state.nodes.tile_of(row))
 
 
+## Terrain as the faction knows it: real once discovered, a plain otherwise (ADR-0007 §5).
+static func known_terrain(state: GameState, faction: int, tile: int) -> int:
+	return state.terrain.at(tile) if _discovered(state, faction, tile) else TerrainGrid.PLAIN
+
+
+## Real owner on a VISIBLE tile, last owner seen elsewhere (GDD 5 rule 4).
+static func known_tile_owner(state: GameState, faction: int, tile: int) -> int:
+	if can_see(state.view_cache, faction, tile):
+		return state.map.owner_at(tile)
+	return state.visibility._vis_last_owner_seen[faction * state.tile_count() + tile]
+
+
+## Anchor on a discovered tile; a ruin anchor only for a faction that knows ruins.
+static func known_anchor(state: GameState, faction: int, tile: int) -> int:
+	var anchor := state.map.anchor_at(tile)
+	if not _discovered(state, faction, tile):
+		return MapSlice.ANCHOR_NONE
+	if anchor == MapSlice.ANCHOR_RUIN and not knows_ruins(faction):
+		return MapSlice.ANCHOR_NONE
+	return anchor
+
+
+## A node is known when it is the faction's own or its tile is discovered.
+static func knows_node(state: GameState, faction: int, node_id: int) -> bool:
+	var row := state.nodes.find_row(node_id)
+	if row < 0:
+		return false
+	return state.nodes.owner_of(row) == faction or _discovered(state, faction, state.nodes.tile_of(row))
+
+
+## Owner of a known node: real in view, last owner seen of its tile out of view.
+static func known_node_owner(state: GameState, faction: int, node_id: int) -> int:
+	if not knows_node(state, faction, node_id):
+		return Faction.NONE
+	var row := state.nodes.find_row(node_id)
+	if can_see_node(state, state.view_cache, faction, node_id):
+		return state.nodes.owner_of(row)
+	return state.visibility._vis_last_owner_seen[faction * state.tile_count() + state.nodes.tile_of(row)]
+
+
+## Level of a known node: real in view, 0 (not remembered) out of view; -1 when unknown.
+static func known_node_level(state: GameState, faction: int, node_id: int) -> int:
+	if not knows_node(state, faction, node_id):
+		return -1
+	if can_see_node(state, state.view_cache, faction, node_id):
+		return state.nodes.level_of(state.nodes.find_row(node_id))
+	return 0
+
+
+## Drawn ruins are marked for the player from turn 1 (GDD 5 rule 15); the AI does
+## not know them (ADR-0005 §6).
+static func knows_ruins(faction: int) -> bool:
+	return faction == Faction.PLAYER
+
+
 ## GDD 5 rule 3: the only states a faction's view exposes.
 static func tile_state(state: GameState, faction: int, tile: int) -> int:
 	if can_see(state.view_cache, faction, tile):
 		return VISIBLE
-	if state.visibility._vis_discovered[faction * state.tile_count() + tile] == 1:
+	if _discovered(state, faction, tile):
 		return EXPLORED
 	return UNKNOWN
+
+
+static func _discovered(state: GameState, faction: int, tile: int) -> bool:
+	return state.visibility._vis_discovered[faction * state.tile_count() + tile] == 1
 
 
 ## GDD 5 rule 20: an event of another faction reaches `faction` only if one of its
