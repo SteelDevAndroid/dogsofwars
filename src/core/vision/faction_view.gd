@@ -29,6 +29,16 @@ func tile_anchor(tile: int) -> int:
 	return VisionService.known_anchor(_state, _faction, tile)
 
 
+## Another faction's energy and research are hidden (as in filtered_copy); its
+## acquired protocols are kept.
+func energy(faction: int) -> int:
+	return super(faction) if faction == _faction else 0
+
+
+func research(faction: int) -> int:
+	return super(faction) if faction == _faction else ResearchRules.NONE
+
+
 func unit_ids() -> PackedInt32Array:
 	var ids := PackedInt32Array()
 	for unit_id in super():

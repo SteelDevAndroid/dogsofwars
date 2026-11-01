@@ -16,6 +16,12 @@ const TILE_BLOCKED := &"CASE_BLOQUÉE"
 const NOTHING_TO_UNDO := &"RIEN_À_ANNULER"
 const MOVE_REVEALED := &"DÉPLACEMENT_A_RÉVÉLÉ"
 const OTHER_ACTION_SINCE := &"AUTRE_ACTION_DEPUIS"
+const UNKNOWN_PROTOCOL := &"PROTOCOLE_INCONNU"
+const PROTOCOL_ACQUIRED := &"PROTOCOLE_ACQUIS"
+const RESEARCH_IN_PROGRESS := &"RECHERCHE_EN_COURS"
+const PREREQUISITE_MISSING := &"PRÉREQUIS_MANQUANT"
+## Params: need, available (GDD 10 rule 6).
+const NOT_ENOUGH_ENERGY := &"ÉNERGIE_INSUFFISANTE"
 ## Internal turn commands out of their sequence (GDD 3, States and Transitions).
 const WRONG_PHASE := &"PHASE_INCORRECTE"
 ## COMMENCER_LE_TOUR beyond T_MAX: the match must end instead (GDD 3 rule 6).

@@ -39,6 +39,20 @@ func revision() -> int:
 	return _state.revision()
 
 
+## Energy stock of a faction.
+func energy(faction: int) -> int:
+	return _state.factions.energy_of(faction)
+
+
+## Protocol under research by a faction, -1 when none.
+func research(faction: int) -> int:
+	return _state.factions.research_of(faction)
+
+
+func has_protocol(faction: int, protocol: int) -> bool:
+	return _state.protocols.has(faction, protocol)
+
+
 func max_turn() -> int:
 	return _state.header.value(HeaderSlice.T_MAX)
 

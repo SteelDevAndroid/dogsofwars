@@ -36,6 +36,13 @@ func _first_divergence(view: StateView, copy_view: StateView, state: GameState) 
 		for query in [&"terrain_at", &"tile_owner", &"tile_anchor", &"unit_at"]:
 			if view.call(query, tile) != copy_view.call(query, tile):
 				return "%s(%d): %s != %s" % [query, tile, view.call(query, tile), copy_view.call(query, tile)]
+	for f in state.faction_count():
+		for query in [&"energy", &"research"]:
+			if view.call(query, f) != copy_view.call(query, f):
+				return "%s(%d): %s != %s" % [query, f, view.call(query, f), copy_view.call(query, f)]
+		for protocol in CatalogFactory.standard().protocols.count():
+			if view.has_protocol(f, protocol) != copy_view.has_protocol(f, protocol):
+				return "has_protocol(%d, %d)" % [f, protocol]
 	var families := [
 		[HeaderSlice.NEXT_UNIT_ID, [&"unit_tile", &"unit_faction", &"unit_hp", &"unit_type", &"unit_moved", &"unit_asleep"]],
 		[HeaderSlice.NEXT_NODE_ID, [&"node_tile", &"node_owner", &"node_level"]],

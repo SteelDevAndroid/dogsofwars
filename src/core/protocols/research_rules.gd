@@ -23,6 +23,12 @@ static func advance(state: GameState, faction: int, events: Array[PresentationEv
 	events.append(ResearchCompletedEvent.new(faction, protocol))
 
 
+## GDD 12 rule 5: research begins with turns left = duration.
+static func start(state: GameState, faction: int, protocol: int, duration: int) -> void:
+	state.factions._fac_research_id[faction] = protocol
+	state.factions._fac_research_turns[faction] = duration
+
+
 ## GDD 12 rule 15: the calendar protocols of `turn` for the AI, without energy or
 ## prerequisite; an already acquired one is skipped.
 static func receive_calendar(state: GameState, turn: int, ai: AiParams, events: Array[PresentationEvent]) -> void:

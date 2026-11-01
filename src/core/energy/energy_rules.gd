@@ -36,6 +36,15 @@ static func pay_income(state: GameState, faction: int, energy: EnergyParams, eve
 		events.append(EnergyChangedEvent.new(faction, before, after))
 
 
+## GDD 10 rule 6 (dépenser): debits `amount` (>= 1, at most the stock, checked by
+## the validation) and returns ÉNERGIE_CHANGÉE in `events`.
+static func spend(state: GameState, faction: int, amount: int, events: Array[PresentationEvent]) -> void:
+	var before := stock(state, faction)
+	assert(amount >= 1 and amount <= before, "spend outside 1..stock")
+	state.factions._fac_energy[faction] = before - amount
+	events.append(EnergyChangedEvent.new(faction, before, before - amount))
+
+
 ## GDD 10 rule 9: 0 <= stock <= max (tests and every load).
 static func consistency_errors(state: GameState, energy: EnergyParams) -> PackedStringArray:
 	var errors := PackedStringArray()

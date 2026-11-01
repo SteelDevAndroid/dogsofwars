@@ -1,6 +1,6 @@
 # Game states for tests (ADR-0011 §4): named minimal states, and seeded random
 # states drawn with GameState.hash32 (never randi()), built only through the setup
-# and the owners' write functions, then VisionService.setup (rule 22 of GDD 5): the
+# and the owners' write functions (energy, protocols and research included), then VisionService.setup (rule 22 of GDD 5): the
 # Visibility slice is filled and the view cache valid. Intentions, AI data and
 # journals stay empty until their systems exist.
 class_name StateFactory
@@ -17,6 +17,8 @@ const TERRAIN_CODES := 4
 ## One live unit in DESTROY_ONE_IN is destroyed, to leave dead rows.
 const DESTROY_ONE_IN := 5
 const EXTRA_DRAWS := 8
+## Each protocol is acquired by a faction with a chance of one in PROTOCOL_ONE_IN.
+const PROTOCOL_ONE_IN := 3
 
 
 ## Vision context of `state` over the standard test catalog (types 0..2: Éclaireur
@@ -87,6 +89,16 @@ static func _random_state(dice: _Dice) -> GameState:
 		for fragment in FRAGMENT_POOL:
 			if dice.roll(2) == 1:
 				GameStateSetup.add_chronicle_fragment(state, faction, fragment)
+	var catalog := CatalogFactory.standard()
+	EnergyRules.initialize(state, catalog.energy)
+	for faction in FACTIONS:
+		EnergyRules.pay_income(state, faction, catalog.energy, [] as Array[PresentationEvent])
+		for protocol in catalog.protocols.count():
+			if dice.roll(PROTOCOL_ONE_IN) == 0:
+				ResearchRules.acquire(state, faction, protocol)
+		var researched := dice.roll(catalog.protocols.count() + 1) - 1
+		if researched >= 0 and not state.protocols.has(faction, researched):
+			ResearchRules.start(state, faction, researched, catalog.protocols.duration(researched))
 	GameStateSetup.set_turn(state, dice.roll(GameState.MAX_TURN + 1))
 	for k in dice.roll(EXTRA_DRAWS):
 		state.draw(GameState.DRAW_MAX)

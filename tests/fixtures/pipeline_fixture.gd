@@ -32,6 +32,11 @@ func move(unit_id: int, tile: int, faction: int = Faction.PLAYER) -> ValidationR
 	return pipeline.submit(MoveCommand.new(faction, emitter, unit_id, tile))
 
 
+func research(protocol: int, faction: int = Faction.PLAYER) -> ValidationResult:
+	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
+	return pipeline.submit(ResearchCommand.new(faction, emitter, protocol))
+
+
 func begin_turn(faction: int) -> ValidationResult:
 	return pipeline.submit(BeginTurnCommand.new(faction))
 
