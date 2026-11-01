@@ -138,3 +138,25 @@ func test_vision_context_takes_radii_from_the_catalog() -> void:
 	assert_array(ctx.node_radius).is_equal(PackedInt32Array([0, 2, 2, 3]))
 	assert_int(ctx.mountain_bonus).is_equal(1)
 	assert_int(ctx.fields.max_radius()).is_equal(5)
+
+
+func test_cross_domain_references_are_checked() -> void:
+	var docs := CatalogFactory.documents()
+	docs["energie.json"]["income_by_level"] = [3, 4]
+	docs["ai.json"]["protocol_calendar"] = [{"turn": 12, "protocol": 9}]
+
+	assert_array(_errors_of(docs)).contains([
+		"energie.json: income_by_level: 2 levels, noeuds.json has 3",
+		"ai.json: protocol_calendar[0].protocol: unknown protocol 9"])
+
+
+func test_protocol_levels_and_calendar_order_are_checked() -> void:
+	var docs := CatalogFactory.documents()
+	docs["protocoles.json"]["protocols"][1]["level"] = 3
+	docs["ai.json"]["protocol_calendar"] = [{"turn": 18, "protocol": 5}, {"turn": 12, "protocol": 4}]
+	docs["energie.json"]["start"] = 120
+
+	assert_array(_errors_of(docs)).contains([
+		"protocoles.json: protocols[1].level: expected 2: levels of branch reseau follow 1..k",
+		"ai.json: protocol_calendar[1].turn: turns must not decrease",
+		"energie.json: start: 120 above max 99"])

@@ -12,12 +12,18 @@ var units: UnitTypes
 var fog: FogParams
 var nodes: NodeParams
 var terrain: TerrainParams
+var energy: EnergyParams
+var protocols: ProtocolTree
+var ai: AiParams
 
 
 ## Domain files expected at the data root, with the class that checks (SCHEMA) and
 ## builds (build) each one. Any other .json at the root is refused.
 static func domains() -> Dictionary:
-	return {"brouillard.json": FogParams, "noeuds.json": NodeParams, "terrain.json": TerrainParams, "units.json": UnitTypes}
+	return {
+		"ai.json": AiParams, "brouillard.json": FogParams, "energie.json": EnergyParams, "noeuds.json": NodeParams,
+		"protocoles.json": ProtocolTree, "terrain.json": TerrainParams, "units.json": UnitTypes,
+	}
 
 
 static func load_all(source: DataSource) -> DataCatalogResult:
@@ -44,15 +50,34 @@ static func load_all(source: DataSource) -> DataCatalogResult:
 		var data: Variant = DataSchema.check(parsed, {"kind": &"object", "fields": known[name].SCHEMA}, name, "", errors)
 		if data != null:
 			built[name] = known[name].build(data, name, errors)
+	if errors.is_empty():
+		_cross_check(built, errors)
 	if not errors.is_empty():
 		return DataCatalogResult.new(null, errors)
 	var catalog := DataCatalog.new()
+	catalog.ai = built["ai.json"]
+	catalog.energy = built["energie.json"]
+	catalog.protocols = built["protocoles.json"]
 	catalog.fog = built["brouillard.json"]
 	catalog.nodes = built["noeuds.json"]
 	catalog.terrain = built["terrain.json"]
 	catalog.units = built["units.json"]
 	catalog.content_hash = content_hash_of(files)
 	return DataCatalogResult.new(catalog, errors)
+
+
+## References between domains (ADR-0009 §3).
+static func _cross_check(built: Dictionary, errors: Array[DataError]) -> void:
+	var energy: EnergyParams = built["energie.json"]
+	var nodes: NodeParams = built["noeuds.json"]
+	if energy.level_count() != nodes.max_level():
+		errors.append(DataError.new("energie.json", "income_by_level",
+			"%d levels, noeuds.json has %d" % [energy.level_count(), nodes.max_level()]))
+	var tree: ProtocolTree = built["protocoles.json"]
+	var calendar := (built["ai.json"] as AiParams).calendar_ids()
+	for k in calendar.size():
+		if calendar[k] >= tree.count():
+			errors.append(DataError.new("ai.json", "protocol_calendar[%d].protocol" % k, "unknown protocol %d" % calendar[k]))
 
 
 ## SHA-256 over, for each file in explicit alphabetical order: its name, "\n", its

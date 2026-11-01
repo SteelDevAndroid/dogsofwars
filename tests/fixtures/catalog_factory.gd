@@ -1,5 +1,5 @@
 # Data catalogs for tests (ADR-0011 §4): the standard documents below hold the GDD
-# values (GDD 2, 5, 6 and 11), loaded through MemoryDataSource; tests derive broken
+# values (GDD 2, 5, 6, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
 # variants from documents().
 class_name CatalogFactory
 extends RefCounted
@@ -38,7 +38,22 @@ static func documents() -> Dictionary:
 		"brouillard.json": {"schema_version": 1, "node_view_min": 2, "mountain_view_bonus": 1},
 		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3]},
 		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0]},
+		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
+		"protocoles.json": {"schema_version": 1, "protocols": [
+			_protocol(0, "veille_elargie", "reseau", 1, 15, 2),
+			_protocol(1, "reveil_sobre", "reseau", 2, 20, 2),
+			_protocol(2, "cadence_de_marche", "reseau", 3, 30, 3),
+			_protocol(3, "repos_reglementaire", "meute", 1, 15, 2),
+			_protocol(4, "blindage_appoint", "meute", 2, 25, 2),
+			_protocol(5, "rempart_arme", "meute", 3, 35, 3),
+		]},
+		"ai.json": {"schema_version": 1, "protocol_calendar": [
+			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
 	}
+
+
+static func _protocol(id: int, key: String, branch: String, level: int, price: int, duration: int) -> Dictionary:
+	return {"id": id, "key": key, "branch": branch, "level": level, "price": price, "duration": duration}
 
 
 static func _unit(id: int, key: String, side: String, hp: int, attack: int, defense: int,

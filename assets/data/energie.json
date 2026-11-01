@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "max": 99,
+  "start": 6,
+  "income_by_level": [3, 4, 5]
+}

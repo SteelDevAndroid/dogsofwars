@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "protocol_calendar": [
+    {"turn": 12, "protocol": 4},
+    {"turn": 18, "protocol": 5}
+  ]
+}

@@ -30,6 +30,19 @@ func length_error(_tiles: int, factions: int) -> String:
 	return ""
 
 
+func energy_of(faction: int) -> int:
+	return _fac_energy[faction]
+
+
+## Protocol under research, -1 when none.
+func research_of(faction: int) -> int:
+	return _fac_research_id[faction]
+
+
+func research_turns_of(faction: int) -> int:
+	return _fac_research_turns[faction]
+
+
 func is_eliminated(faction: int) -> bool:
 	return _fac_eliminated[faction] == 1
 

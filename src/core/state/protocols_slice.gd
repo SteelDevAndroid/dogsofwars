@@ -19,3 +19,18 @@ func columns() -> Array:
 
 func length_error(_tiles: int, _factions: int) -> String:
 	return _parallel_error()
+
+
+func faction_of(row: int) -> int:
+	return _proto_faction[row]
+
+
+func protocol_of(row: int) -> int:
+	return _proto_id[row]
+
+
+func has(faction: int, protocol: int) -> bool:
+	for row in _proto_id.size():
+		if _proto_faction[row] == faction and _proto_id[row] == protocol:
+			return true
+	return false
