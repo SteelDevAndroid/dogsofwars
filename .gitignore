@@ -2,3 +2,4 @@
 /reports/
 # vendored add-on kept identical to upstream; Godot regenerates these on import
 addons/gdUnit4/**/*.uid
+addons/gdUnit4/**/*.import
