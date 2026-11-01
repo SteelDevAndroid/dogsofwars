@@ -1,0 +1,10 @@
+# Project commands and tooling (ADR-0011 §1 and §2).
+engine:
+  name: godot
+  version: 4.7.2-stable
+testing:
+  framework: gdunit4
+  version: 6.2.2            # pinned in addons/gdUnit4/plugin.cfg
+commands:
+  import: godot --headless --import
+  test: godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode

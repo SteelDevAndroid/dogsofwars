@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les standards du projet (`.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`) et les critères de validation des ADR-0001 à 0010. Selon `run-and-observe.md`, la commande gdUnit4 du projet a été exécutée avec **gdUnit4 6.2.2 sur Godot 4.7.2** (Windows) ; elle n'est **pas encore installée** dans ce dépôt (`addons/` absent). Les scripts shell de `tests/unit/ci/` ont tourné (8 cas) ; aucun test GDScript n'existe encore. Amendé le 2026-11-01 (revue d'architecture, M3 : parité sur `validate`).
+2026-10-31 — conception sur les standards du projet (`.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`) et les critères de validation des ADR-0001 à 0010. Selon `run-and-observe.md`, la commande gdUnit4 du projet a été exécutée avec **gdUnit4 6.2.2 sur Godot 4.7.2** (Windows) ; elle n'est **pas encore installée** dans ce dépôt (`addons/` absent). Les scripts shell de `tests/unit/ci/` ont tourné (8 cas) ; aucun test GDScript n'existe encore. Amendé le 2026-11-01 (revue d'architecture, M3 : parité sur `validate`). **Installé et vérifié le 2026-11-01** sur Godot 4.7.2-stable Linux (binaire officiel, SHA-512 contrôlé) : gdUnit4 6.2.2 dans `addons/gdUnit4/` (sans ses propres tests), `project.godot` racine, `project.yaml` ; la commande du §2 rend **0** sur la suite verte, **100** sur un test rouge et **101** sur un orphelin (cas temporaires, non commités) ; rapport JUnit écrit dans `reports/report_N/results.xml`.
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -58,7 +58,7 @@ Les standards exigent des tests avant les systèmes de jeu, un déterminisme str
 
 **1. gdUnit4, version épinglée.** Le cadre est **gdUnit4** (déjà nommé par les standards), version **6.2.2**, installé dans `addons/gdUnit4/` et **commité** (pas de téléchargement à la volée en CI). `project.yaml` porte le **nom** (`testing.framework: gdunit4`, comme `effects-map.md`) et la version épinglée vit dans `addons/gdUnit4/plugin.cfg` ; un changement de version est une décision tracée, avec ré-exécution de la suite sur le Godot épinglé. GUT n'est pas utilisé : aucune fixture ni doc ne doit le référencer.
 
-**2. Commande et exécution.** La commande unique est celle de `project.yaml` : `godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode`. Le Godot de la CI est **épinglé à 4.7.2-stable** avec vérification d'empreinte du binaire téléchargé. Un test rouge, une erreur de script ou un orphelin (code 101) font échouer l'étape ; aucun test n'est désactivé pour passer la CI.
+**2. Commande et exécution.** La commande unique est celle de `project.yaml` : `godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode`. Le Godot de la CI est **épinglé à 4.7.2-stable** avec vérification d'empreinte du binaire téléchargé. Codes de sortie mesurés : 0 vert, **100** test rouge ou erreur, **101** orphelin ; tout code non nul fait échouer l'étape ; aucun test n'est désactivé pour passer la CI.
 
 **3. Arborescence.** `tests/unit/<système>/<système>_<fonction>_test.gd` (Logic), `tests/integration/<système>/…` (multi-systèmes, rejeu, reprise), `tests/performance/…` (seuils chiffrés, échec si dépassés ; les mesures d'appareil sont des rapports), `tests/fixtures/` (fabriques, fichiers témoins, rejeux dorés), `tests/unit/ci/*.sh` (scripts d'outillage, voir 8). Chaque test suit arrange / act / assert.
 
@@ -175,12 +175,12 @@ Foundational — no direct GDD requirement. Enables : tous les critères d'accep
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun test existant en GDScript. À faire via `/test-setup` : installer `addons/gdUnit4` (6.2.2), créer `tests/`, les fabriques et doublures, l'étape gdUnit4 du workflow `tests`, créer `project.yaml` avec `testing.framework: gdunit4` et la commande du §2. **Fait** (2026-11-01) : le workflow `tests` (auto-tests shell et contrôles de couches et de données) ; plus aucune mention de GUT dans les fixtures de `tests/unit/ci/`.
+**Fait** (2026-11-01) : `addons/gdUnit4` 6.2.2 commité (ses tests internes retirés), `project.godot` racine (réglages d'ADR-0001 et ADR-0010 : rendu Mobile, étirement `disabled`, `emulate_mouse_from_touch = false`, `quit_on_go_back = false`, greffon gdUnit4 activé), `project.yaml` (`testing.framework: gdunit4` et la commande du §2), `.gdignore` sur `design/`, `docs/`, `prototypes/` et `tools/`, un test témoin `tests/unit/framework/framework_smoke_test.gd`, le workflow `tests` (auto-tests shell, contrôles de couches et de données, puis gdUnit4 sur Godot épinglé par SHA-512, import préalable, rapport JUnit archivé) ; plus aucune mention de GUT dans les fixtures de `tests/unit/ci/`. **Reste** : `StateFactory` et les doublures du §4, à écrire avec les premiers ports (stories Foundation).
 
 **Rollback plan**: si gdUnit4 devient incompatible avec le moteur, basculer vers GUT en gardant les fabriques et doublures (elles ne dépendent pas du cadre).
 
 ## Validation Criteria
-- La commande du projet rend 0 sur la suite verte et non nul sur un test rouge ; un orphelin donne 101.
+- La commande du projet rend 0 sur la suite verte, 100 sur un test rouge et 101 sur un orphelin (vérifié le 2026-11-01, Linux).
 - Les catégories de la section 5 existent, chacune avec au moins un test vu échouer sur une défaillance introduite volontairement.
 - La CI bloque une PR dont un test échoue.
 
