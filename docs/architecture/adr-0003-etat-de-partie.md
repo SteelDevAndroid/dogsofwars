@@ -173,7 +173,7 @@ Les colonnes et leurs indices sont définis dans un fichier de constantes unique
 - **Network**: sans objet.
 
 ## Migration Plan
-Sans objet : aucun code de production n'existe. Le banc `prototypes/etat-copie/` n'est pas migré.
+Le banc `prototypes/etat-copie/` n'est pas migré. **Implémenté le 2026-11-01** dans `src/core/state/` : `GameState`, 18 tranches (`SliceBase` porte la copie, l'égalité, les contrôles de longueur, la compaction et la recherche par dichotomie, dérivées de la table `COLUMNS` de chaque tranche), `TerrainGrid` partagé sans setter, `GameStateSetup` (mise en place), `StateView`, `hash32` / `draw` (vecteurs de référence figés dans `tests/unit/state/game_state_draw_test.gd`) ; `ViewCache` dans `src/core/vision/` ; `UnitWrites.destroy` (système 6). Choix d'agencement : le compte de siège (`SiegeSlice`) et `curseur_ia` (`AiCursorSlice`, privée à l'IA) sont des tranches scalaires séparées, pour que les tranches d'entités n'aient que des colonnes de lignes. **Reste** : `filtered_copy`, qui doit passer par le prédicat de `VisionService` (ADR-0007 §5), et les migrations, à écrire avec le premier changement de schéma après le test fermé.
 
 ## Validation Criteria
 - Sur l'appareil Android de référence : **copie + première écriture ≤ 200 µs** (500 ms ÷ 2 500 copies, formule 5), soit une marge de 2 si la copie seule vaut ≤ 100 µs ; sinon revoir le budget de l'IA.
