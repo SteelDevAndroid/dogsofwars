@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur le GDD 5 (revu après la PR #3) et les ADR-0003 à 0005 ; **micro-banc headless** Godot 4.7.2 Windows : union de listes précalculées pour une faction (30 unités et 5 nœuds, 16 × 16) en **43 µs**, copie du cache de 256 octets en **0,26 µs**, précalcul sans occlusion en 8 ms (une fois). Android non mesuré. Amendé le 2026-11-01 (revue d'architecture : B1, aperçus sur la variante de simulation ; B4, appelants de `rebuild`).
+2026-10-31 — conception sur le GDD 5 (revu après la PR #3) et les ADR-0003 à 0005 ; **micro-banc headless** Godot 4.7.2 Windows : union de listes précalculées pour une faction (30 unités et 5 nœuds, 16 × 16) en **43 µs**, copie du cache de 256 octets en **0,26 µs**, précalcul sans occlusion en 8 ms (une fois). Android non mesuré. Amendé le 2026-11-01 (revue d'architecture : B1, aperçus sur la variante de simulation ; B4, appelants de `rebuild` ; M15).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -171,7 +171,7 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 - Le précalcul des champs coûte quelques millisecondes une fois par carte (au chargement).
 
 ## Risks
-- **Seuil de 1 ms dépassé sur Android** : *Atténuation* : repli sur un compteur par tuile (section 8), mesure sur l'appareil.
+- **Seuil de 1 ms dépassé sur Android** : *Atténuation* : repli sur un compteur par tuile (section 10), mesure sur l'appareil.
 - **Fuite par un lecteur oublié** : *Atténuation* : parité exhaustive, motif interdit enregistré, revue des nouvelles requêtes.
 - **Cache périmé après `restore_from`** : *Atténuation* : `restore_from` recopie le cache de l'instantané ; un cache invalide (`from_bytes` sans `rebuild`) fait échouer `can_see` en développement ; test AC-BR38.
 

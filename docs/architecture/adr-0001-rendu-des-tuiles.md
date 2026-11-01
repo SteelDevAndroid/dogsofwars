@@ -34,7 +34,7 @@ Le rendu de 144 à 256 tuiles, avec l'onde de recoloration, la palette daltonien
 | **Depends On** | ADR-0002 `docs/architecture/adr-0002-evenements-de-presentation.md` (file, séquenceur, `PresentationClock`, `StateView` ; le renderer consomme la file, règles 10, 13, 16 et 17 de `hud-systeme.md`) — doit être Accepted avant l'acceptation de celui-ci |
 | **Enables** | ADR de composition des couches de présentation (unités, marqueurs, HUD au-dessus des tuiles) |
 | **Blocks** | Les stories de **rendu** de l'epic « Recoloration du monde » et de la présentation du brouillard. Les stories Logic (module pur `WaveScheduler`, formules F3, F4, F5, F7, tests `tests/unit/recoloration/`) ne dépendent pas de la primitive de rendu et peuvent démarrer |
-| **Ordering Note** | Le test Android est une story « spike » de l'epic, à faire sur le contrat amendé ; l'ADR reste Proposed jusque-là |
+| **Ordering Note** | Accepted le 2026-10-31. Le test Android est une story « spike » de l'epic, sur le contrat amendé : il valide l'ADR sans conditionner son statut, et un échec le rouvre par amendement (revue du 2026-11-01, M12) |
 
 ## Context
 

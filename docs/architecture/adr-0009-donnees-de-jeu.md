@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les Tuning Knobs de tous les GDD MVP et les renvois des ADR-0001 à 0008 ; **tests headless** Godot 4.7.2 Windows : `JSON.parse_string` rend **tous les nombres en `float`** (`typeof` = `TYPE_FLOAT`, un entier au-delà de 2⁵³ perd sa précision : 9007199254740993 devient …992.0), **une clé dupliquée est silencieusement écrasée** (`{"a":1,"a":2}` donne `a = 2`), une erreur de syntaxe est rapportée par `JSON.new().parse` avec code et message. Inclusion des `.json` dans l'export Android : **non vérifiée**.
+2026-10-31 — conception sur les Tuning Knobs de tous les GDD MVP et les renvois des ADR-0001 à 0008 ; **tests headless** Godot 4.7.2 Windows : `JSON.parse_string` rend **tous les nombres en `float`** (`typeof` = `TYPE_FLOAT`, un entier au-delà de 2⁵³ perd sa précision : 9007199254740993 devient …992.0), **une clé dupliquée est silencieusement écrasée** (`{"a":1,"a":2}` donne `a = 2`), une erreur de syntaxe est rapportée par `JSON.new().parse` avec code et message. Inclusion des `.json` dans l'export Android : **non vérifiée**. Amendé le 2026-11-01 (revue d'architecture : B3, M7 à M10).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -44,7 +44,7 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 ### Constraints
 - GDScript, Godot 4.7.2, Android d'abord ; déterminisme exigé (rejeu, reprise de la phase ennemie).
 - JSON.parse rend des `float` : un champ entier doit être vérifié, pas supposé.
-- Les valeurs de réglage changent entre deux versions (équilibrage) sans changer le schéma de sauvegarde (GDD 16, règle 17bis) : une partie reprend avec les nouvelles valeurs.
+- Les valeurs de réglage changent entre deux versions (équilibrage) sans changer le schéma de sauvegarde (GDD 16, règle 17bis) : une partie reprend avec les nouvelles valeurs. Exceptions : retirer un identifiant ou baisser un maximum (§10).
 - Pas de singleton (ADR-0002) : le catalogue est injecté.
 
 ### Requirements
@@ -72,13 +72,13 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 **9. Export.** On suppose que le filtre d'inclusion de l'export Android **doit** contenir `*.json` (hypothèse : un `.json` n'a pas d'importeur, vérifié en éditeur headless, et ne serait donc exporté que par le filtre) ; la vérification (1) la confirme sur l'appareil.
 
-**10. Cohérence entre une partie et les données.** Retirer ou renuméroter un identifiant du catalogue (type d'unité, protocole, fragment) est un **changement de schéma** (GDD 16, règle 17bis). La validation de l'état au chargement contrôle ses références au catalogue (type d'unité connu, PV ≤ maximum courant, identifiants de protocole et de fragment connus) : un identifiant inconnu fait **refuser le fichier** avec repli sur `.bak` (ADR-0006) ; une valeur dépassant le nouveau maximum est ramenée au maximum **par une migration documentée**, jamais en silence.
+**10. Cohérence entre une partie et les données.** Retirer ou renuméroter un identifiant du catalogue (type d'unité, protocole, fragment) est un **changement de schéma** (GDD 16, règle 17bis). La validation de l'état au chargement contrôle ses références au catalogue (type d'unité connu, PV ≤ maximum courant, identifiants de protocole et de fragment connus) : un identifiant inconnu ou une valeur au-dessus du maximum courant fait **refuser le fichier** avec repli sur `.bak` (ADR-0006). **Baisser un maximum** (PV, stock, taille de pool) est donc, comme retirer un identifiant, un **changement de schéma** : la migration N → N + 1 (ADR-0006 §3) ramène les valeurs au nouveau maximum ; aucune valeur n'est jamais ramenée au chargement sans migration (revue du 2026-11-01, M9).
 
 ### Architecture Diagram
 
 ```
  assets/data/*.json ──► DataSource (port : FileAccess réel | dictionnaire de test)
-        │ parse (JSON.parse_string / JSON.new().parse pour les erreurs)
+        │ parse (JSON.new().parse : code et message d'erreur ; jamais JSON.parse_string)
         ▼
  DataSchema (par domaine) ── valide : types, entiers, bornes, clés, références ──► toutes les erreurs ou ──┐
                                                                                                          ▼
@@ -92,7 +92,8 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 ```gdscript
 class_name DataSource extends RefCounted
-func read_text(path: String) -> String            # "" + erreur si absent ; réel : FileAccess ; test : mémoire
+func read_bytes(path: String) -> PackedByteArray  # vide + erreur si absent ; réel : FileAccess.get_file_as_bytes ; test : mémoire ; source de content_hash
+func read_text(path: String) -> String            # read_bytes(path).get_string_from_utf8() : une seule lecture par fichier
 func list(dir: String) -> PackedStringArray
 
 class_name DataCatalog extends RefCounted
@@ -112,7 +113,7 @@ var errors: Array[DataError]                       # fichier, chemin du champ, m
 
 ### Implementation Guidelines
 - Une valeur de jeu **ne doit jamais** être codée en dur : elle vient du catalogue.
-- Les données **ne doivent contenir** aucun nombre fractionnaire ; un rapport **doit** porter le suffixe `_pct` ou `_milli`.
+- Les données **ne doivent contenir** aucun nombre fractionnaire ; un rapport **doit** porter le suffixe `_pct`, `_milli` ou `_micro`.
 - Le catalogue **ne doit jamais** être lu par une API statique ni un autoload ; il est injecté.
 - Le catalogue **ne doit jamais** être modifié ni rechargé pendant une partie.
 - Un champ manquant ou inconnu **doit** être une erreur, jamais un défaut.

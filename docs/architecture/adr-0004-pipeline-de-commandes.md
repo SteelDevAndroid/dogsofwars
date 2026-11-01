@@ -7,7 +7,7 @@ Accepted
 2026-10-30
 
 ## Last Verified
-2026-10-30 — conception sur le GDD 23 et les ADR-0002 et 0003 ; **aucun prototype** ; `@abstract` (4.5) et la règle 4.7 sur les redéfinitions de type de retour sont des API postérieures à la connaissance du modèle, à vérifier avant l'acceptation. Amendé le 2026-11-01 (revue d'architecture : B1, variante de simulation pour l'aperçu ; B2, PAS_VOTRE_TOUR limité aux émetteurs JOUEUR et IA).
+2026-10-30 — conception sur le GDD 23 et les ADR-0002 et 0003 ; **aucun prototype** ; `@abstract` (4.5) et la règle 4.7 sur les redéfinitions de type de retour sont des API postérieures à la connaissance du modèle, à vérifier avant l'acceptation. Amendé le 2026-11-01 (revue d'architecture : B1, variante de simulation pour l'aperçu ; B2, PAS_VOTRE_TOUR limité aux émetteurs JOUEUR et IA ; M2, M6, M14).
 
 ## Decision Makers
 Utilisateur (direction de projet), Claude (rédaction), technical-director (validation avant écriture).
@@ -62,7 +62,7 @@ Le GDD 23 fixe : valider puis appliquer (règle 1), un résultat sans texte (2),
 
 **4. Flux d'une commande** (synchrone), avec un **préfixe commun fixe de refus** :
 1. réentrance (COMMANDES_VERROUILLÉES, erreur en développement) ; 2. PARTIE_TERMINÉE ; 3. PAS_VOTRE_TOUR, **pour les émetteurs JOUEUR et IA seulement** : une commande SYS n'est jamais refusée pour le tour, car VALIDER_LA_LECTURE, de faction JOUEUR, peut être retentée pendant la phase ennemie (ADR-0006 §8 ; revue du 2026-11-01, B2) ; 4. verrou du joueur (COMMANDES_VERROUILLÉES) ; 5. vérifications propres à la commande, dans un ordre fixe couvert par un test. PARTIE_TERMINÉE et PAS_VOTRE_TOUR sont des lectures d'état (système 3), **pas** le `CommandGate` (qui ne porte que la réentrance et les verrous du joueur, ADR-0002). Exception : ABANDONNER est permis en phase ennemie.
-- **Appliquer** : avant un DÉPLACER du joueur, l'instantané d'annulation est pris (`duplicate_state()`, dans l'`UndoSlot`, hors de l'état) ; `apply` s'exécute et enregistre les événements dans l'ordre des écritures ; la **révision** (tranche « journal des commandes », propriété du pipeline) augmente de 1 par la fonction d'écriture de cette tranche (`command_id = révision`, un seul numéro). Une copie incrémente sa propre révision sans effet sur l'état réel.
+- **Appliquer** : avant un DÉPLACER du joueur, l'instantané d'annulation est pris (`duplicate_state()`, dans l'`UndoSlot`, hors de l'état) ; `apply` s'exécute et enregistre les événements dans l'ordre des écritures ; la **révision** (tranche « journal des commandes », propriété du pipeline) augmente de 1 par la fonction d'écriture de cette tranche (`command_id = révision`, un seul numéro). Pour une commande ordinaire d'émetteur IA, la couche des commandes appelle ensuite la fonction d'écriture du système 9 qui pose `curseur_ia` (ADR-0005 §5) : le handler de DÉPLACER ou de MONTER_NŒUD n'écrit jamais la tranche « agents de l'IA » (un écrivain par champ ; revue du 2026-11-01, M6). Une copie incrémente sa propre révision sans effet sur l'état réel.
 - **Phase après validation (post-commit)** : un `PostCommitPort` injecté (réel pour la partie, nul pour le rejeu ; l'aperçu et les simulations n'y passent jamais, puisqu'elles n'appellent que `apply`) déclenche la sauvegarde (16) **après chaque commande appliquée, du joueur, de l'IA ou interne**, annulation et abandon compris, et à la fin de partie (décision du 2026-10-30 ; prédicat et séquence : ADR-0006), **synchrone et avant** l'application des autres effets et `EventSink.push`, pour que le panneau de fragment ne s'ouvre qu'après l'écriture. La sauvegarde **n'écoute jamais la file d'événements** (une resynchronisation la vide). En synchrone il n'y a pas de coalescence (ADR-0006 §7) : chaque commande écrit, donc une phase ennemie de N commandes coûte N écritures ; si AC-F1 dépasse le budget sur l'appareil, le fil d'écriture est décidé dans ADR-0006.
 - **Filtrer et publier** : avant l'application, le pipeline réel copie le `ViewCache` ; après l'application, il retire du lot les événements de l'autre faction que `VisionService.event_visible(avant, après, faction, événement)` juge invisibles (ADR-0007 §7) ; le lot (`EventBatch`, ADR-0002) est poussé après le post-commit.
 
@@ -106,7 +106,7 @@ func check(command: Command) -> ValidationResult
 func preview(command: Command) -> PreviewResult        # faction = command.faction
 func apply_on(copy: GameState, command: Command) -> ValidationResult   # effets jetés
 func on_state_loaded() -> void
-func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array   # RuleTable : tuiles où validate(Move) est permis (ADR-0010)
+func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array   # délègue à la méthode d'instance RuleTable.check_move_range : tuiles où validate(Move) est permis (ADR-0010)
 class_name PostCommitPort extends RefCounted            # on_commit(state, command, result) ; réel, nul
 class_name ProfilePort extends RefCounted               # apply(effect) -> bool (écriture réussie) ; réel, nul (rejeu)
 class_name CommandCodec extends RefCounted             # identifiants de type entiers stables
@@ -181,7 +181,7 @@ class_name CommandCodec extends RefCounted             # identifiants de type en
 | ruines-fragments.md (13) | Règle 14 a–g, règle 17 : séquence de lecture, fragment suivant | §5, instantané de la chronique, effet « enregistrer un fragment », `ProfilePort`, VALIDER_LA_LECTURE |
 | sauvegarde-automatique.md (16) | Règle 10 : sauvegarde avant le panneau, profil écrit après l'application | `PostCommitPort` avant `EventSink.push` |
 | ia-ennemie.md (9) | Règles 4 et 7 : aucune attaque sans intention ; règle 19 : copies | `AUCUNE_INTENTION`, §9, vue figée et `duplicate_state()` |
-| noeuds.md (11) | MONTER_NŒUD : six codes de refus, NŒUD_MONTÉ | 12e type de commande |
+| noeuds.md (11) | MONTER_NŒUD : six codes de refus, NŒUD_MONTÉ | Type `UPGRADE_NODE` |
 | modele-etat-partie.md (1) | Règles 2, 3, 10, 14 : un écrivain, chemin unique, journal des lectures de ruine, révision | `apply` par propriétaires, effets rendus et appliqués par la couche des commandes, VALIDER_LA_LECTURE ordinaire |
 
 ## Performance Implications

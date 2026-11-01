@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur le GDD 4 et les ADR-0002, 0004, 0007, 0008 ; **vérifié en headless** Godot 4.7.2 Windows : existence de `Input.set_use_accumulated_input`, `DisplayServer.get_display_safe_area`, du réglage `input_devices/pointing/emulate_touch_from_mouse`, des réglages `display/window/stretch/*`, de la propriété `Window.content_scale_mode` et de `InputEventScreenTouch.canceled`. **Non vérifié** : tout le comportement tactile réel (annulation de contact, accumulation, densité d'écran) : Android seulement.
+2026-10-31 — conception sur le GDD 4 et les ADR-0002, 0004, 0007, 0008 ; **vérifié en headless** Godot 4.7.2 Windows : existence de `Input.set_use_accumulated_input`, `DisplayServer.get_display_safe_area`, du réglage `input_devices/pointing/emulate_touch_from_mouse`, des réglages `display/window/stretch/*`, de la propriété `Window.content_scale_mode` et de `InputEventScreenTouch.canceled`. **Non vérifié** : tout le comportement tactile réel (annulation de contact, accumulation, densité d'écran) : Android seulement. Amendé le 2026-11-01 (revue d'architecture : M2, M3).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -109,8 +109,8 @@ func recenter_to(tile: Vector2i, animated: bool) -> void
 class_name TapResolver extends RefCounted
 static func resolve(mode: int, selection: int, target: TapTarget, checks: CheckPort) -> TapAction
 
-# ajout à ADR-0004 (RuleTable)
-static func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array
+# ajout à ADR-0004 (RuleTable) : méthode d'instance, la RuleTable détient catalogue et VisionContext ; le pipeline délègue
+func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array
 ```
 
 ### Implementation Guidelines
@@ -190,7 +190,7 @@ Aucun code existant. À créer : `InputSurface`, `GestureInterpreter`, `MapCamer
 
 ## Validation Criteria
 - Suite de tests purs : une séquence qui dépasse la demi-tuile puis revient ne donne jamais un appui ; pose, seconde pose, relevé ne produit aucune commande.
-- Parité `check(Move)` / `check_move_range` sur 1 000 états aléatoires.
+- Parité `RuleTable.validate(view, Move)` / `check_move_range` sur 1 000 états aléatoires (jamais `pipeline.check`, §7).
 - Sur appareil : tuile minimale de 31 dp, zone sûre respectée, perte de focus sans commande.
 
 ## Related

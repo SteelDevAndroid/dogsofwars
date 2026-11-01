@@ -147,12 +147,12 @@ state_ownership:
     status: active
     owner_system: ai-agents-slice
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
+    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; rôles et compteurs écrits par l'application d'ANNONCER_LES_INTENTIONS ; curseur_ia écrit après chaque commande ordinaire de l'IA par la couche des commandes, via la fonction d'écriture du système 9, jamais par le handler ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
     write_access: ai-system-only
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-01   # ancien : « écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA » (revue du 2026-11-01, M6)
 
   - state: game_state_intentions
     status: active

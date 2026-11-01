@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les standards du projet (`.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`) et les critères de validation des ADR-0001 à 0010. Selon `run-and-observe.md`, la commande gdUnit4 du projet a été exécutée avec **gdUnit4 6.2.2 sur Godot 4.7.2** (Windows) ; elle n'est **pas encore installée** dans ce dépôt (`addons/` absent). Les scripts shell de `tests/unit/ci/` ont tourné (8 cas) ; aucun test GDScript n'existe encore.
+2026-10-31 — conception sur les standards du projet (`.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`) et les critères de validation des ADR-0001 à 0010. Selon `run-and-observe.md`, la commande gdUnit4 du projet a été exécutée avec **gdUnit4 6.2.2 sur Godot 4.7.2** (Windows) ; elle n'est **pas encore installée** dans ce dépôt (`addons/` absent). Les scripts shell de `tests/unit/ci/` ont tourné (8 cas) ; aucun test GDScript n'existe encore. Amendé le 2026-11-01 (revue d'architecture, M3 : parité sur `validate`).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -68,7 +68,7 @@ Les standards exigent des tests avant les systèmes de jeu, un déterminisme str
 - `TestSessionFactory` (dans `tests/fixtures/`, **pas** dans `src/`) appelle la `SessionFactory.build` d'ADR-0008 avec ces doublures, sans `Bootstrap` ni scène : `src/` ne dépend jamais de `tests/`.
 
 **5. Catégories de tests exigées par les ADR** :
-- **Propriétés sur états aléatoires** (au moins 1 000 états, graine fixe affichée en cas d'échec) : parité `FactionView` / `filtered_copy` (ADR-0007), indépendance copie / original sur chaque colonne (ADR-0003), `check(Move)` ⇔ `check_move_range` (ADR-0010), égalité après `to_bytes` / `from_bytes`.
+- **Propriétés sur états aléatoires** (au moins 1 000 états, graine fixe affichée en cas d'échec) : parité `FactionView` / `filtered_copy` (ADR-0007), indépendance copie / original sur chaque colonne (ADR-0003), `validate(view, Move)` ⇔ `check_move_range` (ADR-0010 §7, jamais `pipeline.check`), égalité après `to_bytes` / `from_bytes`.
 - **Rejeu** : un `CommandLog` doré rejoue au même état final ; un refus pendant le rejeu est une divergence (ADR-0004).
 - **Reprise** : arrêt simulé après la commande k, pour tout k, d'un tour d'IA fixé : même état final qu'un tour sans arrêt (ADR-0005, AC-IA33).
 - **Pannes de fichier** : injection à chaque étape de l'écriture ; un fichier valide reste toujours chargeable (ADR-0006).

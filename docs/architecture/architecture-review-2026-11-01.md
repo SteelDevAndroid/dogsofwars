@@ -4,7 +4,7 @@
 
 **Verdict : CONCERNS.** Les corrections de fond du 30/10 tiennent : planification sur `WorkerThreadPool` (B1), perception avant chaque `plan_next` (B2), schéma porté par l'enveloppe (B3), enum à 13 types (B4), `is_locked(faction, emitter)` (B5). Les ADR 0007 à 0011 comblent les trous de couverture signalés. Il reste quatre défauts de conception introduits ou laissés ouverts par les amendements, et une série de contrats contradictoires entre ADR, surtout autour de la `RuleTable`.
 
-**Suivi (2026-11-01)** : B1 à B4 sont corrigés par amendement d'ADR-0003 à ADR-0009 et du registre (même PR). Les incohérences M1 et le diagramme d'ADR-0007 sont soldés avec B1 ; M2 à M15 restent ouvertes.
+**Suivi (2026-11-01)** : B1 à B4 et M1 à M15 sont corrigés par amendement d'ADR-0001, 0003 à 0011 et du registre (même PR). M1 et M4 sont soldés avec B1. Pour M9, la décision retenue est : baisser un maximum est un changement de schéma, avec migration ; sans migration, le fichier est refusé. Les points d'attention de la section 3 restent ouverts.
 
 Les ADR étant `Accepted`, chaque correction ci-dessous est un **amendement** (date `Last Verified`, entrée `revised:` au registre si un contrat enregistré change).
 

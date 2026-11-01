@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les ADR-0001 à 0007 et 0009 ; **vérifié en headless** Godot 4.7.2 : le projet n'a aucun réglage `autoload/*` (aucun singleton à retirer). Construction réelle des scènes et libération en fin de partie : non prototypées. Amendé le 2026-11-01 (revue d'architecture, B4 : le `VisionContext` vient du chargement ou de la mise en place).
+2026-10-31 — conception sur les ADR-0001 à 0007 et 0009 ; **vérifié en headless** Godot 4.7.2 : le projet n'a aucun réglage `autoload/*` (aucun singleton à retirer). Construction réelle des scènes et libération en fin de partie : non prototypées. Amendé le 2026-11-01 (revue d'architecture, B4 : le `VisionContext` vient du chargement ou de la mise en place ; M11, M12).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -34,7 +34,7 @@ Tous les ADR injectent leurs dépendances (ports, puits d'événements, portes d
 | **Depends On** | ADR-0002 (`EventSink`, `CommandGate`, séquenceur), ADR-0003 (état), ADR-0004 (pipeline), ADR-0005 (runner), ADR-0006 (`SaveStore`, `FileStore`), ADR-0009 (`DataCatalog`) — Accepted avant celui-ci |
 | **Enables** | ADR-0010 (la surface d'entrée reçoit son pipeline et sa caméra), ADR-0011 (fabrique de test), toutes les stories d'écran et de partie |
 | **Blocks** | Stories : nouvelle partie, continuer, fin de partie, reprise de la phase ennemie, écran d'erreur de données |
-| **Ordering Note** | Dernier des ADR Core à accepter : il assemble les autres ; ADR-0002 à 0006 et 0009 sont encore Proposed, l'ordre d'acceptation faisable est donné dans la section Related |
+| **Ordering Note** | Assemble les autres ADR Core, tous Accepted depuis le 2026-10-31 ; toute nouvelle dépendance injectée amende la fabrique (§3) |
 
 ## Context
 
@@ -162,7 +162,7 @@ static func build(app: AppContext, state: GameState, vision: VisionContext, port
 - Le sens de dépendance est vérifiable par grep.
 
 ### Negative
-- Plus de code d'assemblage (fabrique, `SessionPorts`, `SessionOverrides`) qu'avec des autoloads.
+- Plus de code d'assemblage (fabrique, `SessionPorts`) qu'avec des autoloads.
 - Toute nouvelle dépendance exige de toucher la fabrique.
 
 ### Neutral
