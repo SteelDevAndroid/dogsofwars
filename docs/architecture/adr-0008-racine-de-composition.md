@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les ADR-0001 à 0007 et 0009 ; **vérifié en headless** Godot 4.7.2 : le projet n'a aucun réglage `autoload/*` (aucun singleton à retirer). Construction réelle des scènes et libération en fin de partie : non prototypées.
+2026-10-31 — conception sur les ADR-0001 à 0007 et 0009 ; **vérifié en headless** Godot 4.7.2 : le projet n'a aucun réglage `autoload/*` (aucun singleton à retirer). Construction réelle des scènes et libération en fin de partie : non prototypées. Amendé le 2026-11-01 (revue d'architecture, B4 : le `VisionContext` vient du chargement ou de la mise en place).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -58,17 +58,17 @@ Sans racine de composition, chaque système construirait ses dépendances (donc 
 **1. Aucun autoload, un seul `Bootstrap`.** La scène principale `src/app/main.tscn` porte `Bootstrap` (`Node`) ; c'est, avec les autres fichiers de `src/app/`, le **seul** code autorisé à instancier des classes concrètes du Core **et** de la Presentation (la Presentation peut nommer le Core ; le Core ne nomme jamais `app` ni `presentation`). Il n'y a **aucun** réglage `autoload/*`. Les dépendances se passent par **paramètres de constructeur ou d'initialisation** ; un `get_node("/root/…")` pour trouver un service est interdit.
 
 **2. Deux portées.**
-- `AppContext` (`RefCounted`, durée du processus) : `DataCatalog` (ADR-0009), `FileStore` réel, `SaveStore` (ADR-0006), `ProfileStore` et les réglages (profil). Construit au démarrage dans cet ordre : catalogue (échec : écran d'erreur de données, rien d'autre ne démarre) → `FileStore` → `SaveStore` → profil → réglages.
+- `AppContext` (`RefCounted`, durée du processus) : `DataCatalog` (ADR-0009), `FileStore` réel, `SaveStore` (ADR-0006), `ProfileStore` et les réglages (profil). Construit au démarrage dans cet ordre : catalogue (échec : écran d'erreur de données, rien d'autre ne démarre) → `FileStore` → `SaveStore` (qui reçoit le catalogue pour l'étape 5 du chargement, ADR-0006 §3) → profil → réglages.
 - `GameSession` (`RefCounted`, durée d'une partie) : l'état (`GameState` et son `ViewCache`, ADR-0007), la `RuleTable`, `CommandGate`, `UndoSlot`, `CommandLog`, `CommandPipeline`, `SaveCoordinator` (le `PostCommitPort` réel), le `ProfilePort` réel, le système des tours (3) et l'`AiPlanner` avec ses `AiParams`. Aucune de ces classes n'est un `Node`.
 
-**3. `SessionFactory`, le seul constructeur de `GameSession`.** `SessionFactory.build(app: AppContext, state: GameState, ports: SessionPorts) -> GameSession` assemble dans l'ordre : `RuleTable` (instance immuable construite avec le catalogue et le `VisionContext`, ADR-0004 et 0007) → `CommandGate`, `UndoSlot`, `CommandLog` (avec `content_hash`, ADR-0009) → `SaveCoordinator` et `ProfilePort` → `CommandPipeline(state, rule_table, gate, undo, log, post_commit, profile_port, ports.event_sink)` → système des tours. `SessionPorts` ne contient que ce que la Presentation fournit **avant** la session : `event_sink` (la `EventQueue`) et `pacing_gate`. Une **nouvelle partie** et un **chargement** passent par la même fabrique : seul l'état change (`GameStateFactory.new_game(app, options)` ou `SaveStore.load_match()`), puis `pipeline.on_state_loaded()`.
+**3. `SessionFactory`, le seul constructeur de `GameSession`.** `SessionFactory.build(app: AppContext, state: GameState, vision: VisionContext, ports: SessionPorts) -> GameSession` assemble dans l'ordre : `RuleTable` (instance immuable construite avec le catalogue et le `VisionContext` **reçu**, ADR-0004 et 0007 ; la fabrique n'appelle jamais `rebuild`) → `CommandGate`, `UndoSlot`, `CommandLog` (avec `content_hash`, ADR-0009) → `SaveCoordinator` et `ProfilePort` → `CommandPipeline(state, rule_table, gate, undo, log, post_commit, profile_port, ports.event_sink)` → système des tours. `SessionPorts` ne contient que ce que la Presentation fournit **avant** la session : `event_sink` (la `EventQueue`) et `pacing_gate`. Une **nouvelle partie** et un **chargement** passent par la même fabrique : seuls l'état et son `VisionContext` changent (`GameStateFactory.new_game(app, options)` ou `SaveStore.load_match()`, qui rendent tous deux un état au cache reconstruit et son contexte, ADR-0007 §2), puis `pipeline.on_state_loaded()`.
 
 **4. `MatchScreen`, l'arbre de présentation d'une partie, construit en deux phases.** `src/app/match_screen.tscn` porte, pour chaque partie : `PresentationClock` (−20, implémente `ClockSource`), `TileTimeSource` (−10), `PresentationSequencer` (0) et ses gestionnaires (tuiles, HUD, caméra), `World` (`Node2D`, reçoit le transform de la caméra, ADR-0010) **dont `TileRenderer` (10), les marqueurs et les surcouches sont des enfants**, `AiRunner` (20), `InputSurface` (`Control`, ADR-0010) et `HudLayer` (`CanvasLayer`). `EventQueue` (`RefCounted`, **Core**, ADR-0002) est créée par `Bootstrap`. Ordre : (1) `Bootstrap` instancie `MatchScreen` **sans liaisons** et lui prend ses adaptateurs (`pacing_gate`, adaptateur sur le séquenceur) ; (2) `SessionFactory.build(app, state, ports)` ; (3) `match_screen.bind(session)` : donne `session.gate` au séquenceur (qui pose et lève ses verrous du joueur **directement** sur le `CommandGate`, ADR-0002 §8, sans `lock_port`), `session.pipeline` à l'`InputSurface` et à l'`AiRunner`, et un `AiRunnerPort` (`resume`, `cancel`, `is_running`) au système des tours.
 
 **5. Branchement des événements.** Le Core appelle par **appels directs et `Callable` injectés** (rappels `on_turn_finished`, `PacingGate`, `EventSink.push`). Les **signaux** ne servent qu'à l'intérieur de la Presentation (interface). Le séquenceur enregistre ses gestionnaires (`TileRendererHandler`, HUD, audio) à la construction de `MatchScreen`.
 
 **6. Chargement, reprise, fin.**
-- **Chargement** : `Bootstrap.resume_match()` → `SaveStore.load_match()` (ADR-0006) → `from_bytes(bytes, schema)` puis `VisionService.rebuild(state, vision_context)` (ADR-0007) → `MatchScreen` sans liaisons → `SessionFactory.build` → `match_screen.bind(session)` → `pipeline.on_state_loaded()` → RESYNCHRONISER du séquenceur. Si la phase stockée est EXÉCUTION_ENNEMIE, le système des tours appelle `AiRunnerPort.resume(state, pipeline, pacing)` (ADR-0005 §5, interface ajoutée) **après** `on_state_loaded()`.
+- **Chargement** : `Bootstrap.resume_match()` → `SaveStore.load_match()` (ADR-0006 : `from_bytes`, `VisionContext.for_map`, `rebuild` et validation à l'étape 5, repli sur `.bak` si la vue est incohérente) → `MatchScreen` sans liaisons → `SessionFactory.build(app, state, vision, ports)` → `match_screen.bind(session)` → `pipeline.on_state_loaded()` → RESYNCHRONISER du séquenceur. Si la phase stockée est EXÉCUTION_ENNEMIE, le système des tours appelle `AiRunnerPort.resume(state, pipeline, pacing)` (ADR-0005 §5, interface ajoutée) **après** `on_state_loaded()`.
 - **Fin ou abandon** : dans cet ordre, (1) `ai_runner.cancel()` : lève un drapeau d'annulation **coopératif** que la tâche de planification teste, puis `WorkerThreadPool.wait_for_task_completion(id)` (la tâche ne fait jamais de `call_deferred` bloquant ni n'attend le fil principal : interblocage) ; (2) `set_process(false)` sur les nœuds de `MatchScreen` et le `CommandGate` lève les verrous ; (3) `session.shutdown()`, qui **rompt tous les cycles** (champs de rappel et `Callable` mis à `null` ou `Callable()`) ; (4) `MatchScreen.queue_free()` ; (5) `Bootstrap` ne met la session à `null` qu'après le signal `tree_exited`. Vérifié : `queue_free()` ne détruit qu'en fin d'image, un nœud de priorité 20 exécute encore son `_process` dans l'image où il est en file ; chaque nœud teste donc `session != null` et son drapeau d'arrêt. Aucune tâche, aucun nœud ni objet de session ne survit.
 - **Retour au menu / nouvelle partie** : même séquence, puis nouvelle fabrique.
 
@@ -84,11 +84,11 @@ Sans racine de composition, chaque système construirait ses dépendances (donc 
    │ 2. FileStore ► SaveStore ► ProfileStore ► Réglages        ═══ AppContext (processus) ═══
    │
    ├─ Menus (18)  ──► « Nouvelle partie » / « Continuer »
-   │        │ état : GameStateFactory.new_game | SaveStore.load_match + from_bytes (rebuild ViewCache)
+   │        │ état + VisionContext : GameStateFactory.new_game | SaveStore.load_match (from_bytes, for_map, rebuild)
    │        ▼
    │   EventQueue (Core, créée par Bootstrap) + MatchScreen sans liaisons ──► SessionPorts{event_sink, pacing_gate}
    │        ▼
-   │   SessionFactory.build(app, state, ports)  ═══ GameSession (partie, RefCounted) ═══
+   │   SessionFactory.build(app, state, vision, ports)  ═══ GameSession (partie, RefCounted) ═══
    │        RuleTable ► Gate/Undo/Log ► SaveCoordinator + ProfilePort ► CommandPipeline ► TurnSystem + AiPlanner
    │        ▼
    └─ MatchScreen (Node, une par partie)
@@ -120,7 +120,7 @@ var planner: AiPlanner
 func shutdown() -> void                          # idempotent ; sans nœud, sans tâche vivante
 
 class_name SessionFactory extends RefCounted     # src/app/
-static func build(app: AppContext, state: GameState, ports: SessionPorts) -> GameSession
+static func build(app: AppContext, state: GameState, vision: VisionContext, ports: SessionPorts) -> GameSession
 ```
 
 ### Implementation Guidelines

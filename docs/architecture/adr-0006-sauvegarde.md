@@ -7,7 +7,7 @@ Accepted
 2026-10-30
 
 ## Last Verified
-2026-10-30 — conception sur les GDD 16 et 22 et les ADR-0003 et 0004 ; tests headless de godot-specialist sur Godot 4.7.2-stable official, **Windows seulement**. Le comportement d'Android (remplacement par renommage, cycle de vie, exclusion de sauvegarde automatique, `fsync`) est NOT SOURCEABLE.
+2026-10-30 — conception sur les GDD 16 et 22 et les ADR-0003 et 0004 ; tests headless de godot-specialist sur Godot 4.7.2-stable official, **Windows seulement**. Le comportement d'Android (remplacement par renommage, cycle de vie, exclusion de sauvegarde automatique, `fsync`) est NOT SOURCEABLE. Amendé le 2026-11-01 (revue d'architecture, B4 : reconstruction de la vue à l'étape 5 du chargement).
 
 ## Decision Makers
 Utilisateur (direction de projet), Claude (rédaction), godot-specialist et technical-director (validation avant écriture).
@@ -58,7 +58,7 @@ Le GDD 16 fixe quatre fichiers, des déclencheurs (après **chaque commande appl
 
 **2. Enveloppe à préfixe figé.** Chaque fichier = **préfixe définitif** (marque de 4 octets, version d'enveloppe, **longueur** de la charge utile, schéma de contenu, révision) puis la **charge utile**, puis l'**empreinte SHA-256** (`HashingContext`, 32 octets) de tout ce qui précède. Le **préfixe ne change jamais** (marque, version d'enveloppe, longueur, position de l'empreinte) : l'empreinte reste toujours vérifiable ; seul le schéma de contenu évolue. SHA-256 est un algorithme normalisé : sa sortie ne dépend pas de la version du moteur (contrainte de la formule 4 du GDD 16). La charge utile est `GameState.to_bytes()` (partie, déterministe, **sans enveloppe**, ADR-0003 amendé) ou le contenu du GDD 22 (profil). **Source unique du schéma de contenu** : l'enveloppe fait foi ; la charge utile ne le porte plus.
 
-**3. Ordre normatif des contrôles au chargement.** (1) marque ; (2) longueur ; (3) empreinte ; (4) schéma de contenu (**plus récent** : refus sans repli, fichier non modifié, copie non essayée, profil en lecture seule ; **plus ancien** : migration selon la règle 17bis du GDD 16 — avant le test fermé, mise de côté sans migration ; ensuite, chaîne de migrations N → N + 1 testées sur fixtures) ; (5) `from_bytes` et validation des invariants (GDD 1, règle 14). Un fichier plus récent n'est donc jamais lu comme « abîmé », et un octet de version altéré est attrapé par l'empreinte avant d'être interprété.
+**3. Ordre normatif des contrôles au chargement.** (1) marque ; (2) longueur ; (3) empreinte ; (4) schéma de contenu (**plus récent** : refus sans repli, fichier non modifié, copie non essayée, profil en lecture seule ; **plus ancien** : migration selon la règle 17bis du GDD 16 — avant le test fermé, mise de côté sans migration ; ensuite, chaîne de migrations N → N + 1 testées sur fixtures) ; (5) `from_bytes`, puis `VisionContext.for_map(catalog, state)` et `VisionService.rebuild(state, ctx)` (ADR-0007 §2), puis validation des invariants, vue et références au catalogue comprises (GDD 1, règle 14 ; ADR-0009 §10) ; un échec à cette étape est une corruption et bascule sur `.bak`. `SaveStore` reçoit le `DataCatalog` à sa construction (ADR-0008 §2) et rend l'état **et** son `VisionContext` dans `LoadResult` (revue du 2026-11-01, B4). Un fichier plus récent n'est donc jamais lu comme « abîmé », et un octet de version altéré est attrapé par l'empreinte avant d'être interprété.
 
 **4. Port `FileStore` injecté.** Toute opération de fichier passe par `FileStore` : `write(path, bytes) -> Error` (échec = premier `store_*` en échec), `read(path) -> PackedByteArray`, `rename(from, to) -> Error`, `delete(path) -> Error`, `exists(path) -> bool`. Les opérations rendent un **`Error`** (`DirAccess.rename_absolute`, `copy` et `remove_absolute` n'ont pas d'« erreur courante » à relire ; `FileAccess.get_open_error()` n'existe qu'après un échec d'ouverture). Deux implémentations : réelle (`FileAccess`, `DirAccess`, chemins complets `user://`) et **en mémoire avec injection de pannes** (échec à l'étape n, stockage plein, arrêt simulé entre deux étapes). Aucun appel de `FileAccess` ou `DirAccess` hors de l'implémentation réelle.
 
@@ -106,7 +106,7 @@ class_name SaveStore extends RefCounted            # écrivain unique, synchrone
 func save_match(state: GameState) -> Error
 func save_profile(profile: ProfileData) -> Error
 func delete_match() -> Error
-func load_match() -> LoadResult                    # courant, puis .bak
+func load_match() -> LoadResult                    # courant, puis .bak ; LoadResult : state (cache reconstruit), vision_context
 
 class_name SaveCoordinator extends PostCommitPort
 func on_commit(state: GameState, command: Command, result: ApplyResult) -> void

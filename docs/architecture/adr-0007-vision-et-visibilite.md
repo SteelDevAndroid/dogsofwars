@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur le GDD 5 (revu après la PR #3) et les ADR-0003 à 0005 ; **micro-banc headless** Godot 4.7.2 Windows : union de listes précalculées pour une faction (30 unités et 5 nœuds, 16 × 16) en **43 µs**, copie du cache de 256 octets en **0,26 µs**, précalcul sans occlusion en 8 ms (une fois). Android non mesuré.
+2026-10-31 — conception sur le GDD 5 (revu après la PR #3) et les ADR-0003 à 0005 ; **micro-banc headless** Godot 4.7.2 Windows : union de listes précalculées pour une faction (30 unités et 5 nœuds, 16 × 16) en **43 µs**, copie du cache de 256 octets en **0,26 µs**, précalcul sans occlusion en 8 ms (une fois). Android non mesuré. Amendé le 2026-11-01 (revue d'architecture : B1, aperçus sur la variante de simulation ; B4, appelants de `rebuild`).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -57,9 +57,9 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
 
 **1. Un module, des fonctions sans état.** `VisionService` (`src/core/vision/`) est un ensemble de fonctions statiques ; il **est le seul** code qui lit la position des unités, des nœuds, des ruines et le propriétaire réel pour répondre à « qui voit quoi », et le seul qui écrit la tranche Visibilité (`découverte`, octet 1, `dormant_mémorisé`) et le cache. Aucun nœud, aucun singleton, aucune horloge.
 
-**2. `ViewCache`, transitoire, attaché à l'état.** `GameState.view_cache` (`ViewCache`, `RefCounted`) tient, par faction, un `PackedByteArray` de `W × H` octets : `vue_maintenant`. Il est **copié par `duplicate_state()`**, **en profondeur** : `ViewCache.duplicate()` appelle `duplicate()` sur **chaque** `PackedByteArray` ; `Array.duplicate()` seul est **interdit** (vérifié : il est superficiel, les `PackedByteArray` restent partagés par référence et une simulation de l'IA écraserait la vue réelle du joueur ; `duplicate(true)` ou une boucle les rend indépendants et conserve le type). Coût : 256 octets par faction, de l'ordre de la microseconde (0,26 µs mesuré pour **un** tableau, à remesurer avec la copie profonde des deux), bien moins cher qu'un recalcul ; **reconstruit** par `VisionService.rebuild(state)` après `from_bytes` et `restore_from` (l'annulation du déplacement restaure donc aussi la vue), ignoré par `to_bytes` et `equals`. La validation de l'état vérifie : tout octet du cache à 1 correspond à une tuile `découverte`. Une incohérence dans un fichier chargé est une **corruption** : le fichier est refusé (repli sur `.bak`, ADR-0006), `from_bytes` ne répare jamais l'état en silence (l'égalité après aller-retour en dépend ; **GDD SYNC** : GDD 5, règle 24, qui parlait de poser le bit). **`filtered_copy(f)` ne garde que la ligne `f`** du `ViewCache` et de la tranche Visibilité (`découverte`, octet 1, `dormant_mémorisé`) ; les lignes des autres factions sont mises à zéro (sinon l'IA lirait la vision du joueur, donc la position de ses unités cachées).
+**2. `ViewCache`, transitoire, attaché à l'état.** `GameState.view_cache` (`ViewCache`, `RefCounted`) tient, par faction, un `PackedByteArray` de `W × H` octets : `vue_maintenant`. Il est **copié par `duplicate_state()`**, **en profondeur** : `ViewCache.duplicate()` appelle `duplicate()` sur **chaque** `PackedByteArray` ; `Array.duplicate()` seul est **interdit** (vérifié : il est superficiel, les `PackedByteArray` restent partagés par référence et une simulation de l'IA écraserait la vue réelle du joueur ; `duplicate(true)` ou une boucle les rend indépendants et conserve le type). Coût : 256 octets par faction, de l'ordre de la microseconde (0,26 µs mesuré pour **un** tableau, à remesurer avec la copie profonde des deux), bien moins cher qu'un recalcul ; ignoré par `to_bytes` et `equals`. **Qui le reconstruit** (revue du 2026-11-01, B4) : `from_bytes` et `restore_from` n'ont pas de `VisionContext` et **n'appellent jamais** `rebuild`. `restore_from(snapshot)` **recopie en profondeur le `ViewCache` de l'instantané**, cohérent avec lui puisqu'il a été pris par `duplicate_state()` : l'annulation du déplacement restaure donc aussi la vue, sans recalcul. `from_bytes` rend un état dont le cache est **invalide** (`ViewCache.valid = false` ; `can_see` sur un cache invalide est une erreur en développement). Les deux seuls appelants de `rebuild` sont `GameStateFactory.new_game` (mise en place) et l'étape 5 du chargement de `SaveStore` (ADR-0006 §3), qui construisent le contexte par `VisionContext.for_map(catalog, state)`. La validation de l'état vérifie : tout octet du cache à 1 correspond à une tuile `découverte`. Une incohérence dans un fichier chargé est une **corruption** : le fichier est refusé (repli sur `.bak`, ADR-0006), `from_bytes` ne répare jamais l'état en silence (l'égalité après aller-retour en dépend ; **GDD SYNC** : GDD 5, règle 24, qui parlait de poser le bit). **`filtered_copy(f)` ne garde que la ligne `f`** du `ViewCache` et de la tranche Visibilité (`découverte`, octet 1, `dormant_mémorisé`) ; les lignes des autres factions sont mises à zéro (sinon l'IA lirait la vision du joueur, donc la position de ses unités cachées).
 
-**3. Champs précalculés, tenus par un `VisionContext` injecté.** `FieldTable` (`RefCounted`, hors de l'état, construite une fois par carte à la mise en place ou paresseusement, partagée en lecture seule) donne, pour un couple (tuile source, rayon effectif), la liste ordonnée des indices de tuiles vues, occlusion comprise (formule 3 du GDD 2), **sur le vrai terrain**. Elle n'est utilisée que sur l'état réel. Elle est tenue, avec les rayons de vue par type (`UnitTypes`, ADR-0009), par un `VisionContext` (`RefCounted`, immuable) construit par la fabrique de session (ADR-0008) et passé aux fonctions : aucun accès statique global au catalogue (ADR-0009). Mémoire : plusieurs centaines de listes (256 tuiles × 3 rayons effectifs, 40 à 80 indices de 4 octets), soit de l'ordre de **100 à 250 Ko** hors état, à mesurer (et non « quelques dizaines de Ko » comme l'estimait le GDD 5).
+**3. Champs précalculés, tenus par un `VisionContext` injecté.** `FieldTable` (`RefCounted`, hors de l'état, construite une fois par carte à la mise en place ou paresseusement, partagée en lecture seule) donne, pour un couple (tuile source, rayon effectif), la liste ordonnée des indices de tuiles vues, occlusion comprise (formule 3 du GDD 2), **sur le vrai terrain**. Elle n'est utilisée que sur l'état réel. Elle est tenue, avec les rayons de vue par type (`UnitTypes`, ADR-0009), par un `VisionContext` (`RefCounted`, immuable) construit par `VisionContext.for_map(catalog, state)` (fonction pure) à la mise en place ou au chargement, puis passé à la fabrique de session (ADR-0008) et aux fonctions : aucun accès statique global au catalogue (ADR-0009). Mémoire : plusieurs centaines de listes (256 tuiles × 3 rayons effectifs, 40 à 80 indices de 4 octets), soit de l'ordre de **100 à 250 Ko** hors état, à mesurer (et non « quelques dizaines de Ko » comme l'estimait le GDD 5).
 
 **4. Recalcul dans `apply`, par les fonctions du propriétaire 5.** `recompute(state, ctx) -> VisionDelta` et `reveal_step(state, ctx, unit_id, tile) -> VisionDelta` sont appelés **dans `apply`** des types DÉPLACER, ATTAQUER, CAPTURER, RÉVEILLER, MONTER_NŒUD et EXÉCUTER_UNE_INTENTION (règle 9 du GDD 5). `VisionContext.factions` porte l'ensemble des factions à recalculer : **les deux** pour la `RuleTable` réelle, **aucune** pour la variante de simulation (§8). `VisionDelta` (valeur) est ce que le pipeline remonte dans `ApplyResult` : `révélé` (cas a à e de la règle 13 du GDD 5), la liste triée des tuiles nouvellement découvertes (pour TUILES_RÉVÉLÉES, règle 14) et les unités nouvellement vues. Le déplacement appelle `reveal_step` à chaque pas (règle 11 du GDD 5). `recompute` remet à zéro le cache des factions concernées, parcourt les sources par id croissant (unités éveillées puis nœuds), pose le cache et `découverte`, puis rafraîchit l'octet 1 des tuiles VISIBLES (règle 5, avec son exception de perte ou gain de propriétaire).
 
@@ -69,7 +69,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
 
 **7. Filtre d'événements.** `event_visible(before: ViewCache, after: ViewCache, faction, event) -> bool` est une fonction pure de `VisionService`. Le pipeline copie le cache **avant** l'application, applique, puis filtre le lot d'événements pour la faction du joueur avant `EventSink.push` : un événement de l'autre faction n'est publié que si ses tuiles étaient VISIBLES avant ou après. `TUILES_RÉVÉLÉES` n'existe que pour le joueur, jamais pour l'IA.
 
-**8. Simulations de l'IA : pas de recalcul.** La variante de simulation de la `RuleTable` (`RuleTable.simulation()`) a `VisionContext.factions = []` : `apply_on` ne recalcule rien et ne révèle rien. L'IA planifie sur sa vue figée, reperçue avant **chaque** appel à `plan_next` à partir de l'état réel (ADR-0005 §1) ; l'effet d'une embuscade n'est donc pas simulé (il l'est dans le run réel). Cela règle à la fois la fuite de terrain par `FieldTable` (calculée sur le vrai terrain) et le coût : le recalcul n'entre pas dans les 2 500 copies du tour d'IA, contrairement à ce que craignait le GDD 5 (750 ms).
+**8. Simulations de l'IA : pas de recalcul.** La variante de simulation de la `RuleTable` (`RuleTable.simulation()`) a `VisionContext.factions = []` : `apply_on` ne recalcule rien et ne révèle rien. L'IA planifie sur sa vue figée, reperçue avant **chaque** appel à `plan_next` à partir de l'état réel (ADR-0005 §1) ; l'effet d'une embuscade n'est donc pas simulé (il l'est dans le run réel). La même variante sert à `preview` (joueur comme IA) et à `apply_on` (ADR-0004 §2 et §6 ; revue du 2026-11-01, B1) : **aucune copie, filtrée ou non, n'est jamais recalculée** avec la `FieldTable`, construite sur le vrai terrain. Cela règle à la fois la fuite de terrain par `FieldTable` et le coût : le recalcul n'entre pas dans les 2 500 copies du tour d'IA, contrairement à ce que craignait le GDD 5 (750 ms).
 
 **9. Rendu du brouillard.** Hors de ce périmètre : le canal `fog` du shader et les transitions sont décidés par ADR-0001 ; la présentation lit `TUILES_RÉVÉLÉES`, le cache reconstruit au chargement (`RESYNCHRONISER`) et jamais l'état brut.
 
@@ -80,7 +80,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
 ### Architecture Diagram
 
 ```
- Commande appliquée (ADR-0004)                          Pipeline réel : factions {J, IA}     apply_on (IA) : {IA}
+ Commande appliquée (ADR-0004)                          Pipeline réel : factions {J, IA}     copies (preview, apply_on) : {}
    │ DÉPLACER : reveal_step à chaque pas ──┐                       │                                │
    ▼                                       ▼                       ▼                                ▼
  VisionService (fonctions statiques) ── écrit : découverte, octet 1, dormant_mémorisé (état)  +  vue_maintenant (ViewCache)
@@ -88,7 +88,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
    ├─► can_see(cache, f, tuile) ──► FactionView (validation)       ┐ test de parité
    ├─► can_see(cache, f, tuile) ──► filtered_copy(f) (IA, aperçus) ┘
    └─► event_visible(avant, après, f, evt) ──► lot filtré ──► EventSink.push
- GameState ── duplicate_state() copie ViewCache ; from_bytes / restore_from ──► rebuild(state)
+ GameState ── duplicate_state() et restore_from copient le ViewCache ; mise en place et chargement (SaveStore, étape 5) ──► rebuild(state, ctx)
 ```
 
 ### Key Interfaces
@@ -96,6 +96,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
 ```gdscript
 class_name ViewCache extends RefCounted          # transitoire : jamais sérialisé ni comparé
 var seen: Array[PackedByteArray]                 # par faction, W×H octets : vue_maintenant
+var valid: bool                                  # faux après from_bytes, vrai après rebuild ; copié par duplicate et restore_from
 func duplicate() -> ViewCache
 
 class_name FieldTable extends RefCounted         # partagée, lecture seule, sur le vrai terrain
@@ -105,6 +106,8 @@ class_name VisionContext extends RefCounted      # immuable, injecté par la fab
 var fields: FieldTable
 var view_radius: PackedInt32Array                # par type d'unité (UnitTypes, ADR-0009)
 var factions: PackedInt32Array                   # à recalculer dans apply : [J, IA] réel, [] simulation
+static func for_map(catalog: DataCatalog, state: GameState) -> VisionContext   # pur : FieldTable du terrain de l'état, rayons du catalogue, [J, IA]
+func simulation() -> VisionContext               # même FieldTable, factions = []
 
 class_name VisionDelta extends RefCounted        # valeur rendue dans ApplyResult
 var revealed: bool
@@ -112,7 +115,7 @@ var discovered_tiles: PackedInt32Array           # triées, pour TUILES_RÉVÉL�
 var newly_seen_units: PackedInt32Array
 
 class_name VisionService extends RefCounted      # fonctions statiques, aucun état
-static func rebuild(state: GameState, ctx: VisionContext) -> void                # après from_bytes / restore_from
+static func rebuild(state: GameState, ctx: VisionContext) -> void                # appelants : GameStateFactory.new_game, SaveStore (chargement, étape 5)
 static func recompute(state: GameState, ctx: VisionContext) -> VisionDelta     # ctx.factions : deux (réel) ou aucune (simulation)
 static func reveal_step(state: GameState, ctx: VisionContext, unit_id: int, tile: int) -> VisionDelta
 static func can_see(cache: ViewCache, faction: int, tile: int) -> bool
@@ -125,7 +128,8 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 ### Implementation Guidelines
 - Aucun code hors `VisionService` **ne doit** décider de la visibilité ni lire le propriétaire réel d'une tuile pour une faction ; la validation **doit** passer par `FactionView`.
 - `ViewCache` et `FieldTable` **ne doivent jamais** être sérialisés, comparés par `equals` ni écrits ailleurs que par `VisionService`.
-- `duplicate_state()` **doit** copier le cache ; `restore_from`, `from_bytes` et la mise en place **doivent** appeler `rebuild`.
+- `duplicate_state()` et `restore_from` **doivent** copier le cache en profondeur ; la mise en place et le chargement **doivent** appeler `rebuild` avec le contexte de `VisionContext.for_map` ; `from_bytes` et `restore_from` **ne doivent jamais** appeler `rebuild`.
+- `preview`, `apply_on` et toute simulation **doivent** utiliser la variante de simulation : aucune copie n'est recalculée avec la `FieldTable`.
 - Le parcours **doit** se faire par id croissant ; la table de champs **doit** être construite sans `Dictionary` parcouru.
 - Tout nouveau lecteur d'information de faction **doit** être ajouté au test de parité `FactionView` / `filtered_copy`.
 
@@ -169,7 +173,7 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 ## Risks
 - **Seuil de 1 ms dépassé sur Android** : *Atténuation* : repli sur un compteur par tuile (section 8), mesure sur l'appareil.
 - **Fuite par un lecteur oublié** : *Atténuation* : parité exhaustive, motif interdit enregistré, revue des nouvelles requêtes.
-- **Cache périmé après `restore_from`** : *Atténuation* : `rebuild` appelé par `restore_from` lui-même, pas par l'appelant ; test AC-BR38.
+- **Cache périmé après `restore_from`** : *Atténuation* : `restore_from` recopie le cache de l'instantané ; un cache invalide (`from_bytes` sans `rebuild`) fait échouer `can_see` en développement ; test AC-BR38.
 
 ## GDD Requirements Addressed
 
@@ -198,6 +202,8 @@ Aucun code existant. Amendements : **faits** — ADR-0003 (le cache accompagne `
 - Parité `FactionView` / `filtered_copy` sur 1 000 états aléatoires, 0 divergence.
 - `recompute` deux factions ≤ 1 ms sur l'appareil Android de référence ; copie du cache indépendante de l'original.
 - Après `restore_from` (annulation), la vue égale celle d'avant la commande annulée.
+- Un aperçu (joueur ou IA) ne modifie ni `découverte` ni le `ViewCache` de sa copie et rend un `VisionDelta` vide.
+- Après `from_bytes` seul, le cache est invalide ; après le chargement complet (`SaveStore`, étape 5), il égale celui d'avant la sauvegarde.
 
 ## Related
 - ADR-0003 (état, copie filtrée), ADR-0004 (`FactionView`, pipeline), ADR-0005 (perception), ADR-0001 (rendu du brouillard).
