@@ -283,7 +283,7 @@ Ce GDD est le document d'exigences du système ; les écrans sont dans `design/u
 
 ### E. Attaque et verrou (règle 14)
 
-- **AC-HU23** (Logic) **THEN** ordre sur horloge injectée : ATTAQUE_RÉSOLUE, trait (200 à 350 ms), UNITÉ_TOUCHÉE cible à 350 ms, attaquant à 650 ms (décalages depuis ATTAQUE_RÉSOLUE), puis UNITÉ_DÉTRUITE (gris puis affaissement 400 ms) ; verrou ≈ 1,5 s (tolérance [PROP] 1,3 à 1,7 s), COMMANDES_VERROUILLÉES pour tout appui, relâché à la fin. [BLOQUÉ 8]
+- **AC-HU23** (Logic) **THEN** ordre sur horloge injectée : ATTAQUE_RÉSOLUE, trait (200 à 350 ms), UNITÉ_TOUCHÉE cible à 350 ms, attaquant à 650 ms (décalages depuis ATTAQUE_RÉSOLUE), puis UNITÉ_DÉTRUITE (gris puis affaissement 400 ms) ; verrou `ATTACK_LOCK_MS` = 1 600 ms (animation ≈ 1,5 s, règle 14), COMMANDES_VERROUILLÉES pour tout appui, relâché à la fin. [BLOQUÉ 8]
 - **AC-HU24** (Visuel) **THEN** captures à t + 200, 350, 650, 1 050, 1 500 ms ; en animations réduites mêmes étapes et ordre, trait fixe 150 ms, chiffres fixes 800 ms. [BLOQUÉ 8]
 
 ### F. Journal, reprise, rappels (règles 9, 15 à 17, 22)

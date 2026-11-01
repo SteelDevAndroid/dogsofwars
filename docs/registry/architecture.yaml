@@ -388,11 +388,11 @@ performance_budgets:
     status: active
     budget_ms: 8.0
     adr: docs/architecture/adr-0006-sauvegarde.md
-    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) ; sinon fil d'écriture par amendement"
+    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) AVANT les stories du runner de l'IA (chaque commande de l'IA écrit) ; sinon fil d'écriture par amendement d'ADR-0004 §4 et ADR-0006 §7"
     referenced_by:
       - docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-01   # ancien : mesure de t_write sans ordre imposé par rapport aux stories du runner
 
   - system: vision-recompute
     status: active
