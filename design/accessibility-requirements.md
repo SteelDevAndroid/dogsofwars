@@ -97,8 +97,8 @@ taille des tuiles et des textes en paysage.
 | Échelle du texte | Standard | Tout le texte | Not Started | 100% à 150% dans les réglages du jeu. Le jeu suit aussi la taille de police du système quand le moteur peut la lire (NOT SOURCEABLE, voir Platform). Aucun texte ne doit être coupé à 150% : défilement ou retour à la ligne. |
 | Contraste du texte | Standard | Tout le texte | Not Started | 4,5:1 minimum (WCAG AA), 3:1 pour le texte de 24 pt et plus. Vérifié sur les vraies couleurs de fond, y compris le panneau papier des fragments. |
 | Contraste des éléments non textuels | Standard | Icônes, contours, marqueurs de carte | Not Started | 3:1 minimum contre la tuile ou le panneau en dessous (WCAG 2.1 SC 1.4.11). |
-| Palette daltonienne — Protanopie / Deutéranopie | Standard | Couleurs de faction, menace, ruines | Not Started | Une palette alternative unique couvre les deux. Les couleurs de faction sont déjà un réglage unique (tweak « factionColor » des mockups), ce qui rend le changement peu coûteux. L'orange-rouge de menace et le vert de « Attaque esquivée » ne doivent jamais servir seuls (voir l'audit ci-dessous). |
-| Palette daltonienne — Tritanopie | Standard | Mêmes éléments | Not Started | Vérifier que l'ocre des ruines et l'ambre des PV bas restent distincts du jaune de l'énergie. Pas de palette dédiée si les doublures de forme suffisent au test. |
+| Palette daltonienne — Protanopie / Deutéranopie | Standard | Couleurs de faction, menace, ruines | Not Started | Une palette alternative unique couvre les deux. Les couleurs de faction sont déjà un réglage unique (tweak « factionColor » des mockups), ce qui rend le changement peu coûteux. L'orange-rouge de menace ne doit jamais servir seul (voir l'audit ci-dessous). Menace et ruines gardent leurs couleurs dans la palette alternative (art bible, section 4). |
+| Palette daltonienne — Tritanopie | Standard | Mêmes éléments | Not Started | Estimation à la main dans l'art bible (section 4, « Tritanopie ») : seule paire à risque, F1 teal / F3 cobalt, doublée par le motif ; repli = lisière de F3 en trait double. L'ambre des PV bas est retiré (jauge blanche). À confirmer au simulateur ; pas de palette dédiée si les doublures suffisent. |
 | Audit couleur-seule | Basic | Toute l'interface et la carte | Not Started | Tableau ci-dessous. Chaque ligne a une doublure non colorée avant la sortie. |
 | Mode contraste élevé | Comprehensive | — | Out of scope | Retiré des réglages du HUD le 2026-10-29. Voir Known Intentional Limitations. |
 | Luminosité / gamma | Basic | — | N/A | Rendu en aplats sans zones sombres critiques ; la luminosité est celle du téléphone. Le brouillard ne doit jamais cacher une information de jeu (règle de lecture : les ruines restent visibles sous le brouillard). |
@@ -115,11 +115,11 @@ Repris de `design/ux/hud.md` § 10.1 ; toute nouvelle couleur porteuse de sens s
 | Tuiles de la carte | Gris contre couleur de faction | Possession | Motif de faction sur les nœuds et les unités (à dessiner dans l'art bible) ; changement de saturation, pas seulement de teinte | Not Started |
 | Unités | Teinte de faction | Unité du joueur ou ennemie | Silhouettes différentes : hexagone (joueur), losange (ennemi) | Designed (mockups) |
 | Menace annoncée | Orange-rouge | Une attaque frappera cette tuile au prochain tour | Hachuré à 135° et pastille « ! » ; texte dans la puce | Designed (mockups) |
-| Ruine | Ocre et lueur sépia | Lieu narratif à atteindre | Glyphe de ruine anguleux | Designed (mockups) |
-| Attaque esquivée | Vert | L'attaque annoncée n'a pas eu lieu | Coche ✓ et texte | Designed (mockups) |
+| Ruine | Ocre et lueur sépia | Lieu narratif à atteindre | Glyphe en arche brisée | Designed (mockups) |
+| Attaque esquivée | Blanc contourné | L'attaque annoncée n'a pas eu lieu | Coche ✓ et texte | Designed (mockups) |
 | Intention annulée | Orange | Plus de menace sur cette tuile | Croix × sur la tuile | Designed (mockups) |
 | Cible d'attaque | Blanc | Unité ennemie attaquable | Crochets d'angle (forme) | Designed (mockups) |
-| PV bas | Ambre | Unité à moins de la moitié de ses PV | Longueur de la jauge ; valeur dans le panneau | Designed (mockups) |
+| PV bas | Blanc (aucune teinte) | Unité à moins de la moitié de ses PV | Longueur de la jauge, repère fixe à 50 % ; valeur dans le panneau | Designed (mockups) |
 | Perte | Gris | Unité, nœud ou tuile perdus | Glyphe de débris ; liseré en pointillés ; texte dans la puce et le journal | Designed (mockups) |
 | Énergie insuffisante | À choisir | Action trop chère | Coût affiché en chiffres sur le bouton ; bouton désactivé | Open (couleur non choisie) |
 | Tour ennemi | Teinte violette | Les commandes sont verrouillées | Étiquette « Tour ennemi » et journal | Designed (mockups) |
@@ -198,7 +198,7 @@ Aucun son n'est encore conçu ; ces lignes sont les sons attendus d'après `desi
 | Nœud perdu | Perte de territoire | Désaturation, puce de perte, journal | No | Not Started |
 | Drone réveillé | Nouvelle unité | Pulsation et nouvelle unité sur la carte | No | Not Started |
 | Ruine lue / fragment trouvé | Nouveau fragment | Recoloration, panneau de fragment | No | Not Started |
-| Derniers tours | Fin de partie proche | Compteur en ambre | No | Not Started |
+| Derniers tours | Fin de partie proche | Chiffre en blanc plein 700, contour blanc de 2 pt sur la barre, puce « DERNIERS TOURS » | No | Not Started |
 
 ---
 
@@ -228,7 +228,7 @@ le jeu** (il ne peut pas compter sur le réglage système seul).
 |--------|----------------|---------------|-------------------|------------------|-----------|-------|
 | Carte en tuiles et brouillard | Possession par la couleur ; petites tuiles en paysage | Précision des appuis ; pincement pour zoomer | Lire l'état de 80 à 120 tuiles | Aucune | Partial | Doublures de forme et de saturation ; zoom sans pincement à spécifier |
 | Énergie et nœuds | Couleur « énergie insuffisante » non choisie | Aucune | Suivre le stock et le revenu | Aucune | Partial | Coût en chiffres sur les boutons |
-| Unités et combat | PV bas en ambre ; cibles | Confirmation des attaques | Dégâts, riposte, portée | Sons de coup | Partial | Aperçu de combat obligatoire ; jauges ; chiffres |
+| Unités et combat | PV bas (jauge blanche) ; cibles | Confirmation des attaques | Dégâts, riposte, portée | Sons de coup | Partial | Aperçu de combat obligatoire ; jauges ; chiffres |
 | IA à intentions | Menaces en orange-rouge | Aucune (le joueur n'agit pas pendant le tour ennemi) | Retenir les menaces d'un tour à l'autre | Son d'annonce | Partial | Hachuré + « ! » ; puce ; journal ; menaces jamais masquées |
 | Arbre de protocoles | Non conçu | Non conçu | 10 à 12 protocoles | Non conçu | Not Started | Une phrase par protocole (pilier 3) |
 | Ruines, fragments et chronique | Panneau papier : contraste du texte serif | Aucune | Lecture de textes narratifs | Son de découverte | Partial | Pas d'effacement automatique ; échelle de texte |
@@ -295,7 +295,7 @@ le jeu** (il ne peut pas compter sur le réglage système seul).
 | Godot (version installée, 4.7 visée) relie-t-il AccessKit à TalkBack sur Android et à VoiceOver sur iOS ? Expose-t-il la taille de police et le réglage d'animations du système ? Non couvert par `docs/engine-reference/godot/`. | godot-specialist | Avant le gate Technical Setup → Pre-Production | |
 | Les mockups et `design/ux/hud.md` utilisent des cibles de 44 px ; Android recommande 48 dp. Passer le HUD à 48 dp, ou accepter 44 sur Android ? | ux-designer | Avant `/ux-review` suivant | **Résolu le 2026-10-29** : zones tactiles étendues au-delà du dessin (48 dp Android, 44 pt iOS) ; mise en page inchangée |
 | Le mode contraste élevé est listé dans `design/ux/hud.md` § 10.5 mais non engagé ici. L'engager, ou le retirer du HUD ? | user | Avant `/art-bible` | **Résolu le 2026-10-29** : retiré du HUD ; dans Known Intentional Limitations |
-| Quelle palette alternative pour les daltoniens ? Dépend des couleurs de faction de l'art bible. | art-director | `/art-bible` | |
+| Quelle palette alternative pour les daltoniens ? Dépend des couleurs de faction de l'art bible. | art-director | `/art-bible` | **Résolu le 2026-10-30** : azur #3A8EE6, jaune pâle #F0DC6E, gris #5F6266 ; menace et ruines inchangées (art bible, section 4) |
 | Le déplacement en un appui peut-il être annulé ? (Protection contre l'appui involontaire.) | game-designer | GDD des unités | |
 | Zoom sans pincement : boutons +/− ou double appui ? | ux-designer | Pattern library | |
 | Aucune carte du parcours joueur (`design/player-journey.md`) : le contexte d'usage (transports, une main, son coupé) vient du concept. À écrire depuis `.claude/docs/templates/player-journey.md`. | user | Avant les specs d'écran suivantes | |

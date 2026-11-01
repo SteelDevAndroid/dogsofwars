@@ -65,7 +65,133 @@ last_updated: "2026-10-29"
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: eclaireur
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: pack
+    health: 6
+    attack: 1
+    defense: 0
+    movement: 4
+    range: 1
+    vision: 4
+    trait_family: mât
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: assaut
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: pack
+    health: 8
+    attack: 3
+    defense: 1
+    movement: 3
+    range: 1
+    vision: 2
+    trait_family: lame
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: rempart
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: pack
+    health: 14
+    attack: 1
+    defense: 2
+    movement: 2
+    range: 1
+    vision: 2
+    trait_family: carapace
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: ouvrier
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: pack
+    health: 7
+    attack: 1
+    defense: 0
+    movement: 3
+    range: 1
+    vision: 2
+    trait_family: fourche
+    can_capture: true
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: sentinelle
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: gardien
+    health: 10
+    attack: 0
+    defense: 2
+    movement: 0
+    range: 1
+    vision: 3
+    trait_family: croc
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: chasseur
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: gardien
+    health: 8
+    attack: 3
+    defense: 0
+    movement: 3
+    range: 1
+    vision: 3
+    trait_family: faille
+    can_capture: false
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
+  - name: bastion
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/brouillard-vision.md
+    camp: gardien
+    health: 14
+    attack: 2
+    defense: 2
+    movement: 1
+    range: 1
+    vision: 2
+    trait_family: crete
+    can_capture: true
+    notes: "Starting values (proposed); combat balance owned by GDD 8."
+    added: 2026-10-30
+    revised: ""
 
 # Example (remove when first real entry is added):
 #
@@ -138,6 +264,320 @@ formulas:
     notes: "Out-of-bounds coordinates are refused, never clamped."
     added: 2026-10-29
     revised: ""
+  - name: screen_to_tile
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+    variables:
+      - c
+      - rc
+      - s
+      - tile_pt
+    output_range: [-inf, inf]
+    expression: "(floori(w.x), floori(w.y)) with w = c + (s - rc) / tile_pt"
+    notes: "Presentation float math; yields integer (x, y) for commands. floori, never int(). Outside [0,W)x[0,H) is an empty background, never clamped (like tile_index)."
+    added: 2026-10-30
+    revised: ""
+  - name: modifier_pv
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+      - design/gdd/combat.md
+    variables:
+      - pv_avant
+      - delta
+      - PV_max
+    output_range: [0, 14]
+    expression: "pv_apres = clamp(pv_avant + delta, 0, PV_max); detruite = (pv_apres = 0) and (pv_avant > 0)"
+    notes: "Only HP write path (6). Combat (8) computes delta; rest heal passes a positive delta."
+    added: 2026-10-30
+    revised: ""
+  - name: revenu
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    variables:
+      - REVENU_NIVEAU
+      - niveau
+    output_range: [0, 30]
+    expression: "sum of REVENU_NIVEAU[level(n)] over nodes owned by the faction"
+    notes: "Computed each time, never stored. Paid at the start of the faction's turn."
+    added: 2026-10-30
+    revised: ""
+  - name: crediter
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    variables:
+      - avant
+      - montant
+      - ENERGIE_MAX
+    output_range: [0, 99]
+    expression: "apres = min(avant + montant, ENERGIE_MAX); surplus_perdu = avant + montant - apres"
+    notes: "Surplus is lost, never refused. Only the turn-start income credits at MVP."
+    added: 2026-10-30
+    revised: ""
+  - name: owner_of_tile
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    variables:
+      - RAYON_NIVEAU
+      - niveau
+      - distance
+    output_range: [0, 3]
+    expression: "node tile -> node owner; else nearest owned node in range (Chebyshev <= RAYON_NIVEAU[level]); tie keeps current owner, else lowest node id; none in range -> neutral"
+    notes: "Only system 11 writes tile owners. Full recompute after any node write; fixed point."
+    added: 2026-10-30
+    revised: ""
+  - name: territory_size
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    variables:
+      - x
+      - y
+      - R
+      - W
+      - H
+    output_range: [4, 49]
+    expression: "(min(x+R, W-1) - max(x-R, 0) + 1) * (min(y+R, H-1) - max(y-R, 0) + 1)"
+    notes: "Tiles of one isolated node clipped at the borders, before overlap."
+    added: 2026-10-30
+    revised: ""
+  - name: defense_eff
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    variables:
+      - DEF
+      - DEF_PER_TILE_CLASS
+      - tile_class
+    output_range: [0, 4]
+    expression: "DEF + DEF_PER_TILE_CLASS * tile_class"
+    notes: "Defence of the defender's type plus the tile class of the defender's tile."
+    added: 2026-10-30
+    revised: ""
+  - name: damage
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    variables:
+      - DMG_SCALE
+      - DEF_BASE
+      - ATQ
+      - PV_att
+      - PV_max_att
+      - defense_eff
+    output_range: [0, 6]
+    expression: "0 if ATQ = 0 else max(DMG_MIN, (DMG_SCALE*DEF_BASE*ATQ*PV_att) // (PV_max_att*(DEF_BASE+defense_eff)))"
+    notes: "Integer division. Proportional to the striker's remaining HP. Deterministic, no draw. Retaliation uses the same formula."
+    added: 2026-10-30
+    revised: ""
+  - name: sight_field
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+    variables:
+      - rayon
+      - terrain
+      - bloquee
+    output_range: [1, 121]
+    expression: "T visible from V iff cheb(V,T) <= rayon + [V on mountain] and not blocked(V,T)"
+    notes: "blocked() is the map GDD formula 3 (Bresenham, only mountains block). Node sources use max(2, territory radius). Union over a faction's sources."
+    added: 2026-10-30
+    revised: ""
+  - name: prix_reveil
+    status: active
+    source: design/gdd/reveil-drones.md
+    referenced_by:
+      - design/gdd/reveil-drones.md
+      - design/gdd/energie.md
+    variables:
+      - REVEIL_PRIX
+      - type
+    output_range: [4, 8]
+    expression: "REVEIL_PRIX[type]"
+    notes: "Fixed per type for the whole match; read through prix_reveil so that system 12 may add a modifier later. Debited by depenser (10)."
+    added: 2026-10-30
+    revised: ""
+  - name: couleur_tuile
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+      - design/gdd/brouillard-vision.md
+    variables:
+      - proprio_reel
+      - octet1_P
+      - visibilite
+    output_range: [0, 3]
+    expression: "VISIBLE: proprio_reel; EXPLOREE: octet1_P; INCONNUE: 0"
+    notes: "Byte of tile colour for the reference faction; written only by system 15."
+    added: 2026-10-30
+    revised: ""
+  - name: duree_onde_recoloration
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    variables:
+      - T_ANNEAU
+      - T_FONDU
+      - K_MAX
+      - T_TOTAL_MAX
+      - k_max
+    output_range: [400, 1000]
+    expression: "min(K_MAX, k_max) * min(T_ANNEAU, (T_TOTAL_MAX - T_FONDU) div K_MAX) + T_FONDU"
+    notes: "Presentation only; radius 1/2/3 gives 600/800/1000 ms."
+    added: 2026-10-30
+    revised: ""
+  - name: saturation_fondu
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    variables:
+      - u
+      - D
+    output_range: [0, 1000]
+    expression: "(1000 * u) div D (grey to faction); mirrored for faction to grey; two halves for faction to faction"
+    notes: "Thousandths; hues never mix."
+    added: 2026-10-30
+    revised: ""
+  - name: fragment_suivant
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - P_f
+      - C_f
+      - J_f
+    output_range: [1, 12]
+    expression: "min(P_f minus (C_f union J_f))"
+    notes: "Fixed chronicle order; no randomness."
+    added: 2026-10-30
+    revised: ""
+  - name: zone_ruine
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    variables:
+      - RAYON_ZONE_RUINE
+    output_range: [9, 25]
+    expression: "(2 * RAYON_ZONE_RUINE + 1)^2 clipped to the grid"
+    notes: "Only neutral non-node tiles are written."
+    added: 2026-10-30
+    revised: ""
+  - name: score_ruine
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/tours-conditions-victoire.md
+    variables:
+      - w_f
+      - w_t
+      - n_tuiles
+    output_range: [60, 85]
+    expression: "w_f + n_tuiles * w_t"
+    notes: "Not displayed before the read; excluded from the turn-30 comparison."
+    added: 2026-10-30
+    revised: ""
+  - name: score_ia_couple
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    variables:
+      - w_deg
+      - w_letal
+      - w_perte
+      - w_danger
+      - w_noeud
+      - w_raid
+      - w_laisse
+      - w_prog
+    output_range: [-1000, 1000]
+    expression: "w_deg*D_inf + w_letal*letal - w_perte*Riposte - w_danger*Exposition + w_noeud*Valeur_noeud + w_raid*raideur - w_laisse*max(0, dist_poste - LEASH) + w_prog*gain_distance"
+    notes: "Deterministic greedy score; weights are data in assets/data/ai.*"
+    added: 2026-10-30
+    revised: ""
+  - name: stat_effective
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+      - design/gdd/unites-drones.md
+      - design/gdd/combat.md
+      - design/gdd/reveil-drones.md
+      - design/gdd/brouillard-vision.md
+    variables:
+      - base
+      - mod_p
+      - min
+      - max
+    output_range: [0, 99]
+    expression: "clamp(base + sum(mod_p over acquired protocols, by ascending id), min, max)"
+    notes: "Pure accessor; effects are never stored; the faction is a parameter."
+    added: 2026-10-30
+    revised: ""
+  - name: fin_recherche
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    variables:
+      - tour_depart
+      - duree
+    output_range: [2, 30]
+    expression: "tour_depart + duree"
+    notes: "Research finishes at the start of that turn; one research at a time per faction."
+    added: 2026-10-30
+    revised: ""
+  - name: largeur_tuile_centiemes
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/controles-tactiles-camera.md
+    variables:
+      - largeur_rectangle
+      - colonnes
+    output_range: [2983, 4475]
+    expression: "(100 * largeur_rectangle) div colonnes"
+    notes: "Hundredths of a point; minimum tile 3100 (31 pt)."
+    added: 2026-10-30
+    revised: ""
+  - name: instant_panneau_fragment
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    variables:
+      - fin_onde
+      - DELAI_PANNEAU
+    output_range: [1000, 1400]
+    expression: "fin_onde + DELAI_PANNEAU"
+    notes: "Without a wave: end of the read + 400 ms."
+    added: 2026-10-30
+    revised: ""
   - name: draw
     status: active
     source: design/gdd/modele-etat-partie.md
@@ -191,6 +631,84 @@ formulas:
     notes: "Retired IDs excluded. Chronicle (14) compares it to its 4/12 unlock threshold."
     added: 2026-10-29
     revised: ""
+  - name: t_cmd_max
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+      - design/gdd/modele-etat-partie.md
+    variables:
+      - T_ai
+      - f_cmd
+      - C
+      - t_clone
+    output_range: [0, 2000]
+    expression: "T_ai * f_cmd / C - t_clone (ms)"
+    notes: "Budget to validate+apply one command for the AI (9). Provisional 0.3 ms; measure on the reference phone."
+    added: 2026-10-29
+    revised: ""
+  - name: chebyshev
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+    variables:
+      - x1
+      - y1
+      - x2
+      - y2
+    output_range: [0, 15]
+    expression: "max(abs(x1 - x2), abs(y1 - y2))"
+    notes: "Distance on the 8-neighbour square grid. Used for ranges (6, 8), sight radius (5), map rules."
+    added: 2026-10-29
+    revised: ""
+  - name: path_cost
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+      - design/gdd/commandes-evenements.md
+    variables:
+      - c(t)
+      - MP_left
+      - MP_max
+    output_range: [1, 765]
+    expression: "sum of entry costs (plain 1, forest 2, mountain 3, water impassable); reachable if cost <= MP_left, or one step with full MP (floor rule)"
+    notes: "Validates DÉPLACER (23). MP owned by units (6)."
+    added: 2026-10-29
+    revised: ""
+  - name: final_score
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/gdd/profil-donnees-meta.md
+    variables:
+      - T
+      - N
+      - sum_L
+      - P
+      - U
+      - F
+      - D
+    output_range: [0, 776]
+    expression: "w_t*T + w_n*N + w_l*sum_L + w_p*P + w_u*min(U, U_cap) + w_f*F + D"
+    notes: "Start weights 1, 8, 4, 10, 2, 60; U_cap 20. F = ruins read this match. D = 8 per turn left on domination. Best score submitted to the profile (22)."
+    added: 2026-10-29
+    revised: ""
+  - name: loss_bound
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+    variables:
+      - t_write
+      - t_action_min
+    output_range: [1, 10]
+    expression: "1 + ceil(t_write / t_action_min)"
+    notes: "Most player actions a kill can lose. Provisional t_action_min 250 ms gives 2. Never a fragment already shown (save rule 10)."
+    added: 2026-10-29
+    revised: ""
 
 # Example:
 #
@@ -229,6 +747,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/controles-tactiles-camera.md
     value: 16
     unit: tiles per side
     added: 2026-10-29
@@ -238,6 +757,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/unites-drones.md
     value: 60
     unit: units per match
     added: 2026-10-29
@@ -247,6 +767,7 @@ constants:
     source: design/gdd/modele-etat-partie.md
     referenced_by:
       - design/gdd/modele-etat-partie.md
+      - design/gdd/noeuds.md
     value: 10
     unit: nodes per match
     added: 2026-10-29
@@ -286,6 +807,434 @@ constants:
     value: 262144
     unit: bytes (256 KB)
     added: 2026-10-29
+    revised: ""
+  - name: EVENT_QUEUE_MAX
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+    value: 256
+    unit: events
+    added: 2026-10-29
+    revised: ""
+  - name: N_REFUS_MAX
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+    value: 32
+    unit: refused commands per AI turn
+    added: 2026-10-29
+    revised: ""
+  - name: T_FRAME
+    status: active
+    source: design/gdd/commandes-evenements.md
+    referenced_by:
+      - design/gdd/commandes-evenements.md
+      - design/gdd/controles-tactiles-camera.md
+    value: 33
+    unit: ms (one frame at 30 fps)
+    added: 2026-10-29
+    revised: ""
+  - name: MVP_MAP_SIZE
+    status: active
+    source: design/gdd/carte-tuiles-terrain.md
+    referenced_by:
+      - design/gdd/carte-tuiles-terrain.md
+    value: 12
+    unit: tiles per side (launch sizes 10 and 14)
+    added: 2026-10-29
+    revised: ""
+  - name: T_MAX
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/ux/hud.md
+    value: 30
+    unit: turns per match
+    added: 2026-10-29
+    revised: ""
+  - name: LAST_TURNS_WARNING
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+      - design/ux/hud.md
+    value: 5
+    unit: turns left
+    added: 2026-10-29
+    revised: ""
+  - name: W_RUIN
+    status: active
+    source: design/gdd/tours-conditions-victoire.md
+    referenced_by:
+      - design/gdd/tours-conditions-victoire.md
+    value: 60
+    unit: score points per ruin read (shown on the HUD ruin chip)
+    added: 2026-10-29
+    revised: ""
+  - name: SAVE_MAIN_THREAD_BUDGET
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+      - design/gdd/commandes-evenements.md
+    value: 8
+    unit: ms per save on the main thread (provisional)
+    added: 2026-10-29
+    revised: ""
+  - name: SAVE_LOAD_BUDGET
+    status: active
+    source: design/gdd/sauvegarde-automatique.md
+    referenced_by:
+      - design/gdd/sauvegarde-automatique.md
+      - design/gdd/profil-donnees-meta.md
+    value: 150
+    unit: ms to load profile and match at launch (provisional)
+    added: 2026-10-29
+    revised: ""
+  - name: ZOOM_MIN_TILE_PT
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/ux/hud.md
+      - design/accessibility-requirements.md
+    value: 31
+    unit: pt (dp on Android) minimum tile size on screen
+    added: 2026-10-30
+    revised: ""
+  - name: ZOOM_MAX_MILLI
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/accessibility-requirements.md
+    value: 2000
+    unit: thousandths of ZOOM_MIN_TILE_PT (maximum zoom; 2000 = 2x) — renamed from ZOOM_MAX_FACTOR by ADR-0009 (integers only)
+    added: 2026-10-30
+    revised: 2026-10-31
+  - name: TAP_SLOP_MILLI
+    status: active
+    source: design/gdd/controles-tactiles-camera.md
+    referenced_by:
+      - design/gdd/controles-tactiles-camera.md
+      - design/ux/hud.md
+      - design/accessibility-requirements.md
+    value: 500
+    unit: thousandths of a tile (finger drift below which a touch is a tap) — renamed from TAP_SLOP_FACTOR by ADR-0009 (integers only)
+    added: 2026-10-30
+    revised: 2026-10-31
+  - name: REST_HEAL
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    value: 2
+    unit: HP healed at rest (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NODE_REST_BONUS
+    status: active
+    source: design/gdd/unites-drones.md
+    referenced_by:
+      - design/gdd/unites-drones.md
+    value: 2
+    unit: extra HP healed at rest on a node owned by the unit's faction (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: ENERGIE_MAX
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+      - design/ux/hud.md
+      - design/gdd/reveil-drones.md
+    value: 99
+    unit: energy (stock cap per faction)
+    added: 2026-10-30
+    revised: ""
+  - name: ENERGIE_DEPART
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    value: 6
+    unit: energy at match start (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: REVENU_NIVEAU
+    status: active
+    source: design/gdd/energie.md
+    referenced_by:
+      - design/gdd/energie.md
+    value: "1:3, 2:4, 3:5"
+    unit: energy per turn per owned node, by node level (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: RAYON_NIVEAU
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+    value: "1:1, 2:2, 3:3"
+    unit: tiles (Chebyshev radius of a node's territory, by level; proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: PRIX_MONTEE
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+      - design/gdd/energie.md
+    value: "1:12, 2:20"
+    unit: energy to raise a node from level n to n+1 (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NIVEAU_MAX
+    status: active
+    source: design/gdd/noeuds.md
+    referenced_by:
+      - design/gdd/noeuds.md
+      - design/gdd/energie.md
+    value: 3
+    unit: maximum node level
+    added: 2026-10-30
+    revised: ""
+  - name: DMG_SCALE
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 2
+    unit: damage scale factor (integer; 3 breaks the balance; proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DEF_BASE
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 4
+    unit: pivot of the defence damping (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DMG_MIN
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+    value: 1
+    unit: minimum damage of a hit when ATQ > 0
+    added: 2026-10-30
+    revised: ""
+  - name: DEF_PER_TILE_CLASS
+    status: active
+    source: design/gdd/combat.md
+    referenced_by:
+      - design/gdd/combat.md
+      - design/gdd/carte-tuiles-terrain.md
+    value: 1
+    unit: defence per tile defence class (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: NODE_VISION_MIN
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+    value: 2
+    unit: tiles (minimum vision radius of an owned node; level 3 uses its territory radius)
+    added: 2026-10-30
+    revised: ""
+  - name: MOUNTAIN_VISION_BONUS
+    status: active
+    source: design/gdd/brouillard-vision.md
+    referenced_by:
+      - design/gdd/brouillard-vision.md
+      - design/gdd/carte-tuiles-terrain.md
+    value: 1
+    unit: tiles (extra vision radius for a source standing on a mountain)
+    added: 2026-10-30
+    revised: ""
+  - name: REVEIL_PRIX
+    status: active
+    source: design/gdd/reveil-drones.md
+    referenced_by:
+      - design/gdd/reveil-drones.md
+      - design/gdd/energie.md
+    value: "eclaireur:4, ouvrier:5, assaut:6, rempart:8"
+    unit: energy to wake a dormant drone, by its type (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: T_ANNEAU
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 200
+    unit: ms per ring of the recolouring wave (150-200, proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: T_FONDU
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 400
+    unit: ms fade of one tile (200-400, proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: K_MAX
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 3
+    unit: rings after which wave starts are simultaneous (1-5)
+    added: 2026-10-30
+    revised: ""
+  - name: T_TOTAL_MAX
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 1000
+    unit: ms cap of one wave
+    added: 2026-10-30
+    revised: ""
+  - name: T_REV
+    status: active
+    source: design/gdd/recoloration-monde.md
+    referenced_by:
+      - design/gdd/recoloration-monde.md
+    value: 150
+    unit: ms reveal fade without wave
+    added: 2026-10-30
+    revised: ""
+  - name: RAYON_ZONE_RUINE
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+      - design/gdd/noeuds.md
+    value: 2
+    unit: tiles (Chebyshev radius of the ruin zone; zone = 25 tiles)
+    added: 2026-10-30
+    revised: ""
+  - name: Z_RUINE_MAX
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+      - design/gdd/recoloration-monde.md
+    value: 25
+    unit: tiles in a ruin zone
+    added: 2026-10-30
+    revised: ""
+  - name: LECTURES_PAR_PARTIE
+    status: active
+    source: design/gdd/ruines-fragments.md
+    referenced_by:
+      - design/gdd/ruines-fragments.md
+    value: 3
+    unit: ruins drawn (and fragments readable) per match
+    added: 2026-10-30
+    revised: ""
+  - name: PISTES_MAX
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 16
+    unit: last-seen entries kept by the AI
+    added: 2026-10-30
+    revised: ""
+  - name: PISTES_TTL
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 4
+    unit: turns a last-seen entry lives
+    added: 2026-10-30
+    revised: ""
+  - name: LEASH
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 4
+    unit: tiles a Chasseur may stray from its post
+    added: 2026-10-30
+    revised: ""
+  - name: RAID_RADIUS
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 2
+    unit: tiles from an AI-side dormant that counts as a raid
+    added: 2026-10-30
+    revised: ""
+  - name: EVALS_MAX
+    status: active
+    source: design/gdd/ia-ennemie.md
+    referenced_by:
+      - design/gdd/ia-ennemie.md
+    value: 20000
+    unit: pure formula evaluations per AI turn
+    added: 2026-10-30
+    revised: ""
+  - name: PRIX_PROTOCOLES
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    value: "veille_elargie:15, reveil_sobre:20, cadence_marche:30, repos_reglementaire:15, blindage_appoint:25, rempart_arme:35"
+    unit: energy to research (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DUREE_PROTOCOLES
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+    value: "2, 2, 3 turns per branch level"
+    unit: turns (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: CALENDRIER_PROTOCOLES_IA
+    status: active
+    source: design/gdd/arbre-protocoles.md
+    referenced_by:
+      - design/gdd/arbre-protocoles.md
+      - design/gdd/ia-ennemie.md
+    value: "blindage_appoint:12, rempart_arme:18"
+    unit: AI turn at which the protocol is granted (proposed)
+    added: 2026-10-30
+    revised: ""
+  - name: DELAI_PANNEAU
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    value: 400
+    unit: ms after the wave before the fragment panel
+    added: 2026-10-30
+    revised: ""
+  - name: DELAI_FERMETURE
+    status: active
+    source: design/gdd/hud-systeme.md
+    referenced_by:
+      - design/gdd/hud-systeme.md
+      - design/gdd/ruines-fragments.md
+    value: 500
+    unit: ms before Continuer is accepted
+    added: 2026-10-30
     revised: ""
 
 # Example:

@@ -97,7 +97,10 @@ place secondaire, mais le pilier 4 le protège.*
 1. **Carte en tuiles et brouillard de guerre** : déplacement, révélation, terrain.
 2. **Économie d'énergie et nœuds** : les nœuds (l'équivalent des villes) produisent de
    l'énergie, peuvent être capturés et montent de niveau.
-3. **Unités drones et combat** : environ 6 types, attaque et contre-attaque, menaces annoncées.
+3. **Unités drones et combat** : 4 types de meute et 3 types de Gardiens (le camp de l'IA, décision du
+   2026-10-30), attaque et contre-attaque, menaces annoncées. Les Gardiens sont l'apparence
+   unique de l'adversaire ; leurs ruines et leurs fragments sont ceux de la faction affrontée
+   (pilier 2). Chiffrage du périmètre : producer.
 4. **Arbre de protocoles** : la technologie, de 10 à 12 protocoles qui débloquent unités
    et capacités.
 5. **Ruines, fragments et chroniques** : fragments issus d'un pool écrit à la main, tirés
@@ -260,7 +263,7 @@ question au joueur, on choisit celui qui pose une question.
    *Test : une ruine doit se repérer depuis l'autre bout de l'écran, même dans le brouillard.*
 3. **Une silhouette par type, un motif par faction.** Les silhouettes de drones sont fixes,
    compactes et facettées ; les factions se distinguent par la palette et un motif
-   récurrent (antenne, emblème). Les ruines humaines, plus anguleuses et brisées,
+   récurrent (antenne, emblème). Les ruines humaines, en courbes brisées,
    contrastent avec la géométrie propre des drones.
    *Test : un joueur daltonien reconnaît la faction par sa forme, pas seulement par sa couleur.*
 
@@ -389,7 +392,8 @@ rejouer pour la chronique.
 
 **Required for MVP** :
 1. Un duel 1 contre 1 sur une petite carte faite à la main ou à graine fixe.
-2. 4 types d'unités drones, avec combat et contre-attaque.
+2. 4 types d'unités drones de meute, plus 3 types de Gardiens pour l'IA (périmètre inscrit le
+   2026-10-30, à chiffrer par le producer), avec combat et contre-attaque.
 3. Des nœuds à capturer et à faire monter de niveau, et l'économie d'énergie.
 4. 6 protocoles.
 5. Le brouillard de guerre et des ruines contenant 5 fragments.

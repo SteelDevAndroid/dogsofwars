@@ -95,31 +95,47 @@ d'une information.
 
 ## Systems Enumeration
 
+**Sens de la colonne « Depends On »** (précisé le 2026-10-30) : le système A dépend de B
+quand A **lit ou appelle B directement**, par un contrat de données (une tranche de
+l'état dont B est propriétaire, une valeur ou une fonction de B) ou de fonction. Cela
+veut dire trois choses : le GDD de B est conçu avant celui de A ; un changement du
+contrat de B oblige à relire A ; A ne peut pas être testé sans un substitut de B. Cela ne
+veut **pas** dire :
+- « s'exécute après » (l'ordre des phases est possédé par les tours, 3) ;
+- « écrit dans les données de » (qui écrit quoi est dans le modèle d'état, règle 2 du
+  GDD 1 : un système peut écrire une tranche sans que son propriétaire dépende de lui) ;
+- « reçoit les événements de » (les événements passent par la couche des commandes, 23 :
+  le consommateur dépend de 23, jamais du producteur) ;
+- « est affiché par » (le HUD, 17, dépend des systèmes qu'il montre, pas l'inverse).
+La colonne ne liste que les dépendances **directes** ; la fermeture transitive se lit
+dans la carte ci-dessous. Chaque GDD qualifie les siennes de dures (sans elle, rien ne
+marche) ou souples (dégradation prévue) dans sa section Dependencies.
+
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Modèle d'état de partie | Core | MVP | Designed | design/gdd/modele-etat-partie.md | — |
-| 2 | Carte en tuiles et terrain | Core | MVP | Not Started | — | 1 |
-| 3 | Tours et conditions de victoire | Core | MVP | Not Started | — | 1 |
-| 4 | Contrôles tactiles et caméra de carte (inferred) | Core | MVP | Not Started | — | 2, 23 |
-| 5 | Brouillard de guerre et vision | Gameplay | MVP | Not Started | — | 2, 6, 11 |
-| 6 | Unités drones | Gameplay | MVP | Not Started | — | 1, 2 |
-| 7 | Réveil des drones | Gameplay | MVP | Not Started | — | 6, 10 |
-| 8 | Combat | Gameplay | MVP | Not Started | — | 2, 6 |
-| 9 | IA ennemie à intentions | Gameplay | MVP | Not Started | — | 3, 5, 6, 7, 8, 10, 11, 12, 23 |
-| 10 | Énergie | Economy | MVP | Not Started | — | 1, 3 |
-| 11 | Nœuds | Economy | MVP | Not Started | — | 2, 10 |
-| 12 | Arbre de protocoles | Progression | MVP | Not Started | — | 6, 10 |
-| 13 | Ruines et fragments | Narrative | MVP | Not Started | — | 2, 5, 11, 15, 22 |
+| 2 | Carte en tuiles et terrain | Core | MVP | Designed | design/gdd/carte-tuiles-terrain.md | 1 |
+| 3 | Tours et conditions de victoire | Core | MVP | Designed | design/gdd/tours-conditions-victoire.md | 1 |
+| 4 | Contrôles tactiles et caméra de carte (inferred) | Core | MVP | Designed | design/gdd/controles-tactiles-camera.md | 2, 23 |
+| 5 | Brouillard de guerre et vision | Gameplay | MVP | Designed | design/gdd/brouillard-vision.md | 2, 6, 11 |
+| 6 | Unités drones | Gameplay | MVP | Designed | design/gdd/unites-drones.md | 1, 2 |
+| 7 | Réveil des drones | Gameplay | MVP | Designed | design/gdd/reveil-drones.md | 6, 10 |
+| 8 | Combat | Gameplay | MVP | Designed | design/gdd/combat.md | 2, 6 |
+| 9 | IA ennemie à intentions | Gameplay | MVP | Designed | design/gdd/ia-ennemie.md | 3, 5, 6, 7, 8, 10, 11, 12, 23 |
+| 10 | Énergie | Economy | MVP | Designed | design/gdd/energie.md | 1, 3 |
+| 11 | Nœuds | Economy | MVP | Designed | design/gdd/noeuds.md | 2, 10 |
+| 12 | Arbre de protocoles | Progression | MVP | Designed | design/gdd/arbre-protocoles.md | 1, 3, 6, 10, 23 |
+| 13 | Ruines et fragments | Narrative | MVP | Designed | design/gdd/ruines-fragments.md | 2, 5, 11, 15, 22 |
 | 14 | Chronique et progression méta | Narrative | Vertical Slice | Not Started | — | 13, 22 |
-| 15 | Recoloration du monde | Gameplay | MVP | Not Started | — | 2, 11 |
-| 16 | Sauvegarde automatique | Persistence | MVP | Not Started | — | 1, 22 |
-| 17 | HUD (inferred) | UI | MVP | In Design | design/ux/hud.md | 3, 4, 5, 6, 8, 9, 10, 11, 13, 15, 19, 23 |
+| 15 | Recoloration du monde | Gameplay | MVP | Designed | design/gdd/recoloration-monde.md | 2, 11 |
+| 16 | Sauvegarde automatique | Persistence | MVP | Designed | design/gdd/sauvegarde-automatique.md | 1, 22 |
+| 17 | HUD (inferred) | UI | MVP | Designed | design/gdd/hud-systeme.md ; design/ux/hud.md | 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 19, 22, 23 |
 | 18 | Menus et écrans hors partie (inferred) | UI | Vertical Slice | Not Started | — | 3, 14, 16, 19 |
 | 19 | Réglages et accessibilité (inferred) | Meta | Vertical Slice | Not Started | — | 22 |
 | 20 | Audio (inferred) | Audio | Vertical Slice | Not Started | — | 19, 23 |
 | 21 | Génération procédurale de cartes | Core | Alpha | Not Started | — | 2, 7, 11, 13 |
 | 22 | Profil et données méta (inferred) | Persistence | MVP | Designed | design/gdd/profil-donnees-meta.md | — |
-| 23 | Commandes et événements (inferred) | Core | MVP | Not Started | — | 1 |
+| 23 | Commandes et événements (inferred) | Core | MVP | Designed | design/gdd/commandes-evenements.md | 1 |
 
 *Le HUD (17) est spécifié par une UX spec plutôt qu'un GDD ; son statut suit
 `/ux-review` (dernier verdict : NOT ASSESSED, 0 point bloquant, en attente de ces GDD).*
@@ -304,8 +320,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 ## Circular Dependencies
 
 - **Aucun cycle**, sous trois conditions :
-  - **Ruines ↔ chronique** : cassé par le profil (22), qui porte le pool de fragments. Les
-    ruines lisent et avancent le pool dans le profil ; la chronique lit le profil.
+  - **Ruines ↔ chronique** : cassé par le profil (22), qui porte la chronique. À la
+    création de la partie, la chronique est copiée dans l'état (instantané, GDD 1 règle 10) ;
+    les ruines (13) n'y lisent que l'instantané et le journal, et la couche des commandes
+    (23) applique l'effet « enregistrer un fragment » au profil ; la chronique lit le profil.
   - **Tours ↔ IA** : les tours définissent les phases ; l'IA s'y branche. Les tours ne
     dépendent pas de l'IA.
   - **Score ↔ ruines et nœuds** : le score lit ses comptes dans l'état de partie (1), pas
@@ -331,10 +349,10 @@ indépendants d'une même couche peuvent être conçus en parallèle.*
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 23 |
-| Design docs started | 3 (HUD, UX spec ; GDD 1 Modèle d'état de partie ; GDD 22 Profil et données méta) |
-| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1 et 22 en attente de `/design-review` |
+| Design docs started | 19 (HUD, UX spec ; GDD 1, 22, 23, 2, 3, 16, 4, 6, 10, 11, 8, 5, 7, 15, 13, 9, 12 et 17) |
+| Design docs reviewed | 1 (HUD : `/ux-review` NOT ASSESSED, 0 point bloquant) ; GDD 1, 22, 23, 2, 3, 16, 4, 6, 10, 11, 8, 5, 7, 15, 13, 9, 12 et 17 en attente de `/design-review` |
 | Design docs approved | 0 |
-| MVP systems designed | 2/18 |
+| MVP systems designed | 18/18 |
 | Vertical Slice systems designed | 0/4 |
 
 ---

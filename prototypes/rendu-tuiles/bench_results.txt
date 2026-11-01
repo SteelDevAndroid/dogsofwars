@@ -1,0 +1,5 @@
+renderer=vulkan method=mobile adapter=Intel(R) UHD Graphics
+12x12 idle: frames=5378 avg=0.566 ms max=44.285 ms (1767 fps)
+12x12 ondes en continu (1 capture r3 / 0.6 s): frames=8645 avg=0.578 ms max=1.389 ms (1729 fps)
+16x16 idle: frames=4823 avg=0.622 ms max=1.389 ms (1607 fps)
+16x16 ondes en continu: frames=7646 avg=0.658 ms max=24.661 ms (1519 fps)

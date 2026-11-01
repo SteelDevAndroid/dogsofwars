@@ -1,0 +1,802 @@
+# Architecture Decision Registry
+#
+# PURPOSE: Single source of truth for key architectural stances that all ADRs
+# must agree on. Skills check this before writing new ADRs to detect conflicts
+# at authoring time — before stories are created against contradictory decisions.
+#
+# RULES:
+#   - Register a stance when it constrains how OTHER systems must be built.
+#     An internal implementation detail that affects only one ADR does not need
+#     to be registered.
+#   - Never delete entries — set status: "superseded_by: ADR-NNNN" instead,
+#     quoted: unquoted, the second colon makes the file invalid YAML.
+#   - When a stance changes: update the entry, set revised: to today's date,
+#     add a comment with the old value, and run /architecture-review to check
+#     what ADRs are now invalidated.
+#   - adr: is the authoritative source. All other ADRs that depend on this
+#     stance list themselves in referenced_by.
+#
+# WRITTEN BY: /architecture-decision (Phase 5 — after ADR is approved)
+# READ BY:    /architecture-decision (Step 2 — before authoring begins)
+#             /architecture-review (Phase 4 — cross-ADR conflict baseline)
+#             /create-stories (to embed architectural constraints in stories)
+#             /dev-story (to check implementation against accepted stances)
+#
+# SEARCH PATTERNS (for skills using Grep):
+#   All state owners:       Grep pattern="^  - state:" path="docs/registry/architecture.yaml"
+#   Who owns player_health: Grep pattern="state: player_health"
+#   All signal contracts:   Grep pattern="pattern: signal"
+#   Budget for combat:      Grep pattern="system: combat"
+#   All forbidden patterns: Grep pattern="^  - pattern:" (forbidden_patterns section)
+#   Superseded entries:     Grep pattern="superseded_by: ADR-"
+#
+# LAYOUT: the one shape .claude/scripts/registry.sh reads. Each section is a
+#   key at column 0 holding a block list, or [] while it is empty. Each entry
+#   starts with its section's name key ("- state:", "- contract:", "- system:"
+#   or "- target_fps:" for the frame budget, "- purpose:", "- pattern:"), the
+#   dash at column 2 (or 0, the same for every entry of a section); its fields
+#   sit two columns past the dash. Quote a value that holds ": ", such as
+#   "superseded_by: ADR-NNNN". A line in any other shape is reported as
+#   unsupported layout, with its number.
+
+version: 1
+last_updated: 2026-10-30
+
+# ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
+# Who is the authoritative owner of each piece of shared game state.
+# Conflicts: two ADRs claiming to own the same state = data race / authority bug.
+#
+# Register state when it is READ or WRITTEN by more than one system.
+# Internal-only state (never accessed by another system) does not need to be registered.
+#
+# Required fields: state, owner_system, adr, interface, referenced_by[], added
+# interface: how other systems access this state (read-only property, method call,
+#   signal, shared resource, etc.) — this is the contract other ADRs depend on.
+
+state_ownership:
+  - state: tile_render_data
+    status: active
+    owner_system: tile-renderer
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    interface: "8 canaux par instance du MultiMesh (custom data x,y,z,w : shown, previous, fog, start ; color r,g,b,a : s0, dur, fog_start, fog_prev), miroir CPU PackedFloat32Array de WaveScheduler"
+    write_access: tile-renderer-only
+    referenced_by:
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: presentation_time
+    status: active
+    owner_system: presentation-clock
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    interface: "PresentationClock.current() (secondes, pausable, avancée par _process(delta), jamais sauvegardée) ; TileTimeSource écrit g_time depuis l'horloge ; jamais global_shader_parameter_get ni create_timer"
+    write_access: presentation-clock-only
+    referenced_by:
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: 2026-10-30   # ancien propriétaire : tile-time-source (ADR-0001)
+
+  - state: event_queue
+    status: active
+    owner_system: event-queue
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    interface: "EventQueue (RefCounted) : push par le pipeline via un EventSink injecté, pop par PresentationSequencer seulement ; jamais sauvegardée"
+    write_access: command-pipeline-push-and-sequencer-pop-only
+    referenced_by:
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_header
+    status: active
+    owner_system: state-header-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "En-tête (PackedInt64Array à indices nommés : schéma, ids, graine, compteur de tirages, tour, phase) ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_map
+    status: active
+    owner_system: map-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Carte (propriétaire, dernier changement de propriétaire, ancrage, point d'intérêt) et visibilité (découverte, dernier propriétaire vu) ; ni couleur ni vision actuelle stockées (PR #3 : déduites par 15 et 5, caches hors de l'état) ; colonnes par tile_index ; terrain partagé en lecture seule, objet statique sans setter) ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_units
+    status: active
+    owner_system: units-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Unités (colonnes triées par id, compactées en fin de tour) ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_nodes
+    status: active
+    owner_system: nodes-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Nœuds ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_ruins
+    status: active
+    owner_system: ruins-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Ruines, instantané de la chronique (écrit une seule fois à la création) et journal des lectures de ruine ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_ai_agents
+    status: active
+    owner_system: ai-agents-slice
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
+    write_access: ai-system-only
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_intentions
+    status: active
+    owner_system: intentions-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Intentions, pistes de l'IA et rappels de présentation ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: game_state_factions
+    status: active
+    owner_system: factions-slice
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    interface: "Factions : énergie, protocoles, recherche en cours, éliminée ; compteurs de score ; écriture par les fonctions du système propriétaire seulement ; lecture par StateView (scalaires ou copies, jamais une colonne brute) ; champs préfixés _ ; table déclarative des colonnes unique"
+    write_access: owner-system-only
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: 2026-10-30   # le journal des commandes est passé à game_state_command_log (ADR-0004)
+
+  - state: game_state_command_log
+    status: active
+    owner_system: command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    interface: "Révision (= numéro de la dernière commande appliquée) ; incrémentée par le pipeline seulement, jamais reculée, conservée par restore_from ; lecture par StateView"
+    write_access: command-pipeline-only
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: undo_slot
+    status: active
+    owner_system: command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    interface: "UndoSlot : instantané d'annulation (copie hors de l'état), révision de l'instantané, motif ; runtime, jamais sauvegardé ni copié ; remis à zéro par on_state_loaded()"
+    write_access: command-pipeline-only
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: save_files
+    status: active
+    owner_system: save-store
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    interface: "user://match.sav, match.bak, profile.sav, profile.bak : écrits par SaveStore seulement (écrivain unique, synchrone) ; jamais d'accès direct par un autre système"
+    write_access: save-store-only
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: profile_data
+    status: active
+    owner_system: profile-system
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    interface: "Profil (GDD 22) : chronique, déblocages, meilleurs scores, réglages ; écrit par le système 22 via ProfileStore.request_write() puis SaveStore, sur effet appliqué par la couche des commandes (ProfilePort) ; simulations : effets jetés, rejeu : port nul"
+    write_access: profile-system-only
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
+  - state: command_gate
+    status: active
+    owner_system: command-gate
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    interface: "CommandGate : garde de réentrance (toutes sources) et verrous du joueur par raisons ; runtime, jamais sauvegardé ni copié"
+    write_access: command-gate-and-sequencer-only
+    referenced_by:
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: ""
+
+
+# Example:
+#
+# state_ownership:
+#   - state: player_health
+#     status: active           # active | "superseded_by: ADR-NNNN"
+#     owner_system: health-system
+#     adr: docs/architecture/adr-0001-health-system.md
+#     interface: "HealthComponent.current_health (read-only float, range 0–max_health)"
+#     write_access: health-system-only   # only owner can write; others read
+#     referenced_by:
+#       - docs/architecture/adr-0001-health-system.md
+#       - docs/architecture/adr-0003-combat-system.md   # reads to apply damage
+#       - docs/architecture/adr-0007-ui-system.md       # reads to display HUD
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── INTERFACE CONTRACTS ──────────────────────────────────────────────────────
+# How systems are required to communicate with each other.
+# Conflicts: one ADR expects signal, another expects direct call = integration bug.
+#
+# Register a contract when the communication pattern between two systems is
+# explicitly decided in an ADR and other systems must follow the same pattern.
+#
+# pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
+
+interfaces:
+  - contract: color_event_to_renderer
+    status: active
+    pattern: direct_call
+    producer: presentation-sequencer
+    consumers:
+      - tile-renderer
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    signal_signature: "TileRendererHandler.handle(event, ctx) -> PresentationHold appelle TileRenderer.apply_color_event(event: ColorTilesChanged, t0: float) -> int (durée de l'onde en ms, 0 si affichage direct) ; signal wave_finished(event_id: Vector2i) réservé aux tests"
+    referenced_by:
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: 2026-10-30   # ancien motif : signal
+
+  - contract: ai_turn_handoff
+    status: active
+    pattern: direct_call
+    producer: turns-system
+    consumers:
+      - ai-runner
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    signal_signature: "AiRunner.start_turn(state, pipeline, pacing: PacingGate) ; rappel injecté on_turn_finished: Callable ; PacingGate.is_ready() -> bool (port Core, adaptateur de présentation, version factice pour les tests)"
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+    revised: ""
+
+  - contract: command_submission
+    status: active
+    pattern: direct_call
+    producer: controls-ai-turns
+    consumers:
+      - command-pipeline
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    signal_signature: "CommandPipeline.submit(command) -> ValidationResult ; check(command) -> ValidationResult ; preview(command) -> PreviewResult ; apply_on(copy, command) -> ValidationResult"
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+    revised: ""
+
+  - contract: event_batch_delivery
+    status: active
+    pattern: direct_call
+    producer: command-pipeline
+    consumers:
+      - presentation-sequencer
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    signal_signature: "EventSink.push(batch: EventBatch) ; EventQueue.pop() -> EventBatch (null si vide) ; NullSink pour le rejeu ; les simulations n'appellent pas le pipeline"
+    referenced_by:
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: ""
+
+  - contract: presentation_handler
+    status: active
+    pattern: direct_call
+    producer: presentation-sequencer
+    consumers:
+      - tile-renderer-handler
+      - hud-presenter
+      - audio-presenter
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    signal_signature: "handle(event, ctx) -> PresentationHold ; handle_merged(events, ctx) -> PresentationHold ; on_idle(view: StateView) ; rebuild_from_state(view: StateView)"
+    referenced_by:
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+
+# Example:
+#
+# interfaces:
+#   - contract: damage_delivery
+#     status: active
+#     pattern: signal          # how the producer notifies consumers
+#     producer: combat-system
+#     consumers:
+#       - health-system        # receives damage_dealt signal, applies to health
+#       - ui-system            # receives damage_dealt signal, shows damage number
+#       - audio-system         # receives damage_dealt signal, plays SFX
+#     adr: docs/architecture/adr-0003-combat-system.md
+#     signal_signature: "damage_dealt(amount: float, target: Node, is_crit: bool)"
+#     referenced_by:
+#       - docs/architecture/adr-0003-combat-system.md
+#       - docs/architecture/adr-0001-health-system.md
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── PERFORMANCE BUDGETS ──────────────────────────────────────────────────────
+# Frame time allocations per system, against a defined total frame budget.
+# Conflicts: allocations that sum to more than the total budget = unshippable.
+#
+# Register a budget when an ADR explicitly claims a frame time allocation.
+# The registry lets /architecture-review verify the total doesn't exceed the target.
+
+performance_budgets:
+  - target_fps: 60
+    total_frame_budget_ms: 16.6
+    platform: Mobile
+    notes: "Cible de la revue du 2026-10-30 (M6) ; le pire pic d'un commit du joueur (1 + 0,3 + 0,3 + 8 ms) tient, pas avec 20 ms d'écriture synchrone (ADR-0006, AC-F1)"
+    added: 2026-10-30
+
+  - system: game-state-copy
+    status: active
+    budget_ms: 0.2
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    notes: "COÛT UNITAIRE par copie, pas un budget d'image : copie plus première écriture au plus 200 µs sur l'appareil de référence (500 ms ÷ 2 500 copies, formule 5 du GDD 1) ; mesuré 15 µs (copie seule) sur PC, Android non mesuré ; si dépassé, revoir le budget de l'IA, pas la représentation"
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: tile-rendering
+    status: active
+    budget_ms: 1.0
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par image, écriture de 256 tuiles au plus 0,5 ms, 1 appel de dessin, 0 allocation par image ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
+    referenced_by:
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: save-main-thread
+    status: active
+    budget_ms: 8.0
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) ; sinon fil d'écriture par amendement"
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: vision-recompute
+    status: active
+    budget_ms: 1.0
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    notes: "Recalcul de vue pour les DEUX factions par commande RÉELLE, dans l'image du commit ; distinct du 0,3 ms de validation plus application des commandes de l'IA (les simulations ne recalculent pas) ; mesuré 43 µs par faction sur PC sans occlusion, Android non mesuré ; repli : compteur par tuile"
+    referenced_by:
+      - docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+    revised: ""
+
+  - system: move-range-query
+    status: active
+    budget_ms: 2.0
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    notes: "Plage de déplacement (RuleTable.check_move_range) à la sélection ou au changement de révision ; au-delà, WorkerThreadPool et affichage entier à la fin ; à mesurer sur l'appareil"
+    referenced_by:
+      - docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31
+    revised: ""
+
+  - system: ai-runner-frame
+    status: active
+    budget_ms: 2.0
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next ; comptages 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    referenced_by:
+      - docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: command-validate-apply
+    status: active
+    budget_ms: 0.3
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    notes: "Provisoire (formule 3 du GDD 23) : validation plus application au plus 0,3 ms par commande sur l'appareil de référence (non nommé) ; si dépassé, l'IA évalue moins de candidates"
+    referenced_by:
+      - docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+    revised: ""
+
+  - system: presentation-sequencer
+    status: active
+    budget_ms: 0.3
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    notes: "Proposé, à confirmer : séquenceur et file au plus 0,3 ms CPU par image, 0 allocation par image au repos ; aucun appareil de référence nommé"
+    referenced_by:
+      - docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+    revised: ""
+
+
+# Example:
+#
+# performance_budgets:
+#   - target_fps: 60
+#     total_frame_budget_ms: 16.6
+#     platform: PC             # PC | Console | Mobile | All
+#     adr: docs/architecture/adr-0000-performance-targets.md
+#     added: 2026-03-26
+#     revised: ""
+#
+#   - system: combat
+#     status: active
+#     budget_ms: 2.0
+#     adr: docs/architecture/adr-0003-combat-system.md
+#     notes: "Includes physics queries, hitbox evaluation, and damage calculation"
+#     referenced_by:
+#       - docs/architecture/adr-0003-combat-system.md
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── API DECISIONS ───────────────────────────────────────────────────────────
+# Which engine APIs are chosen for which purpose across the project.
+# Conflicts: two ADRs using different APIs for the same purpose = inconsistent
+# implementation that breaks when one system expects the other's API.
+#
+# Register an API decision when the choice is non-obvious and other ADRs might
+# make a different choice for the same purpose without knowing this was decided.
+
+api_decisions:
+  - purpose: save_file_format
+    status: active
+    api: "enveloppe binaire à préfixe figé (marque, version d'enveloppe, longueur, schéma de contenu, révision) + charge utile + SHA-256 (HashingContext) ; quatre fichiers sous user:// ; écriture *.tmp → relecture vérifiée → rotation → renommage via FileStore ; chargement courant puis .bak seulement"
+    not: "JSON ou ConfigFile en sauvegarde de production, ResourceSaver, CRC32 maison, promotion d'un .tmp, FileAccess ou DirAccess hors FileStore, écriture sur un autre fil sans amendement"
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    reason: "Mesuré : var_to_bytes seul accepte 23 % des octets altérés ; rename supprime la cible avant de déplacer sur Windows ; SHA-256 46 µs pour 8 Ko"
+    referenced_by:
+      - docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+    revised: ""
+
+  - purpose: game_state_representation
+    status: active
+    api: "colonnes PackedInt32Array / PackedByteArray (PackedInt64Array pour l'en-tête), duplicate() par colonne, var_to_bytes sans objets (charge utile seule ; enveloppe et empreinte : ADR-0006)"
+    not: "objets RefCounted par entité, Dictionary / Array imbriqués, Resource, JSON en sauvegarde de production, bytes_to_var_with_objects"
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    reason: "Mesuré : copie 15 µs contre 284 µs (Dictionary) et 711 µs (objets), aller-retour var 59 µs ; var_to_bytes seul accepte 23 % des corruptions d'un octet"
+    referenced_by:
+      - docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+    revised: ""
+
+  - purpose: tile_wave_animation
+    status: active
+    api: "MultiMeshInstance2D + shader canvas_item + uniforme global g_time + WaveScheduler (GDScript pur)"
+    not: "TIME, Time.get_ticks_msec() pour les instants de début, Tween ou nœud par tuile"
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    reason: "Un dessin pour la carte, écriture seulement au changement d'état, tests déterministes avec un temps injecté"
+    referenced_by:
+      - docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+    revised: ""
+
+
+# Example:
+#
+# api_decisions:
+#   - purpose: physics_raycast
+#     status: active
+#     api: PhysicsServer3D.space_get_direct_state()
+#     not: RayCast3D node     # explicitly banned for this purpose
+#     adr: docs/architecture/adr-0002-physics-architecture.md
+#     reason: "Direct server calls avoid per-frame node overhead; 3× faster in profiling"
+#     referenced_by:
+#       - docs/architecture/adr-0002-physics-architecture.md
+#       - docs/architecture/adr-0003-combat-system.md
+#     added: 2026-03-26
+#     revised: ""
+
+
+# ─── FORBIDDEN PATTERNS ──────────────────────────────────────────────────────
+# Architecture anti-patterns explicitly banned by accepted ADRs.
+# When writing a new ADR, check this list — if the proposed approach matches
+# a forbidden pattern, it must be reworked before the ADR can be Accepted.
+#
+# Register a pattern when an ADR explicitly bans it AND other ADRs might
+# unknowingly use it (i.e., it's a tempting but wrong approach for this project).
+
+  - purpose: vision_and_visibility
+    status: active
+    api: "VisionService (fonctions sans état) seul écrivain de la tranche Visibilité et du ViewCache ; ViewCache transitoire copié EN PROFONDEUR par duplicate_state (Array.duplicate superficiel interdit), jamais sérialisé ni comparé ; FieldTable et rayons tenus par VisionContext injecté ; can_see / can_see_unit / can_see_node prédicat unique pour FactionView et filtered_copy (terrain masqué, ligne de l'autre faction vide) ; recompute et reveal_step dans apply rendent VisionDelta ; simulations de l'IA sans recalcul ; event_visible(avant, après)"
+    not: "vision stockée dans l'état, décision de visibilité hors VisionService, cache global singleton, FactionView et filtered_copy sur des prédicats différents"
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    reason: "Frontière anti-fuite ; micro-banc : recalcul 43 µs par faction, copie du cache 0,26 µs"
+    referenced_by:
+      - docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: composition_root
+    status: active
+    api: "un Bootstrap unique dans src/app/ ; AppContext (processus) et GameSession (partie) ; SessionFactory.build(app, state, ports{event_sink, pacing_gate}) pour partie neuve et chargée, MatchScreen construit sans liaisons puis bind(session) ; TestSessionFactory dans tests/fixtures ; aucun autoload"
+    not: "autoload, service locator, get_node pour trouver un service, Core qui référence Presentation, construction d'une dépendance par le système qui l'utilise"
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    reason: "ADR-0002 interdit les singletons ; ports injectés dans un seul endroit"
+    referenced_by:
+      - docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: game_data_files
+    status: active
+    api: "assets/data/<domaine>.json, entiers seulement (suffixes _pct, _milli, _ms), DataSchema strict, DataCatalog.load_all(DataSource) chargé une fois au démarrage, objets typés immuables, content_hash SHA-256 dans l'en-tête du CommandLog"
+    not: "nombre fractionnaire dans les données, valeur par défaut silencieuse, rechargement en cours de partie, accès statique global au catalogue, valeur de jeu codée en dur, .tres pour les réglages"
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    reason: "Mesuré : JSON.parse rend tous les nombres en float, écrase les clés dupliquées ; déterminisme exige des entiers"
+    referenced_by:
+      - docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: touch_input_and_camera
+    status: active
+    api: "PointerEvent (ScreenTouch / ScreenDrag seuls, InputEventMouse ignoré, accumulation désactivée) -> GestureInterpreter pur -> Tap / Scroll / Pinch / Cancel ; MapCamera pure pilotant le transform d'un Node2D ; TapResolver pur (tableau B du GDD 4) ; commande par check puis submit ; plage de déplacement par RuleTable.check_move_range (parité avec validate) ; échelle en dp par Window.content_scale_factor = dpi / 160"
+    not: "Camera2D pour la carte, commande née d'un défilement ou d'un contact interrompu, portée calculée par le système 4, mode d'interaction stocké dans l'état, taille tactile en pixels"
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    reason: "La portée affichée est la validation (pilier 4) ; point indépendant de la densité (GDD 4, règle 17)"
+    referenced_by:
+      - docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31
+    revised: ""
+
+  - purpose: test_framework
+    status: active
+    api: "gdUnit4 6.2.2 épinglé (addons/gdUnit4/plugin.cfg) et commité, testing.framework: gdunit4 ; headless ; tests/unit|integration|performance|fixtures ; StateFactory et doublures partagées ; build_for_test ; tests de propriétés à graine fixe ; auto-tests shell des contrôles CI"
+    not: "GUT, test dépendant de l'horloge système, du hasard du moteur ou du système de fichiers réel, test désactivé pour passer la CI, contrôle CI jamais vu échouer"
+    adr: docs/architecture/adr-0011-cadre-de-tests.md
+    reason: "Standards du projet et run-and-observe.md écrits pour gdUnit4 (exécuté sur Godot 4.7.2)"
+    referenced_by:
+      - docs/architecture/adr-0011-cadre-de-tests.md
+    added: 2026-10-31
+    revised: ""
+
+forbidden_patterns:
+  - pattern: per_tile_node_or_material
+    status: active
+    description: "Un nœud, un matériau ou un uniforme d'instance par tuile de carte est interdit : les tuiles sont rendues par un seul MultiMeshInstance2D."
+    why: "Coût d'appels de dessin et d'animation non mesuré, état d'animation réparti qui complique la règle 15 et la reconstruction."
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+
+  - pattern: shader_reads_game_state
+    status: active
+    description: "Le shader des tuiles ne lit que les huit canaux d'instance, pal et g_time."
+    why: "Garde la présentation reconstruisible depuis l'état et le shader sans règle de jeu."
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+
+  - pattern: renderer_writes_game_state
+    status: active
+    description: "Le moteur de rendu des tuiles n'écrit jamais d'état de jeu."
+    why: "Respecte la règle 2 de design/gdd/hud-systeme.md et la séparation logique/présentation."
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+
+  - pattern: global_shader_parameter_get_in_game
+    status: active
+    description: "global_shader_parameter_get n'est jamais appelé en jeu ni dans les tests ; lire la valeur côté TileTimeSource."
+    why: "Erreur moteur observée en 4.7.2 (fonction réservée à l'éditeur, coûteuse)."
+    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    added: 2026-10-30
+
+
+# Example:
+#
+# forbidden_patterns:
+#   - pattern: autoload_singleton_coupling
+#     status: active
+#     description: "Systems must not directly reference Autoload singletons by name.
+#       Use dependency injection or signals instead."
+#     why: "Tight coupling to Autoloads makes systems untestable in isolation and
+#       creates hidden dependencies that break when Autoload load order changes."
+#     adr: docs/architecture/adr-0001-health-system.md
+#     added: 2026-03-26
+#
+#   - pattern: direct_cross_system_state_write
+#     status: active
+#     description: "A system must never write to state owned by another system.
+#       Use signals or method calls on the owner instead."
+#     why: "Direct state writes create race conditions and break the state
+#       ownership model. The owning system must be the sole writer."
+#     adr: docs/architecture/adr-0000-architecture-principles.md
+#     added: 2026-03-26
+
+  - pattern: event_broadcast_by_signal
+    status: active
+    description: "Les événements de présentation ne sont jamais distribués par des signaux Godot : le séquenceur appelle explicitement les gestionnaires dans un ordre fixe."
+    why: "L'ordre d'appel des signaux n'est pas sourcé et un signal émis depuis son gestionnaire s'exécute en récursion synchrone (mesuré, profondeur 3)."
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+
+  - pattern: autoload_event_bus
+    status: active
+    description: "Aucun bus d'événements en autoload global : le pipeline reçoit un EventSink injecté."
+    why: "Couplage caché, tests impossibles sans le singleton, ordre de chargement."
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+
+  - pattern: handler_emits_command
+    status: active
+    description: "Un gestionnaire de présentation n'émet jamais de commande ni n'écrit d'état de jeu."
+    why: "Règle 11 du GDD 23 ; l'état est final à la publication et perdre la file ne change pas la partie."
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+
+  - pattern: await_or_create_timer_in_sequencer
+    status: active
+    description: "Le séquenceur n'utilise ni await ni get_tree().create_timer : il avance par _process et PresentationClock."
+    why: "create_timer continue en pause ; un await en attente d'un signal jamais émis n'est pas libéré par un jeton (mesuré)."
+    adr: docs/architecture/adr-0002-evenements-de-presentation.md
+    added: 2026-10-30
+
+  - pattern: direct_cross_system_state_write
+    status: active
+    description: "Un système n'écrit jamais la colonne ou la tranche d'un autre système : il appelle la fonction d'écriture du propriétaire."
+    why: "Règle 2 du GDD 1 ; GDScript n'a pas de contrôle d'accès : convention vérifiée par une règle grep en CI (champs préfixés _), pas garantie par le langage."
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+
+  - pattern: dictionary_iteration_in_game_rule
+    status: active
+    description: "Une règle de jeu ne parcourt jamais un Dictionary : elle parcourt les colonnes par id croissant."
+    why: "L'ordre d'itération est observé comme celui d'insertion mais non garanti par la référence du moteur (règle 8 du GDD 1)."
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+
+  - pattern: engine_randomness_in_game_state
+    status: active
+    description: "Aucun hasard du moteur dans l'état ni dans les règles : tout tirage passe par la fonction de l'état (graine et compteur)."
+    why: "Reproductibilité et rejeu (règle 7 du GDD 1)."
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+
+  - pattern: object_in_game_state
+    status: active
+    description: "L'état ne contient ni Node, ni Object, ni Callable, ni RID, ni Resource créée à l'exécution, ni Dictionary non typé."
+    why: "Règle 4 du GDD 1 ; var_to_bytes perd les objets ; copie coûteuse."
+    adr: docs/architecture/adr-0003-etat-de-partie.md
+    added: 2026-10-30
+
+  - pattern: logic_in_command
+    status: active
+    description: "Une commande est une donnée pure : aucune logique ni référence à un objet du moteur ; la logique est dans les handlers par système."
+    why: "Règle 17 du GDD 23 : sérialisable sans perte et rejouable."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: validate_writes_state
+    status: active
+    description: "validate ne lit que la vue de la faction et n'écrit jamais."
+    why: "La validation est complète et l'application ne peut pas échouer ; un refus ne révèle rien de caché."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: nested_submit_in_apply
+    status: active
+    description: "apply n'émet jamais de commande ni n'appelle submit ; l'enchaînement des tours est porté par le système des tours."
+    why: "Un submit imbriqué ferait appliquer deux fois au rejeu et casse une révision par commande."
+    adr: docs/architecture/adr-0004-pipeline-de-commandes.md
+    added: 2026-10-30
+
+  - pattern: ai_state_outside_state
+    status: active
+    description: "Aucun état d'IA (rôle, piste, siège, poste) hors des tranches de l'état : ni dans un Node, ni dans un script d'unité, ni dans une variable globale ; l'état du runner et AiBudget sont transitoires et jamais sauvegardés."
+    why: "Copie, sauvegarde et rejeu emportent l'état ; la phase ennemie reprend à la commande suivante depuis l'état seul (sauvegarde après chaque commande)."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+
+  - pattern: runner_saves_or_references_presentation
+    status: active
+    description: "Le runner d'IA ne déclenche jamais de sauvegarde et ne référence aucune classe de Presentation ; il passe par PacingGate."
+    why: "Seul le PostCommitPort sauvegarde, après chaque commande (GDD 16, règle 9) ; sens de dépendance Core vers Presentation (ADR-0002)."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+
+  - pattern: file_access_outside_filestore
+    status: active
+    description: "FileAccess et DirAccess ne sont appelés que dans l'implémentation réelle de FileStore."
+    why: "Les pannes doivent pouvoir être injectées à chaque étape ; un seul écrivain en série."
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+
+  - pattern: ai_decision_outside_state
+    status: active
+    description: "Le prochain coup de l'IA se décide à partir de l'état seul (agents, intentions, pistes, curseur_ia, drapeaux d'unités) ; la partie est sauvegardée après chaque commande de l'IA et la phase reprend à la commande suivante."
+    why: "Décision du 2026-10-30 (PR #3, GDD 16 règle 9) : un arrêt en plein tour d'IA ne perd au plus que la commande en cours."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    revised: 2026-10-30
+    added: 2026-10-30
+
+  - pattern: promote_tmp_file
+    status: active
+    description: "Un fichier .tmp n'est jamais promu en fichier courant au chargement, même valide ; les .tmp restants sont supprimés."
+    why: "Une partie abandonnée ne doit pas ressusciter après un arrêt entre deux suppressions."
+    adr: docs/architecture/adr-0006-sauvegarde.md
+    added: 2026-10-30
+
+  - pattern: ai_planner_touches_scene_or_pipeline
+    status: active
+    description: "La tâche de planification de l'IA (WorkerThreadPool) ne touche ni l'arbre de scène, ni un nœud, ni l'état réel, ni l'instance de CommandPipeline ; elle n'appelle que la RuleTable sans état sur une copie qu'elle possède."
+    why: "Revue du 2026-10-30 (B1) : la planification sort du fil principal ; le déterminisme exige une fonction des entrées seules."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-10-30
+
+  - pattern: visibility_decided_outside_vision_service
+    status: active
+    description: "Aucun code hors VisionService ne décide de la visibilité ni ne lit le propriétaire réel d'une tuile pour une faction ; la validation passe par FactionView."
+    why: "Frontière anti-fuite : un seul prédicat, prouvé par le test de parité FactionView / filtered_copy."
+    adr: docs/architecture/adr-0007-vision-et-visibilite.md
+    added: 2026-10-31
+
+  - pattern: autoload_or_service_locator
+    status: active
+    description: "Aucun autoload ni service global ; une dépendance arrive par paramètre ; get_node('/root/…') pour trouver un service est interdit."
+    why: "ADR-0002 : pas de singleton ; doublures de test impossibles sinon."
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+
+  - pattern: core_references_presentation
+    status: active
+    description: "Aucun fichier de src/core/** ne référence src/presentation/** ni src/app/**."
+    why: "Sens de dépendance Core vers Presentation unique ; contrôle CI check-layer-deps."
+    adr: docs/architecture/adr-0008-racine-de-composition.md
+    added: 2026-10-31
+
+  - pattern: float_in_game_data
+    status: active
+    description: "Aucun nombre fractionnaire dans assets/data/ ; les rapports se notent en _pct ou _milli, les durées en _ms."
+    why: "Entiers seulement (GDD 1, règle 6) ; JSON.parse rend des float qu'il faut valider."
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+
+  - pattern: game_value_hardcoded
+    status: active
+    description: "Aucune valeur de réglage de jeu codée en dur dans un script : elle vient du DataCatalog injecté."
+    why: "Standards : valeurs pilotées par les données."
+    adr: docs/architecture/adr-0009-donnees-de-jeu.md
+    added: 2026-10-31
+
+  - pattern: command_from_scroll_or_cancelled_contact
+    status: active
+    description: "Aucune commande ne naît d'un défilement, d'un pincement ni d'un contact interrompu ; le système 4 ne calcule jamais de portée."
+    why: "GDD 4, règles 8 et 10 : test de la Player Fantasy et pilier 4."
+    adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
+    added: 2026-10-31

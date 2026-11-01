@@ -84,18 +84,21 @@ définit le sens de ses champs et les seules fonctions qui l'écrivent.
 
 | Tranche | Contenu | Propriétaire |
 |---|---|---|
-| En-tête de partie | Version du schéma, identifiant de partie, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, phase en cours, faction active, statut de fin | 1 (schéma, graine, compteurs d'id) ; 3 (tour, phase, faction active, statut de fin) |
-| Carte | Dimensions, terrain de chaque tuile (fixe pendant la partie), propriétaire de chaque tuile, dernier changement de propriétaire de chaque tuile (tour, propriétaire précédent, cause : capture, combat ou ruine), point d'intérêt de chaque tuile | 2 (dimensions, terrain, points d'intérêt) ; 11 (propriétaire et dernier changement) |
-| Visibilité | Pour chaque faction : tuiles déjà découvertes | 5 |
+| En-tête de partie | Identifiant de partie, époque de réinitialisation du profil à la création, graine, compteur de tirages, compteurs d'identifiants (prochain id d'unité, de nœud, de ruine, d'intention), numéro de tour, T_MAX, drapeau « IA passive », phase en cours, faction active, statut de fin | 1 (identifiant, époque, graine, compteurs d'id) ; 3 (tour, T_MAX, IA passive, phase, faction active, statut de fin) |
+| Carte | Dimensions, terrain de chaque tuile (fixe pendant la partie), propriétaire de chaque tuile, couche d'ancrage de chaque tuile (NŒUD, RUINE ou aucun), dernier changement de propriétaire de chaque tuile (tour, propriétaire précédent, cause : capture, combat ou ruine), point d'intérêt de chaque tuile | 2 (dimensions, terrain, points d'intérêt) ; 11 (propriétaire et dernier changement) |
+| Visibilité | Pour chaque faction : tuiles déjà découvertes et **dernier propriétaire vu** de chaque tuile (mémoire du territoire hors de vue, 1 octet par tuile et par faction ; décision du 2026-10-30) ; la vision actuelle n'est pas stockée | 5 |
 | Unités | Par id : type, faction, position, PV, a bougé, a agi, endormie | 6 (le réveil de 7 et les PV du combat 8 passent par les fonctions de 6) |
 | Nœuds | Par id : position, propriétaire, niveau | 11 |
-| Ruines | Par id : position (tirée parmi des emplacements candidats), faction concernée, lue ou non | 13 (21 n'écrit que la mise en place initiale) |
+| Ruines | Par id : position (tirée parmi 9 candidats, 3 zones de 3), zone, faction de mémoire (donnée du fichier de carte), lue ou non, tour de lecture (−1 si non lue), faction lectrice ; R figé à 3 ruines tirées | 13 (21 n'écrit que la mise en place initiale) |
 | Instantané de la chronique | Par faction en jeu : identifiants stables des fragments déjà trouvés à la création de la partie, copiés du profil (22) | 13 (écrit une seule fois, à la création ; jamais modifié ensuite) |
-| Factions | Par faction : stock d'énergie, protocoles recherchés, recherche en cours, éliminée ou non | 10 (stock) ; 12 (protocoles) ; 3 (éliminée) |
-| Intentions | Par id : unité auteur, tuile de l'auteur à l'annonce, type de cible (unité ou nœud), cible (id dans ce type), tuile de la cible à l'annonce, tour d'annonce, tour d'exécution, statut (annoncée, exécutée, annulée), raison d'annulation (cible détruite, cible déplacée) | 9 |
+| Factions | Par faction : stock d'énergie, ensemble trié des ids de protocoles acquis, recherche en cours (id, tours restants), éliminée ou non ; pour l'IA, protocoles reçus par le calendrier fixe (`arbre-protocoles.md`, règle 15) | 10 (stock) ; 12 (protocoles) ; 3 (éliminée) |
+| Intentions | Par id : unité auteur, tuile de l'auteur à l'annonce, type de cible (unité ou nœud), cible (id dans ce type), tuile de la cible à l'annonce, type d'action (attaque ou capture), motif (TRAQUE, REPRÉSAILLE, CAPTURE, DÉFENSE), tour d'annonce, tour d'exécution, statut (annoncée, exécutée, annulée), raison d'annulation (AUTEUR_DÉTRUIT, CIBLE_DÉTRUITE, CIBLE_DÉPLACÉE, HORS_DE_PORTÉE, UNITÉ_ABSENTE, UNITÉ_DÉTRUITE, NŒUD_DÉJÀ_À_L'IA) ; une intention par unité (`INTENT_CAP`, `ia-ennemie.md`, règle 15) ; compte de siège du dernier nœud | 9 |
+| Agents de l'IA | **Tranche privée à la faction de l'IA** (ADR-0005) : par Gardien, état de rôle (POSTE, TRAQUE, RETOUR ; CAPTURE, TIENT, RIPOSTE, SIÈGE), compteur « tours sans cible », poste, motif courant ; une valeur scalaire `curseur_ia` (id de la dernière unité de l'IA qui a émis une commande ce tour, 0 au début de la phase ennemie : point de reprise des coups ordinaires) ; `filtered_copy(IA)` la garde, `filtered_copy(JOUEUR)` la retire ; écrite par l'application d'ANNONCER_LES_INTENTIONS | 9 |
+| Pistes de l'IA | Au plus 16 entrées (id de l'unité du joueur, tuile, tour de vue, type), durée de vie 4 tours (`ia-ennemie.md`, règle 9) | 9 |
+| Rappels de présentation | Pour la dernière phase ennemie seulement : unités perdues (tuile, camp), tuiles perdues ; vidée à la fin du tour suivant du joueur ; **aucun effet de jeu** (ni le score, ni l'IA, ni la vue ne la lisent ; `hud-systeme.md`, règle 22) | 17 lit ; 6 et 11 écrivent |
 | Compteurs de score | Comptes bruts : nœuds tenus, unités détruites (les fragments lus se comptent dans le journal des lectures de ruine) | Chaque compte a le système qui le fait avancer (11, 8) ; 3 possède la formule du score |
 | Journal des lectures de ruine | Par lecture : id de ruine, faction, **identifiant stable du fragment**, statut (en attente, validée) | 13 (voir règle 10) |
-| Journal des commandes | Numéro de la dernière commande appliquée, révision de l'état | 23 |
+| Journal des commandes | Révision de l'état (= numéro de la dernière commande appliquée, un seul numéro) ; propriété du pipeline de commandes, incrémentée par lui à chaque commande appliquée ; conservée par `restore_from` | 23 |
 
 Ne sont **pas** dans l'état : le revenu d'énergie et le score (calculés par 10 et 3 à
 partir de l'état), la couleur des tuiles (déduite par 15 du propriétaire et du dernier
@@ -186,15 +189,17 @@ l'animation, la sélection et tout ce qui est purement visuel. Une valeur qui se
     appartient aux commandes (23), avec la même règle pour le joueur et pour l'IA.
     Seuls la sauvegarde (16), la couche des commandes (23) et les tests lisent l'état
     complet.
-12. **Taille bornée.** L'état ne grandit pas sans limite : pas d'historique, pas de
+12. **Taille bornée.** Les collections sont **compactées en fin de tour** par un tri stable (id croissant préservé, ids consommés jamais réutilisés ; ADR-0003). L'état ne grandit pas sans limite : pas d'historique, pas de
     journal d'événements. Les bornes sont des constantes de ce document (voir Tuning
     Knobs) : 16 × 16 tuiles, 60 unités, 10 nœuds, et un plafond d'intentions par tour.
+    L'instantané qui permet d'annuler le dernier déplacement est une copie gardée
+    **hors de l'état** par les commandes (23), jamais sauvegardée.
 13. **Sérialisable sans perte.** L'état se sérialise et se recharge en un état égal
-    (égalité profonde définie par ce système). L'en-tête porte un numéro de version du
-    schéma ; un état d'une version plus ancienne est migré au chargement, un état d'une
+    (égalité profonde définie par ce système). Le numéro de version du schéma est porté
+    par l'enveloppe du fichier (ADR-0006), pas par l'état ; un état d'une version plus ancienne est migré au chargement, un état d'une
     version plus récente est refusé. Ce système possède le schéma et le contrat
     « vers données / depuis données » ; la sauvegarde (16) possède les fichiers, l'écriture
-    atomique et le moment des sauvegardes. **Égalité profonde** : deux états sont égaux
+    atomique et le moment des sauvegardes. **Égalité profonde** (ADR-0003 : elle ignore les lignes mortes et la disposition interne ; `to_bytes` est déterministe et rend la charge utile seule ; l'enveloppe, la taille et l'empreinte d'intégrité relèvent de la sauvegarde, ADR-0006) : deux états sont égaux
     quand toutes leurs tranches ont les mêmes champs avec les mêmes valeurs, les
     collections indexées par identifiant étant comparées par identifiant (sans tenir
     compte de l'ordre interne) et les grilles case par case.
@@ -211,20 +216,18 @@ sur la dernière phase sauvegardée.
 | Valeur stockée | Atteinte depuis | Déclencheur (propriétaire) | Ce qui doit être vrai |
 |---|---|---|---|
 | CRÉÉE | — | Nouvelle partie (3, avec la carte 2 ou le générateur 21) | Graine fixée, compteurs d'id à zéro, tour 0, instantané de la chronique copié du profil (13) |
-| PHASE_JOUEUR (tour n) | CRÉÉE, FIN_DE_TOUR | Début du tour (3) | Revenu appliqué (10) ; copie de début de tour disponible |
-| EXÉCUTION_ENNEMIE | PHASE_JOUEUR | Commande « fin du tour » (3) | Les intentions annoncées au tour précédent sont exécutées ou annulées (cible détruite ou déplacée, jamais redirigée) |
-| INTENTIONS_PUBLIÉES | EXÉCUTION_ENNEMIE | 3 ; l'IA écrit ses intentions (9) | Les intentions sont calculées sur l'état **après** l'exécution, jamais sur un état antérieur |
-| FIN_DE_TOUR | INTENTIONS_PUBLIÉES | 3 | État complet et cohérent |
-| TERMINÉE (victoire, défaite, 30e tour, abandon) | toute phase | Contrôle de victoire (3) | Statut de fin posé ; l'état ne change plus |
+| PHASE_JOUEUR (tour n) | CRÉÉE, FIN_DE_TOUR | Début du tour (3), par la commande interne COMMENCER_LE_TOUR (`design/gdd/commandes-evenements.md`) | Revenu appliqué (10) |
+| EXÉCUTION_ENNEMIE | PHASE_JOUEUR | Commande « fin du tour » (3) | Les intentions du tour précédent sont exécutées ou annulées (cible détruite ou déplacée, jamais redirigée) ; puis l'IA joue ; puis elle **annonce** ses intentions du tour suivant (9), sauf au tour 30 |
+| FIN_DE_TOUR | EXÉCUTION_ENNEMIE | 3 | État complet et cohérent |
+| TERMINÉE (domination, défaite, 30e tour, abandon) | toute phase | Contrôle de fin de partie (3) | Statut de fin posé ; l'état ne change plus |
 
-*L'ordre est fixé (décision du 2026-10-30) : exécuter les intentions du tour précédent,
-puis annoncer celles du tour en cours, pour que l'IA n'annonce jamais sur un état
-périmé. Provisoire : INTENTIONS_PUBLIÉES pourrait n'être qu'une étape interne de la fin
-du tour ennemi plutôt qu'une phase stockée. Le GDD des tours (3) tranche ; si c'est une
-étape, la ligne disparaît.*
+*Décidé dans `design/gdd/tours-conditions-victoire.md` : la publication des intentions
+est une étape de la fin de la phase ennemie, pas une phase stockée. Une sauvegarde au
+milieu de la résolution d'une commande est interdite : la sauvegarde sur pause
+enregistre le dernier état cohérent.*
 
 *Sauvegarde après chaque commande (décision du 2026-10-30) : la partie est enregistrée
-de façon atomique après chaque commande appliquée, du joueur ou de l'IA (environ 28 Ko,
+de façon atomique après chaque commande appliquée, du joueur ou de l'IA (environ 32 Ko,
 formule 5). Une fermeture forcée en plein tour ne perd au plus que la commande en cours,
 ce qui tient la promesse « poser le téléphone en plein tour ». Une reprise au milieu de
 l'exécution ennemie repart de la commande suivante : l'IA décide donc à partir de l'état
@@ -287,7 +290,7 @@ sont refusées, jamais ramenées dans les bornes.
 
 The draw formula is defined as:
 
-`draw(n) = hash32(seed, counter) mod n`, puis `counter = counter + 1`
+`draw(n) = hash32(seed, counter) mod n`, puis `counter = counter + 1`, avec `hash32(seed, counter)` = SplitMix32 appliqué à `z = (seed + (counter + 1) × 0x9E3779B9) & 0xFFFFFFFF` (forme canonique, ADR-0003 : le point fixe `hash32(0, 0) = 0` d'une forme sans incrément n'existe plus et la graine 0 reste légale)
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -304,8 +307,7 @@ casserait la reproductibilité. n est plafonné à 65 536. Le comportement des e
 GDScript en cas de dépassement n'est pas couvert par la référence du moteur (NOT
 SOURCEABLE) : chaque étape du hachage est masquée, et le hachage est figé par des tests
 à valeurs de référence.
-**Example:** hash32(1234, 7) = 2 913 004 551 (*valeur fictive, à remplacer par la
-vraie sortie du hachage choisi*) ; n = 6 → 2 913 004 551 mod 6 = 3 ; le compteur passe
+**Example:** hash32(1234, 7) = 2 913 004 551 (*valeur fictive, à recalculer avec la forme canonique et figer dans un test ; les graines de référence sont 0, 1, 1234, 987654321 et 4294967295*) ; n = 6 → 2 913 004 551 mod 6 = 3 ; le compteur passe
 à 8.
 
 ### 3. Attribution d'identifiant
@@ -346,7 +348,7 @@ décision de l'IA (9).
 
 The state_size formula is defined as:
 
-`S_raw = 64 + T×6 + T×F + U×16 + N×8 + R×8 + I×24 + F×64 + F×P×2` (octets)
+`S_raw = 64 + T×6 + T×F×2 + U×16 + N×8 + R×8 + I×24 + F×64 + F×P×2` (octets)
 
 `N_clones_max = floor(T_ai × f_clone / t_clone)`
 
@@ -366,15 +368,15 @@ The state_size formula is defined as:
 
 Estimations par entité : tuile 6 octets (propriétaire, dernier changement : tour,
 propriétaire précédent et cause, point d'intérêt ; le terrain est partagé, la couleur
-est déduite), tuile découverte 1 octet par tuile et par faction, unité 16, nœud 8,
+est déduite), visibilité 2 octets par tuile et par faction (découverte, dernier propriétaire vu), unité 16, nœud 8,
 ruine 8, intention 24, fragment de l'instantané 2.
 
-**Output Range:** environ 7 Ko de données brutes au maximum ; environ 28 Ko sur disque
+**Output Range:** environ 8 Ko de données brutes au maximum ; environ 32 Ko sur disque
 avec un format texte (facteur 4). Le surcoût réel des Dictionary et Object de Godot 4.7
 n'est pas couvert par la référence (NOT SOURCEABLE ; il peut multiplier ces chiffres par
 10 à 50) : ces valeurs servent de budget à vérifier, pas de garantie.
-**Example:** T = 256, F = 4, U = 60, N = 10, R = 20, I = 120, P = 12 → 7 056 octets,
-environ 7 Ko. Avec
+**Example:** T = 256, F = 4, U = 60, N = 10, R = 20, I = 120, P = 12 → 8 080 octets,
+environ 8 Ko. Avec
 t_clone = 200 µs et f_clone = 25 % : floor(2000 ms × 25 % / 0,2 ms) = 2 500 copies par
 tour d'IA.
 
@@ -403,8 +405,9 @@ cas ; ce document en fixe seulement le contrat côté état.*
 - **Si la version du schéma est plus ancienne** : les migrations s'appliquent dans
   l'ordre, puis l'état est validé.
 - **Si la validation échoue au chargement** (un invariant ci-dessous est violé) : le
-  chargement est refusé, la sauvegarde n'est pas écrasée et une sauvegarde antérieure
-  est proposée. Propriétaire de l'écran de reprise : 16 et 18.
+  chargement est refusé, la sauvegarde n'est pas écrasée, et la copie de secours est
+  utilisée automatiquement, avec un avertissement (`design/gdd/sauvegarde-automatique.md`,
+  règle 15). Propriétaire de l'écran d'avertissement : 18.
 - **Si une entrée du journal des lectures de ruine est « en attente » au chargement et
   que le fragment est déjà dans le profil** : l'entrée passe à « validée » et la ruine
   reste lue.
@@ -672,8 +675,7 @@ injectées ; aucun accès fichier dans les tests unitaires.*
 - Les règles 2 et 3 (« un système n'écrit jamais la tranche d'un autre ») ne se
   prouvent pas entièrement à l'exécution : AC-02 et AC-03 les échantillonnent, une
   vérification en revue de code ou par analyse statique les complète.
-- Aucun critère de transition entre phases tant que le GDD des tours (3) n'a pas
-  tranché le statut d'INTENTIONS_PUBLIÉES.
+- Les critères de transition entre phases sont dans `design/gdd/tours-conditions-victoire.md`.
 
 ## Open Questions
 
@@ -683,7 +685,7 @@ injectées ; aucun accès fichier dans les tests unitaires.*
 | Peut-on simuler l'IA hors du fil principal sur Android ? (NOT SOURCEABLE) ; repli prévu : travail réparti sur plusieurs images | engine-programmer | Prototype des intentions de l'IA (1 semaine, PR-SCOPE) | |
 | Ordre d'itération des Dictionary dans la version installée de Godot (NOT SOURCEABLE) ; la règle 8 l'évite, mais l'ADR doit le confirmer | gameplay-programmer | ADR de représentation | |
 | Comportement des entiers GDScript en cas de dépassement, pour le hachage du tirage (NOT SOURCEABLE) | gameplay-programmer | ADR du générateur de hasard | |
-| INTENTIONS_PUBLIÉES : phase stockée ou étape interne de la fin de tour ? | game-designer | GDD des tours (3) | |
+| INTENTIONS_PUBLIÉES : phase stockée ou étape interne de la fin de tour ? | game-designer | GDD des tours (3) | **Résolu le 2026-10-29** : étape de la fin de la phase ennemie, pas une phase stockée |
 | INTENT_CAP : une intention au plus par unité ennemie ? | game-designer, ai-programmer | GDD de l'IA (9) | |
 | Une ruine lue par l'IA fait-elle avancer la chronique du joueur ? (le concept fait avancer un pool quand on joue la faction ou qu'on l'affronte) | game-designer | GDD des ruines (13) | |
 | Que se passe-t-il quand un coup rencontre une unité cachée (arrêt du déplacement, coup refusé) ? | game-designer, lead-programmer | GDD des commandes (23) | |

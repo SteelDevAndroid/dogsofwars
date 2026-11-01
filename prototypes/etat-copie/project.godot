@@ -1,0 +1,5 @@
+; PROTOTYPE - NOT FOR PRODUCTION
+config_version=5
+
+[application]
+config/name="etat-copie-bench"
