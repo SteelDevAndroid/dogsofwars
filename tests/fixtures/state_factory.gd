@@ -17,14 +17,12 @@ const TERRAIN_CODES := 4
 ## One live unit in DESTROY_ONE_IN is destroyed, to leave dead rows.
 const DESTROY_ONE_IN := 5
 const EXTRA_DRAWS := 8
-## View radius by unit type 0..2 (Éclaireur 4, Assaut 2, Rempart 2, GDD 5 rule 7).
-const UNIT_VIEW_RADIUS := [4, 2, 2]
-## View radius by node level 0..3: max(2, RAYON_NIVEAU), level 0 unused.
-const NODE_VIEW_RADIUS := [0, 2, 2, 3]
 
 
+## Vision context of `state` over the standard test catalog (types 0..2: Éclaireur
+## view 4, Assaut 2, Rempart 2).
 static func vision_context(state: GameState) -> VisionContext:
-	return VisionContext.for_map(state, PackedInt32Array(UNIT_VIEW_RADIUS), PackedInt32Array(NODE_VIEW_RADIUS))
+	return VisionContext.for_map(CatalogFactory.standard(), state)
 
 
 ## 8 x 8 plains, two factions, one player unit at (1, 1), one AI unit at (6, 6).

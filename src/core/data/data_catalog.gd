@@ -1,0 +1,79 @@
+# Game data, loaded once at startup and injected (ADR-0009): one JSON file per
+# domain, integers only, strict schema, typed read-only objects. A loading error is
+# a startup error, never a silent default. No static access: the composition root
+# builds it (ADR-0008) and passes it on.
+class_name DataCatalog
+extends RefCounted
+
+
+## SHA-256 of the data files (ADR-0009 §7), written in the CommandLog header.
+var content_hash: String
+var units: UnitTypes
+var fog: FogParams
+var nodes: NodeParams
+
+
+## Domain files expected at the data root, with the class that checks (SCHEMA) and
+## builds (build) each one. Any other .json at the root is refused.
+static func domains() -> Dictionary:
+	return {"brouillard.json": FogParams, "noeuds.json": NodeParams, "units.json": UnitTypes}
+
+
+static func load_all(source: DataSource) -> DataCatalogResult:
+	var errors: Array[DataError] = []
+	var known := domains()
+	var names := source.list("")
+	var files := {}
+	for name in names:
+		if not name.ends_with(".json"):
+			continue
+		files[name] = source.read_bytes(name)
+		if not known.has(name):
+			errors.append(DataError.new(name, "(file)", "unknown data file"))
+	var built := {}
+	var expected := PackedStringArray(known.keys())
+	expected.sort()
+	for name in expected:
+		if not files.has(name):
+			errors.append(DataError.new(name, "(file)", "missing data file"))
+			continue
+		var parsed: Variant = _parse(name, files[name], errors)
+		if parsed == null:
+			continue
+		var data: Variant = DataSchema.check(parsed, {"kind": &"object", "fields": known[name].SCHEMA}, name, "", errors)
+		if data != null:
+			built[name] = known[name].build(data, name, errors)
+	if not errors.is_empty():
+		return DataCatalogResult.new(null, errors)
+	var catalog := DataCatalog.new()
+	catalog.fog = built["brouillard.json"]
+	catalog.nodes = built["noeuds.json"]
+	catalog.units = built["units.json"]
+	catalog.content_hash = content_hash_of(files)
+	return DataCatalogResult.new(catalog, errors)
+
+
+## SHA-256 over, for each file in explicit alphabetical order: its name, "\n", its
+## length in bytes (decimal), "\n", its bytes. Name and length make the
+## concatenation unambiguous; bytes, never text, so "\r" counts (ADR-0009 §7).
+static func content_hash_of(files: Dictionary) -> String:
+	var names := PackedStringArray(files.keys())
+	names.sort()
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	for name in names:
+		var bytes: PackedByteArray = files[name]
+		hashing.update(("%s\n%d\n" % [name, bytes.size()]).to_utf8_buffer())
+		hashing.update(bytes)
+	return hashing.finish().hex_encode()
+
+
+## JSON.new().parse, never JSON.parse_string (which prints and returns null).
+static func _parse(name: String, bytes: PackedByteArray, errors: Array[DataError]) -> Variant:
+	var json := JSON.new()
+	if json.parse(bytes.get_string_from_utf8()) != OK:
+		var line := json.get_error_line()
+		var where := "line %d" % line if line > 0 else "(root)"
+		errors.append(DataError.new(name, where, json.get_error_message()))
+		return null
+	return json.data

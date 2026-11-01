@@ -23,7 +23,7 @@ static func setup(state: GameState, ctx: VisionContext) -> void:
 				vis._vis_dormant_memo[f * tiles + state.units.tile_of(row)] = 1
 	state.view_cache = ViewCache.new(nf, tiles)
 	state.view_cache.valid = true
-	recompute(state, VisionContext.new(ctx.fields, ctx.view_radius, ctx.node_radius, PackedInt32Array(range(nf))))
+	recompute(state, ctx.all_factions(nf))
 
 
 ## Rebuilds the cache from the sources without touching the state (after a load,
@@ -200,14 +200,14 @@ static func _sources_view(state: GameState, ctx: VisionContext, f: int) -> Packe
 	for row in nodes.row_count():
 		if nodes.owner_of(row) == f:
 			var tile := nodes.tile_of(row)
-			var radius := ctx.node_radius[nodes.level_of(row)] + (1 if state.terrain.is_mountain(tile) else 0)
+			var radius := ctx.node_radius[nodes.level_of(row)] + (ctx.mountain_bonus if state.terrain.is_mountain(tile) else 0)
 			for t in ctx.fields.field(tile, radius):
 				seen[t] = 1
 	return seen
 
 
 static func _unit_radius(state: GameState, ctx: VisionContext, row: int, tile: int) -> int:
-	return ctx.view_radius[state.units.type_of(row)] + (1 if state.terrain.is_mountain(tile) else 0)
+	return ctx.view_radius[state.units.type_of(row)] + (ctx.mountain_bonus if state.terrain.is_mountain(tile) else 0)
 
 
 ## Writes what faction f learns from its new view `seen` (previous view `before`):
