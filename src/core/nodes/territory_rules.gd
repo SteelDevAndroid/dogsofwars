@@ -74,6 +74,25 @@ static func _only(claimants: PackedInt32Array, faction: int) -> bool:
 	return true
 
 
+## recolorer_zone (GDD 11 rule 15), the interface of the ruins (13): only neutral
+## tiles that hold no node are written, with the RUIN anchor; an enemy tile is never
+## taken. Returns the tiles really changed, ascending.
+static func recolor_zone(state: GameState, faction: int, tiles: PackedInt32Array, cause: int) -> PackedInt32Array:
+	var changed := PackedInt32Array()
+	var sorted := tiles.duplicate()
+	sorted.sort()
+	for tile in sorted:
+		if state.map.owner_at(tile) != Faction.NONE or state.view().node_at(tile) >= 0:
+			continue
+		state.map._tile_owner[tile] = faction
+		state.map._tile_anchor[tile] = MapSlice.ANCHOR_RUIN
+		state.map._tile_prev_owner[tile] = Faction.NONE
+		state.map._tile_change_turn[tile] = state.turn()
+		state.map._tile_change_cause[tile] = cause
+		changed.append(tile)
+	return changed
+
+
 ## Ruin tiles of an eliminated faction become neutral (GDD 11 rule 15).
 static func release_ruin_tiles(state: GameState, faction: int) -> void:
 	for tile in state.tile_count():

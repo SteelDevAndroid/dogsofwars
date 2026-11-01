@@ -63,8 +63,7 @@ func test_changes_are_recorded_and_grouped_neutral_first() -> void:
 func test_ruin_tile_survives_its_nodes_and_falls_to_another_faction_only() -> void:
 	var state := _map(7)
 	var tile := state.tile_index(3, 1)
-	GameStateSetup.set_tile_owner(state, tile, Faction.PLAYER)
-	state.map._tile_anchor[tile] = MapSlice.ANCHOR_RUIN
+	TerritoryRules.recolor_zone(state, Faction.PLAYER, PackedInt32Array([tile]), MapSlice.CAUSE_RUIN)
 	_recompute(state)
 	assert_int(state.map.owner_at(tile)).is_equal(Faction.PLAYER)
 	assert_int(state.map.anchor_at(tile)).is_equal(MapSlice.ANCHOR_RUIN)
@@ -79,11 +78,25 @@ func test_ruin_tile_survives_its_nodes_and_falls_to_another_faction_only() -> vo
 func test_ruin_tile_under_a_node_of_its_own_faction_stays_a_ruin_tile() -> void:
 	var state := _map(7)
 	var tile := state.tile_index(3, 1)
-	GameStateSetup.set_tile_owner(state, tile, Faction.PLAYER)
-	state.map._tile_anchor[tile] = MapSlice.ANCHOR_RUIN
+	TerritoryRules.recolor_zone(state, Faction.PLAYER, PackedInt32Array([tile]), MapSlice.CAUSE_RUIN)
 	GameStateSetup.add_node(state, state.tile_index(4, 1), Faction.PLAYER, 1)
 
 	_recompute(state)
 
 	assert_int(state.map.owner_at(tile)).is_equal(Faction.PLAYER)
 	assert_int(state.map.anchor_at(tile)).is_equal(MapSlice.ANCHOR_RUIN)
+
+
+func test_recolor_zone_writes_neutral_non_node_tiles_only() -> void:
+	var state := _map(7)
+	GameStateSetup.add_node(state, state.tile_index(0, 0), Faction.AI, 1)
+	GameStateSetup.add_node(state, state.tile_index(6, 2), Faction.NONE, 1)
+	_recompute(state)
+	var zone := PackedInt32Array([state.tile_index(3, 1), state.tile_index(1, 1), state.tile_index(6, 2), state.tile_index(2, 1)])
+
+	var changed := TerritoryRules.recolor_zone(state, Faction.PLAYER, zone, MapSlice.CAUSE_RUIN)
+
+	assert_array(changed).is_equal(PackedInt32Array([state.tile_index(2, 1), state.tile_index(3, 1)]))
+	assert_int(state.map.owner_at(state.tile_index(1, 1))).is_equal(Faction.AI)
+	assert_int(state.map.anchor_at(state.tile_index(3, 1))).is_equal(MapSlice.ANCHOR_RUIN)
+	assert_int(state.map._tile_change_cause[state.tile_index(3, 1)]).is_equal(MapSlice.CAUSE_RUIN)
