@@ -24,7 +24,11 @@ const PREREQUISITE_MISSING := &"PRÉREQUIS_MANQUANT"
 const NOT_ENOUGH_ENERGY := &"ÉNERGIE_INSUFFISANTE"
 ## An AI attack or capture only comes from a stored intention (ADR-0004 §9).
 const NO_INTENTION := &"AUCUNE_INTENTION"
-const TYPE_CANNOT_CAPTURE := &"TYPE_NON_CAPABLE"
+## Shared by CAPTURER (not an Ouvrier or Bastion) and RÉVEILLER (not a pack unit).
+const TYPE_NOT_CAPABLE := &"TYPE_NON_CAPABLE"
+## RÉVEILLER: the target is not, on the faction's view, a visible sleeping unit at
+## distance 1. One code, no parameter, for every way to fail (GDD 7 rule 2).
+const NO_ADJACENT_DRONE := &"AUCUN_DRONE_ADJACENT"
 const ALREADY_ACTED := &"DÉJÀ_AGI"
 const NOT_ON_A_NODE := &"PAS_SUR_UN_NŒUD"
 const NODE_ALREADY_OWNED := &"NŒUD_DÉJÀ_POSSÉDÉ"

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "prices": [
+    {"type": "eclaireur", "price": 4},
+    {"type": "ouvrier", "price": 5},
+    {"type": "assaut", "price": 6},
+    {"type": "rempart", "price": 8}
+  ]
+}

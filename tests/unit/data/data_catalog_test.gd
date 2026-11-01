@@ -159,3 +159,29 @@ func test_protocol_levels_and_calendar_order_are_checked() -> void:
 		"protocoles.json: protocols[1].level: expected 2: levels of branch reseau follow 1..k",
 		"ai.json: protocol_calendar[1].turn: turns must not decrease",
 		"energie.json: start: 120 above max 99"])
+
+
+func test_a_duplicated_wake_price_is_refused() -> void:
+	var docs := CatalogFactory.documents()
+	docs["reveil.json"]["prices"].append({"type": "assaut", "price": 7})
+
+	assert_array(_errors_of(docs)).contains(["reveil.json: prices[4].type: duplicate type assaut"])
+
+
+## Cross-domain checks only run once every file is valid on its own.
+func test_wake_prices_are_cross_checked_with_the_units_and_the_energy_cap() -> void:
+	var docs := CatalogFactory.documents()
+	docs["reveil.json"]["prices"] = [
+		{"type": "eclaireur", "price": 4}, {"type": "assaut", "price": 6},
+		{"type": "dragon", "price": 2}, {"type": "bastion", "price": 3}, {"type": "rempart", "price": 8}]
+	docs["energie.json"]["max"] = 5
+	docs["energie.json"]["start"] = 5
+
+	var errors := _errors_of(docs)
+
+	assert_array(errors).contains([
+		"reveil.json: prices[2].type: unknown unit type dragon",
+		"reveil.json: prices[3].type: bastion is not a pack type",
+		"reveil.json: prices[1].price: 6 above the energy cap 5",
+		"reveil.json: prices[4].price: 8 above the energy cap 5",
+		"reveil.json: prices: no price for pack type ouvrier"])

@@ -22,6 +22,13 @@ static func unit(at_state: GameState, type: int, faction: int, x: int, y: int, a
 			hp if hp >= 0 else CatalogFactory.standard().units.hp(type), asleep)
 
 
+## The same state with the factions' energy stocks replaced (the view is rebuilt).
+static func with_energy(at_state: GameState, player: int, ai: int) -> GameState:
+	var loaded := StatePayload.decoded_with(at_state, &"_fac_energy", PackedInt32Array([player, ai]))
+	VisionService.rebuild(loaded, StateFactory.vision_context(loaded))
+	return loaded
+
+
 ## Vision set up: call after the units and nodes are placed.
 static func ready(at_state: GameState) -> GameState:
 	VisionService.setup(at_state, StateFactory.vision_context(at_state))

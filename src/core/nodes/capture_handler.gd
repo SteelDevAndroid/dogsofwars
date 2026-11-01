@@ -16,7 +16,7 @@ func validate(view: StateView, command: Command, rules: RuleTable) -> Validation
 	if view.unit_faction(capture.unit_id) != capture.faction:
 		return ValidationResult.refused(Refusal.UNKNOWN_UNIT)
 	if not rules.catalog.units.can_capture(view.unit_type(capture.unit_id)):
-		return ValidationResult.refused(Refusal.TYPE_CANNOT_CAPTURE)
+		return ValidationResult.refused(Refusal.TYPE_NOT_CAPABLE)
 	if view.unit_acted(capture.unit_id):
 		return ValidationResult.refused(Refusal.ALREADY_ACTED)
 	var node_id := view.node_at(view.unit_tile(capture.unit_id))

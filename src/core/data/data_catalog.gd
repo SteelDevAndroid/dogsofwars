@@ -17,6 +17,7 @@ var protocols: ProtocolTree
 var ai: AiParams
 var score: ScoreParams
 var combat: CombatParams
+var wake: WakeParams
 
 
 ## Domain files expected at the data root, with the class that checks (SCHEMA) and
@@ -24,7 +25,7 @@ var combat: CombatParams
 static func domains() -> Dictionary:
 	return {
 		"ai.json": AiParams, "brouillard.json": FogParams, "combat.json": CombatParams, "energie.json": EnergyParams,
-		"noeuds.json": NodeParams,
+		"noeuds.json": NodeParams, "reveil.json": WakeParams,
 		"protocoles.json": ProtocolTree, "score.json": ScoreParams, "terrain.json": TerrainParams, "units.json": UnitTypes,
 	}
 
@@ -63,6 +64,7 @@ static func load_all(source: DataSource) -> DataCatalogResult:
 	catalog.protocols = built["protocoles.json"]
 	catalog.score = built["score.json"]
 	catalog.combat = built["combat.json"]
+	catalog.wake = built["reveil.json"]
 	catalog.fog = built["brouillard.json"]
 	catalog.nodes = built["noeuds.json"]
 	catalog.terrain = built["terrain.json"]
@@ -80,6 +82,7 @@ static func _cross_check(built: Dictionary, errors: Array[DataError]) -> void:
 			"%d levels, noeuds.json has %d" % [energy.level_count(), nodes.max_level()]))
 	var tree: ProtocolTree = built["protocoles.json"]
 	var units: UnitTypes = built["units.json"]
+	_check_wake_prices(built["reveil.json"], units, energy, errors)
 	for effect in tree.effect_count():
 		for key in tree.effect_types(effect):
 			if units.type_of_key(key) < 0:
@@ -89,6 +92,23 @@ static func _cross_check(built: Dictionary, errors: Array[DataError]) -> void:
 	for k in calendar.size():
 		if calendar[k] >= tree.count():
 			errors.append(DataError.new("ai.json", "protocol_calendar[%d].protocol" % k, "unknown protocol %d" % calendar[k]))
+
+
+## GDD 7 rule 1: every pack type has a price, each price fits the energy cap, and
+## only pack types are priced (a dormant is a pack type).
+static func _check_wake_prices(wake: WakeParams, units: UnitTypes, energy: EnergyParams, errors: Array[DataError]) -> void:
+	for k in wake.count():
+		var type := units.type_of_key(wake.key_at(k))
+		if type < 0:
+			errors.append(DataError.new("reveil.json", "prices[%d].type" % k, "unknown unit type %s" % wake.key_at(k)))
+		elif units.side(type) != Faction.PLAYER:
+			errors.append(DataError.new("reveil.json", "prices[%d].type" % k, "%s is not a pack type" % wake.key_at(k)))
+		if wake.price_at(k) > energy.max_stock():
+			errors.append(DataError.new("reveil.json", "prices[%d].price" % k,
+				"%d above the energy cap %d" % [wake.price_at(k), energy.max_stock()]))
+	for type in units.count():
+		if units.side(type) == Faction.PLAYER and wake.base_price(units.key(type)) == 0:
+			errors.append(DataError.new("reveil.json", "prices", "no price for pack type %s" % units.key(type)))
 
 
 ## SHA-256 over, for each file in explicit alphabetical order: its name, "\n", its

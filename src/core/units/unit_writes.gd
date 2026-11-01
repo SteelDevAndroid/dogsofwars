@@ -19,6 +19,18 @@ static func start_turn(state: GameState, faction: int) -> void:
 			state.units._unit_acted[row] = 0
 
 
+## réveiller (GDD 6, GDD 7 rule 3 step 2): the dormant becomes the waker's faction,
+## awake, having moved and acted; the waker has acted. Type, HP and tile unchanged.
+static func wake(state: GameState, waker_id: int, target_id: int) -> void:
+	var waker := state.units.find_row(waker_id)
+	var target := state.units.find_row(target_id)
+	state.units._unit_asleep[target] = 0
+	state.units._unit_faction[target] = state.units._unit_faction[waker]
+	state.units._unit_moved[target] = 1
+	state.units._unit_acted[target] = 1
+	state.units._unit_acted[waker] = 1
+
+
 ## GDD 6 rule 4: the unit has acted this turn (capture, attack, wake-up).
 static func set_acted(state: GameState, unit_id: int) -> void:
 	state.units._unit_acted[state.units.find_row(unit_id)] = 1

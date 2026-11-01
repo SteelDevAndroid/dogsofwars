@@ -1,5 +1,5 @@
 # Data catalogs for tests (ADR-0011 §4): the standard documents below hold the GDD
-# values (GDD 2, 3, 5, 6, 8, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
+# values (GDD 2, 3, 5, 6, 7, 8, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
 # variants from documents().
 class_name CatalogFactory
 extends RefCounted
@@ -41,6 +41,9 @@ static func documents() -> Dictionary:
 		"brouillard.json": {"schema_version": 1, "node_view_min": 2, "mountain_view_bonus": 1},
 		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3]},
 		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0], "defense_class": [0, 1, 2, 0]},
+		"reveil.json": {"schema_version": 1, "prices": [
+			{"type": "eclaireur", "price": 4}, {"type": "ouvrier", "price": 5},
+			{"type": "assaut", "price": 6}, {"type": "rempart", "price": 8}]},
 		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
 		"protocoles.json": {"schema_version": 1, "protocols": [

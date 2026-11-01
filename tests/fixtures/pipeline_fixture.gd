@@ -50,6 +50,11 @@ func attack(attacker_id: int, target_id: int, faction: int = Faction.PLAYER) -> 
 	return pipeline.submit(AttackCommand.new(faction, emitter, attacker_id, target_id))
 
 
+func wake(waker_id: int, target_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
+	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
+	return pipeline.submit(WakeCommand.new(faction, emitter, waker_id, target_id))
+
+
 func capture(unit_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
 	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
 	return pipeline.submit(CaptureCommand.new(faction, emitter, unit_id))

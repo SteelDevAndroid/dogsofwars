@@ -44,7 +44,7 @@ func test_validation_order_returns_the_first_failure() -> void:
 	GameStateSetup.set_phase(fx.state, HeaderSlice.PHASE_PLAYER, Faction.PLAYER)
 	assert_str(fx.capture(1).code).is_equal(Refusal.UNKNOWN_UNIT)
 	var assault := MapBuilder.unit(fx.state, ASSAUT, Faction.PLAYER, 3, 1)
-	assert_str(fx.capture(assault).code).is_equal(Refusal.TYPE_CANNOT_CAPTURE)
+	assert_str(fx.capture(assault).code).is_equal(Refusal.TYPE_NOT_CAPABLE)
 	var off_node := MapBuilder.unit(fx.state, OUVRIER, Faction.PLAYER, 3, 2)
 	assert_str(fx.capture(off_node).code).is_equal(Refusal.NOT_ON_A_NODE)
 	var on_own := MapBuilder.unit(fx.state, OUVRIER, Faction.PLAYER, 0, 0)
