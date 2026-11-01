@@ -5,6 +5,8 @@
 class_name MapSlice
 extends SliceBase
 
+## Why a tile is owned (GDD 11 rules 13 and 15): through a node's territory, or
+## recoloured by a ruin (survives the loss of the faction's nodes); NONE when neutral.
 const ANCHOR_NONE := 0
 const ANCHOR_NODE := 1
 const ANCHOR_RUIN := 2

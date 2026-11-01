@@ -19,6 +19,11 @@ static func start_turn(state: GameState, faction: int) -> void:
 			state.units._unit_acted[row] = 0
 
 
+## GDD 6 rule 4: the unit has acted this turn (capture, attack, wake-up).
+static func set_acted(state: GameState, unit_id: int) -> void:
+	state.units._unit_acted[state.units.find_row(unit_id)] = 1
+
+
 ## GDD 6 rule 4: the unit has used its move this turn.
 static func set_moved(state: GameState, unit_id: int) -> void:
 	state.units._unit_moved[state.units.find_row(unit_id)] = 1

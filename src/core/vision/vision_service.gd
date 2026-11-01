@@ -105,14 +105,10 @@ static func known_tile_owner(state: GameState, faction: int, tile: int) -> int:
 	return state.visibility._vis_last_owner_seen[faction * state.tile_count() + tile]
 
 
-## Anchor on a discovered tile; a ruin anchor only for a faction that knows ruins.
+## Why a tile is owned, as the faction sees it: real on a VISIBLE tile, unknown
+## (NONE) elsewhere, like the history of the owner changes.
 static func known_anchor(state: GameState, faction: int, tile: int) -> int:
-	var anchor := state.map.anchor_at(tile)
-	if not _discovered(state, faction, tile):
-		return MapSlice.ANCHOR_NONE
-	if anchor == MapSlice.ANCHOR_RUIN and not knows_ruins(faction):
-		return MapSlice.ANCHOR_NONE
-	return anchor
+	return state.map.anchor_at(tile) if can_see(state.view_cache, faction, tile) else MapSlice.ANCHOR_NONE
 
 
 ## A node is known when it is the faction's own or its tile is discovered.

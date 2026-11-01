@@ -22,6 +22,12 @@ const RESEARCH_IN_PROGRESS := &"RECHERCHE_EN_COURS"
 const PREREQUISITE_MISSING := &"PRÉREQUIS_MANQUANT"
 ## Params: need, available (GDD 10 rule 6).
 const NOT_ENOUGH_ENERGY := &"ÉNERGIE_INSUFFISANTE"
+## An AI attack or capture only comes from a stored intention (ADR-0004 §9).
+const NO_INTENTION := &"AUCUNE_INTENTION"
+const TYPE_CANNOT_CAPTURE := &"TYPE_NON_CAPABLE"
+const ALREADY_ACTED := &"DÉJÀ_AGI"
+const NOT_ON_A_NODE := &"PAS_SUR_UN_NŒUD"
+const NODE_ALREADY_OWNED := &"NŒUD_DÉJÀ_POSSÉDÉ"
 ## Internal turn commands out of their sequence (GDD 3, States and Transitions).
 const WRONG_PHASE := &"PHASE_INCORRECTE"
 ## COMMENCER_LE_TOUR beyond T_MAX: the match must end instead (GDD 3 rule 6).

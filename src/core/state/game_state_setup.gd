@@ -42,14 +42,12 @@ static func add_unit(state: GameState, type: int, faction: int, tile: int, hp: i
 static func add_node(state: GameState, tile: int, owner: int, level: int) -> int:
 	var id := state.allocate_id(HeaderSlice.NEXT_NODE_ID)
 	state.nodes.append(id, tile, owner, level)
-	state.map._tile_anchor[tile] = MapSlice.ANCHOR_NODE
 	return id
 
 
 static func add_ruin(state: GameState, tile: int, zone: int, memory_faction: int) -> int:
 	var id := state.allocate_id(HeaderSlice.NEXT_RUIN_ID)
 	state.ruins.append(id, tile, zone, memory_faction)
-	state.map._tile_anchor[tile] = MapSlice.ANCHOR_RUIN
 	return id
 
 

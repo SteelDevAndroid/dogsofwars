@@ -84,6 +84,10 @@ func is_asleep(row: int) -> bool:
 	return _unit_asleep[row] == 1
 
 
+func has_acted(row: int) -> bool:
+	return _unit_acted[row] == 1
+
+
 func has_moved(row: int) -> bool:
 	return _unit_moved[row] == 1
 

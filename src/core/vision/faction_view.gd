@@ -67,6 +67,15 @@ func unit_moved(unit_id: int) -> bool:
 	return super(unit_id) if _sees_unit(unit_id) else false
 
 
+func unit_acted(unit_id: int) -> bool:
+	return super(unit_id) if _sees_unit(unit_id) else false
+
+
+func node_at(tile: int) -> int:
+	var node_id := super(tile)
+	return node_id if node_id >= 0 and VisionService.knows_node(_state, _faction, node_id) else -1
+
+
 func unit_asleep(unit_id: int) -> bool:
 	return super(unit_id) if _sees_unit(unit_id) else false
 

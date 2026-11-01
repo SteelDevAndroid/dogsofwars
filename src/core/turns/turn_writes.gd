@@ -18,5 +18,10 @@ static func finish(state: GameState, status: int) -> void:
 	state.header._header[HeaderSlice.END_STATUS] = status
 
 
+## GDD 3 rule 10: the faction holds no node any more.
+static func eliminate(state: GameState, faction: int) -> void:
+	state.factions._fac_eliminated[faction] = 1
+
+
 static func end_phase(state: GameState) -> void:
 	state.header._header[HeaderSlice.PHASE] = HeaderSlice.PHASE_END_OF_TURN

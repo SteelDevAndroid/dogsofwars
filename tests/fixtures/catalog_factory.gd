@@ -66,4 +66,4 @@ static func _protocol(id: int, key: String, branch: String, level: int, price: i
 static func _unit(id: int, key: String, side: String, hp: int, attack: int, defense: int,
 		move: int, vision: int) -> Dictionary:
 	return {"id": id, "key": key, "side": side, "hp": hp, "attack": attack, "defense": defense,
-		"move": move, "range": 1, "vision": vision}
+		"move": move, "range": 1, "vision": vision, "captures": 1 if key in ["ouvrier", "bastion"] else 0}

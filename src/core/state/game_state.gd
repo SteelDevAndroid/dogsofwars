@@ -5,7 +5,8 @@ class_name GameState
 extends RefCounted
 
 ## Content schema of to_bytes; carried by the save envelope only (ADR-0006).
-const SCHEMA_VERSION := 1
+## 2: nodes gain since_turn and upgraded_turn (GDD 11 rule 1), 2026-11-01.
+const SCHEMA_VERSION := 2
 
 const MAX_MAP_SIZE := 16
 const MAX_UNITS := 60
@@ -164,7 +165,8 @@ func restore_from(snapshot: GameState) -> void:
 ## - ruins: kept for the player (drawn ruins are marked from turn 1, GDD 5 rule 15),
 ##   absent for the AI (ADR-0005 §6);
 ## - tiles out of view: last owner seen, no change history; undiscovered tiles:
-##   no anchor nor point of interest, and a terrain of its own where they are plains;
+##   no point of interest, and a terrain of its own where they are plains; the
+##   anchor (why a tile is owned) only in view;
 ## - other factions: their Visibility rows and view-cache rows at zero, their energy
 ##   and research hidden, their chronicle and journal rows absent;
 ## - slices private to another faction emptied; authors of intentions out of view

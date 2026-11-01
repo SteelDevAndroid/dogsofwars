@@ -19,6 +19,7 @@ const SCHEMA := {
 		"move": {"kind": &"int", "min": 0, "max": 4},
 		"range": {"kind": &"int", "min": 1, "max": 1},
 		"vision": {"kind": &"int", "min": 1, "max": 5},
+		"captures": {"kind": &"int", "min": 0, "max": 1},
 	}}},
 }
 
@@ -30,6 +31,7 @@ var _defense := PackedInt32Array()
 var _move := PackedInt32Array()
 var _range := PackedInt32Array()
 var _vision := PackedInt32Array()
+var _captures := PackedByteArray()
 
 
 ## Builds from checked data; ids must be 0..n-1 in order and keys unique.
@@ -50,6 +52,7 @@ static func build(data: Dictionary, file: String, errors: Array[DataError]) -> U
 		types._move.append(row["move"])
 		types._range.append(row["range"])
 		types._vision.append(row["vision"])
+		types._captures.append(row["captures"])
 	return types
 
 
@@ -93,6 +96,11 @@ func attack_range(type: int) -> int:
 
 func vision(type: int) -> int:
 	return _vision[type]
+
+
+## GDD 6 rule 7: only the Ouvrier (pack) and the Bastion (Guardians) capture nodes.
+func can_capture(type: int) -> bool:
+	return _captures[type] == 1
 
 
 ## View radius of every type, by type id (a copy).

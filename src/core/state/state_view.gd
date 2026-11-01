@@ -104,6 +104,11 @@ func unit_moved(unit_id: int) -> bool:
 	return row >= 0 and _state.units.has_moved(row)
 
 
+func unit_acted(unit_id: int) -> bool:
+	var row := _live_unit_row(unit_id)
+	return row >= 0 and _state.units.has_acted(row)
+
+
 func unit_asleep(unit_id: int) -> bool:
 	var row := _live_unit_row(unit_id)
 	return row >= 0 and _state.units.is_asleep(row)
@@ -121,6 +126,14 @@ func tile_anchor(tile: int) -> int:
 
 func node_ids() -> PackedInt32Array:
 	return _state.nodes._node_id.duplicate()
+
+
+## Id of the node on `tile`, or -1.
+func node_at(tile: int) -> int:
+	for row in _state.nodes.row_count():
+		if _state.nodes.tile_of(row) == tile:
+			return _state.nodes.id_of(row)
+	return -1
 
 
 ## Level of a node, -1 when the id is unknown.

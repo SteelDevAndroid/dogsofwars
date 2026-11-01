@@ -75,9 +75,7 @@ func test_ruins_are_kept_for_the_player_only() -> void:
 	VisionService.setup(state, StateFactory.vision_context(state))
 
 	assert_int(state.filtered_copy(Faction.PLAYER).ruins.row_count()).is_equal(1)
-	var ai_copy := state.filtered_copy(Faction.AI)
-	assert_int(ai_copy.ruins.row_count()).is_equal(0)
-	assert_int(ai_copy.map.anchor_at(state.tile_index(4, 0))).is_equal(MapSlice.ANCHOR_NONE)
+	assert_int(state.filtered_copy(Faction.AI).ruins.row_count()).is_equal(0)
 
 
 func test_private_slices_follow_their_faction() -> void:
