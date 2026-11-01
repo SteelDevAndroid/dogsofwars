@@ -22,5 +22,6 @@ Les ADR citent, dans **References Consulted** et ailleurs, des sources qui ne so
 | `.gitattributes` (`assets/data/*.json text eol=lf`) | ADR-0009 §7 | Fait |
 | Workflow `tests` (auto-tests shell, contrôles, gdUnit4) | ADR-0011 §8, §9 | Fait |
 | `addons/gdUnit4` 6.2.2, `project.godot` racine, `project.yaml` | ADR-0011 §1, §2 | Fait (2026-11-01) ; `project.yaml` est désormais versionné |
-| `StateFactory` et doublures (`tests/fixtures/`) | ADR-0011 §4 | À faire avec les premiers ports (stories Foundation) |
+| Doublures des ports `DataSource`, `FileStore`, `EventSink`, `PacingGate`, `ClockSource` (`tests/fixtures/`) | ADR-0011 §4 | Fait (2026-11-01) |
+| `StateFactory`, `NullProfilePort`, `RecordingProfilePort` | ADR-0011 §4 | Avec `GameState` (ADR-0003) et `ProfilePort` (ADR-0004) |
 | `export_presets.cfg` (preset Android, `include_filter="assets/data/*.json"`) | ADR-0009 §9 | À faire avec le premier export Android |

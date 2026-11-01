@@ -92,6 +92,7 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 ```gdscript
 class_name DataSource extends RefCounted
+var last_error: Error                              # OK, ou ERR_FILE_NOT_FOUND après la lecture d'un chemin absent
 func read_bytes(path: String) -> PackedByteArray  # vide + erreur si absent ; réel : FileAccess.get_file_as_bytes ; test : mémoire ; source de content_hash
 func read_text(path: String) -> String            # read_bytes(path).get_string_from_utf8() : une seule lecture par fichier
 func list(dir: String) -> PackedStringArray
