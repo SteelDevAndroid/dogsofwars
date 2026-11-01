@@ -49,6 +49,23 @@ func unit_hp(unit_id: int) -> int:
 	return super(unit_id) if _sees_unit(unit_id) else 0
 
 
+func unit_type(unit_id: int) -> int:
+	return super(unit_id) if _sees_unit(unit_id) else -1
+
+
+func unit_moved(unit_id: int) -> bool:
+	return super(unit_id) if _sees_unit(unit_id) else false
+
+
+func unit_asleep(unit_id: int) -> bool:
+	return super(unit_id) if _sees_unit(unit_id) else false
+
+
+func unit_at(tile: int) -> int:
+	var unit_id := super(tile)
+	return unit_id if unit_id >= 0 and _sees_unit(unit_id) else -1
+
+
 func node_ids() -> PackedInt32Array:
 	var ids := PackedInt32Array()
 	for node_id in super():

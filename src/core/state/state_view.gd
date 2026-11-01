@@ -71,6 +71,28 @@ func unit_hp(unit_id: int) -> int:
 	return 0 if row < 0 else _state.units.hp_of(row)
 
 
+## Type of a live unit, -1 when the id is unknown or destroyed.
+func unit_type(unit_id: int) -> int:
+	var row := _live_unit_row(unit_id)
+	return -1 if row < 0 else _state.units.type_of(row)
+
+
+func unit_moved(unit_id: int) -> bool:
+	var row := _live_unit_row(unit_id)
+	return row >= 0 and _state.units.has_moved(row)
+
+
+func unit_asleep(unit_id: int) -> bool:
+	var row := _live_unit_row(unit_id)
+	return row >= 0 and _state.units.is_asleep(row)
+
+
+## Id of the live unit on `tile`, or -1.
+func unit_at(tile: int) -> int:
+	var row := _state.units.live_row_at(tile)
+	return -1 if row < 0 else _state.units.id_of(row)
+
+
 func tile_anchor(tile: int) -> int:
 	return _state.map.anchor_at(tile)
 

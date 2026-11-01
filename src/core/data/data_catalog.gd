@@ -11,12 +11,13 @@ var content_hash: String
 var units: UnitTypes
 var fog: FogParams
 var nodes: NodeParams
+var terrain: TerrainParams
 
 
 ## Domain files expected at the data root, with the class that checks (SCHEMA) and
 ## builds (build) each one. Any other .json at the root is refused.
 static func domains() -> Dictionary:
-	return {"brouillard.json": FogParams, "noeuds.json": NodeParams, "units.json": UnitTypes}
+	return {"brouillard.json": FogParams, "noeuds.json": NodeParams, "terrain.json": TerrainParams, "units.json": UnitTypes}
 
 
 static func load_all(source: DataSource) -> DataCatalogResult:
@@ -48,6 +49,7 @@ static func load_all(source: DataSource) -> DataCatalogResult:
 	var catalog := DataCatalog.new()
 	catalog.fog = built["brouillard.json"]
 	catalog.nodes = built["noeuds.json"]
+	catalog.terrain = built["terrain.json"]
 	catalog.units = built["units.json"]
 	catalog.content_hash = content_hash_of(files)
 	return DataCatalogResult.new(catalog, errors)

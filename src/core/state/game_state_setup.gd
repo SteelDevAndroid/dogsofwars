@@ -64,3 +64,9 @@ static func add_chronicle_fragment(state: GameState, faction: int, fragment_id: 
 
 static func set_turn(state: GameState, turn: int) -> void:
 	state.header._header[HeaderSlice.TURN] = turn
+
+
+## Phase and active faction (tests and setup; in a match, BEGIN_TURN writes them).
+static func set_phase(state: GameState, phase: int, active_faction: int) -> void:
+	state.header._header[HeaderSlice.PHASE] = phase
+	state.header._header[HeaderSlice.ACTIVE_FACTION] = active_faction

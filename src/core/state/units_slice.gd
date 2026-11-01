@@ -82,3 +82,15 @@ func type_of(row: int) -> int:
 
 func is_asleep(row: int) -> bool:
 	return _unit_asleep[row] == 1
+
+
+func has_moved(row: int) -> bool:
+	return _unit_moved[row] == 1
+
+
+## Row of the live unit on `tile`, or -1 (one unit per tile, GDD 6 rule 1).
+func live_row_at(tile: int) -> int:
+	for row in _unit_id.size():
+		if _unit_alive[row] == 1 and _unit_tile[row] == tile:
+			return row
+	return -1

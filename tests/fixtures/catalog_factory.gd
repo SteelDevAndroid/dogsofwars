@@ -1,5 +1,5 @@
 # Data catalogs for tests (ADR-0011 §4): the standard documents below hold the GDD
-# values (GDD 5, 6 and 11), loaded through MemoryDataSource; tests derive broken
+# values (GDD 2, 5, 6 and 11), loaded through MemoryDataSource; tests derive broken
 # variants from documents().
 class_name CatalogFactory
 extends RefCounted
@@ -37,6 +37,7 @@ static func documents() -> Dictionary:
 		]},
 		"brouillard.json": {"schema_version": 1, "node_view_min": 2, "mountain_view_bonus": 1},
 		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3]},
+		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0]},
 	}
 
 
