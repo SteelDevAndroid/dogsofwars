@@ -76,3 +76,27 @@ func test_other_format_is_refused_and_other_data_flagged() -> void:
 
 	assert_str(outcome.code).is_equal(CommandReplay.FORMAT_INCOMPATIBLE)
 	assert_bool(outcome.other_data).is_true()
+
+
+func test_turn_cycles_replay_to_an_equal_state() -> void:
+	var initial := StateFactory.random_states(1, SEED)[0]
+	GameStateSetup.set_turn(initial, 0)
+	var fx := PipelineFixture.new(initial.duplicate_state(), true)
+	for turn in 3:
+		fx.begin_turn(Faction.PLAYER)
+		for unit_id in FactionView.new(fx.state, Faction.PLAYER).unit_ids():
+			var reach := fx.pipeline.check_move_range(FactionView.new(fx.state, Faction.PLAYER), Faction.PLAYER, unit_id)
+			if not reach.is_empty():
+				fx.move(unit_id, reach[0])
+		fx.end_turn()
+		fx.begin_turn(Faction.AI)
+		for unit_id in FactionView.new(fx.state, Faction.AI).unit_ids():
+			var reach := fx.pipeline.check_move_range(FactionView.new(fx.state, Faction.AI), Faction.AI, unit_id)
+			if not reach.is_empty():
+				fx.move(unit_id, reach[reach.size() - 1], Faction.AI)
+
+	var outcome := CommandReplay.replay(initial, fx.log, CatalogFactory.standard())
+
+	assert_int(fx.state.turn()).is_equal(3)
+	assert_int(outcome.divergence).override_failure_message("divergence %d: %s %s" % [outcome.divergence, outcome.code, fx.log.commands[maxi(outcome.divergence, 0)]]).is_equal(-1)
+	assert_bool(outcome.state.equals(fx.state)).is_true()

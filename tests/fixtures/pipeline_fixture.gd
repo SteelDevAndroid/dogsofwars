@@ -14,10 +14,11 @@ var profile := RecordingProfilePort.new()
 var pipeline: CommandPipeline
 
 
-## `state` at the player's turn 1 unless its phase is already set.
-func _init(p_state: GameState) -> void:
+## `state` put in the player's phase by the setup (no command) unless its phase is
+## already set or `created` asks to keep the CRÉÉE state.
+func _init(p_state: GameState, created: bool = false) -> void:
 	state = p_state
-	if state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_CREATED:
+	if not created and state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_CREATED:
 		GameStateSetup.set_phase(state, HeaderSlice.PHASE_PLAYER, Faction.PLAYER)
 	var catalog := CatalogFactory.standard()
 	rules = RuleTable.standard(catalog, VisionContext.for_map(catalog, state))
@@ -29,6 +30,14 @@ func _init(p_state: GameState) -> void:
 func move(unit_id: int, tile: int, faction: int = Faction.PLAYER) -> ValidationResult:
 	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
 	return pipeline.submit(MoveCommand.new(faction, emitter, unit_id, tile))
+
+
+func begin_turn(faction: int) -> ValidationResult:
+	return pipeline.submit(BeginTurnCommand.new(faction))
+
+
+func end_turn() -> ValidationResult:
+	return pipeline.submit(EndTurnCommand.new())
 
 
 func undo_move() -> ValidationResult:

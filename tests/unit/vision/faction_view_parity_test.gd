@@ -28,7 +28,7 @@ func test_parity_detects_a_divergent_view() -> void:
 
 
 func _first_divergence(view: StateView, copy_view: StateView, state: GameState) -> String:
-	for query in [&"width", &"height", &"tile_count", &"faction_count", &"turn", &"phase",
+	for query in [&"width", &"height", &"tile_count", &"faction_count", &"turn", &"phase", &"max_turn", &"active_faction",
 			&"revision", &"unit_ids", &"node_ids", &"ruin_ids"]:
 		if view.call(query) != copy_view.call(query):
 			return "%s: %s != %s" % [query, view.call(query), copy_view.call(query)]

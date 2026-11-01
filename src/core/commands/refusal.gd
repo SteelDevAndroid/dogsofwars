@@ -16,3 +16,7 @@ const TILE_BLOCKED := &"CASE_BLOQUÉE"
 const NOTHING_TO_UNDO := &"RIEN_À_ANNULER"
 const MOVE_REVEALED := &"DÉPLACEMENT_A_RÉVÉLÉ"
 const OTHER_ACTION_SINCE := &"AUTRE_ACTION_DEPUIS"
+## Internal turn commands out of their sequence (GDD 3, States and Transitions).
+const WRONG_PHASE := &"PHASE_INCORRECTE"
+## COMMENCER_LE_TOUR beyond T_MAX: the match must end instead (GDD 3 rule 6).
+const TURN_LIMIT := &"LIMITE_DE_TOURS"

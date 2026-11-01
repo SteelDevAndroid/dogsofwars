@@ -21,6 +21,8 @@ static func standard(p_catalog: DataCatalog, p_vision: VisionContext) -> RuleTab
 	var handlers: Array[CommandHandler] = []
 	handlers.resize(CommandType.COUNT)
 	handlers[CommandType.MOVE] = MoveHandler.new()
+	handlers[CommandType.BEGIN_TURN] = BeginTurnHandler.new()
+	handlers[CommandType.END_TURN] = EndTurnHandler.new()
 	return RuleTable.new(p_catalog, p_vision, handlers)
 
 

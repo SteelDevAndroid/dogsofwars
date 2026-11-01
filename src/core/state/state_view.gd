@@ -39,6 +39,14 @@ func revision() -> int:
 	return _state.revision()
 
 
+func max_turn() -> int:
+	return _state.header.value(HeaderSlice.T_MAX)
+
+
+func active_faction() -> int:
+	return _state.header.value(HeaderSlice.ACTIVE_FACTION)
+
+
 func terrain_at(tile: int) -> int:
 	return _state.terrain.at(tile)
 

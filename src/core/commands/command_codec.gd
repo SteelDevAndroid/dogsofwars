@@ -19,4 +19,8 @@ static func decode(values: PackedInt64Array) -> Command:
 			return MoveCommand.from_params(values[1], values[2], rest)
 		CommandType.UNDO_MOVE:
 			return UndoMoveCommand.from_params(values[1], values[2], rest)
+		CommandType.BEGIN_TURN:
+			return BeginTurnCommand.from_params(values[1], values[2], rest)
+		CommandType.END_TURN:
+			return EndTurnCommand.from_params(values[1], values[2], rest)
 	return null

@@ -27,6 +27,7 @@ const SIZE := 17
 const PHASE_CREATED := 0
 const PHASE_PLAYER := 1
 const PHASE_ENEMY_EXECUTION := 2
+## FIN_DE_TOUR: the player has ended their phase, the enemy phase has not begun.
 const PHASE_END_OF_TURN := 3
 const PHASE_FINISHED := 4
 

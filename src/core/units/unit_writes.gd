@@ -11,6 +11,14 @@ static func move_to(state: GameState, unit_id: int, tile: int) -> void:
 	state.units._unit_tile[row] = tile
 
 
+## GDD 3 rule 2: "a bougé" and "a agi" back to false for every unit of the faction.
+static func start_turn(state: GameState, faction: int) -> void:
+	for row in state.units.row_count():
+		if state.units.faction_of(row) == faction:
+			state.units._unit_moved[row] = 0
+			state.units._unit_acted[row] = 0
+
+
 ## GDD 6 rule 4: the unit has used its move this turn.
 static func set_moved(state: GameState, unit_id: int) -> void:
 	state.units._unit_moved[state.units.find_row(unit_id)] = 1
