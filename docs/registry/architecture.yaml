@@ -281,7 +281,7 @@ interfaces:
     consumers:
       - ai-runner
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    signal_signature: "AiRunner.start_turn(state, pipeline, pacing: PacingGate) ; rappel injecté on_turn_finished: Callable ; PacingGate.is_ready() -> bool (port Core, adaptateur de présentation, version factice pour les tests)"
+    signal_signature: "AiRunner.start_turn(state, pipeline, pacing: PacingGate, catalog: DataCatalog) et resume(même signature) ; rappel injecté on_turn_finished: Callable ; PacingGate.is_ready() -> bool (port Core, adaptateur de présentation, version factice pour les tests)"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30

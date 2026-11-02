@@ -67,7 +67,7 @@ Le système 4 transforme des doigts en ordres et en mouvements de caméra sans j
 
 **6. Commande : `check` puis `submit`.** `InteractionController` (Presentation) reçoit un `Tap`, convertit la position en tuile par `MapCamera`, interroge `InteractionModel` et `TapResolver`, puis appelle `pipeline.check(cmd)` et, si permis, `pipeline.submit(cmd)`. Le refus affiché est le code du pipeline, inchangé. Une tuile sous brouillard est validée sur la vue du joueur (ADR-0007) et n'affiche aucune information cachée ; le seul refus possible sur une tuile jamais vue est `HORS_DE_PORTÉE`.
 
-**7. Plage de déplacement = validation.** La portée affichée n'est pas calculée par le système 4 : `RuleTable.check_move_range(view: StateView, unit_id: int) -> PackedInt32Array` (**ajout à ADR-0004**) rend les tuiles où DÉPLACER est permis, par un parcours qui appelle **le même code d'étape** que `validate` de DÉPLACER ; un test de parité vérifie, pour chaque tuile, `RuleTable.validate(view, Move)` permis ⇔ tuile ∈ plage (c'est `validate` qui est comparé, **pas** `pipeline.check`, dont le préfixe de refus — PAS_VOTRE_TOUR, verrous — ferait échouer la parité en tour ennemi). La plage est calculée à la sélection et mémorisée par (révision, unité) ; elle est recalculée quand la révision change. Si le coût dépasse 2 ms sur l'appareil, le calcul (fonction pure sur une copie) passe sur `WorkerThreadPool` comme la planification de l'IA (ADR-0005 §7) et la plage apparaît **entière** à la fin, jamais partielle.
+**7. Plage de déplacement = validation.** La portée affichée n'est pas calculée par le système 4 : `RuleTable.check_move_range(view: StateView, faction: int, unit_id: int) -> PackedInt32Array` (**ajout à ADR-0004** ; méthode d'instance, la faction est celle de la vue) rend les tuiles où DÉPLACER est permis, par un parcours qui appelle **le même code d'étape** que `validate` de DÉPLACER ; un test de parité vérifie, pour chaque tuile, `RuleTable.validate(view, Move)` permis ⇔ tuile ∈ plage (c'est `validate` qui est comparé, **pas** `pipeline.check`, dont le préfixe de refus — PAS_VOTRE_TOUR, verrous — ferait échouer la parité en tour ennemi). La plage est calculée à la sélection et mémorisée par (révision, unité) ; elle est recalculée quand la révision change. Si le coût dépasse 2 ms sur l'appareil, le calcul (fonction pure sur une copie) passe sur `WorkerThreadPool` comme la planification de l'IA (ADR-0005 §7) et la plage apparaît **entière** à la fin, jamais partielle.
 
 **8. Caméra et événements.** `MapCamera` n'est pas dans l'état ni la sauvegarde : au chargement, zoom par défaut et centre sur l'unité du joueur d'identifiant le plus bas. Elle écoute DÉPLACEMENT_ANNULÉ, ÉTAT_CHARGÉ, UNITÉ_DÉPLACÉE, RUINE_LUE et TOUR_COMMENCÉ par le gestionnaire de présentation (ADR-0002) et n'émet aucune commande de caméra : « la caméra n'est pas une commande ».
 
@@ -87,7 +87,7 @@ Le système 4 transforme des doigts en ordres et en mouvements de caméra sans j
                                                               TapResolver (pur, tableau B) ──► Select | Deselect | Refusal | Command
                                                                              │ Command
                                                        pipeline.check(cmd) ──► pipeline.submit(cmd) ──► (ADR-0004)
- Sélection ──► RuleTable.check_move_range(view, unit) ──► PackedInt32Array ──► surcouche de portée (mémorisée par révision)
+ Sélection ──► RuleTable.check_move_range(view, faction, unit) ──► PackedInt32Array ──► surcouche de portée (mémorisée par révision)
  UiScale : Window.content_scale_factor = dpi / 160 (unité de viewport = 1 dp) ; zone sûre ──► rectangle de carte
 ```
 
@@ -110,7 +110,7 @@ class_name TapResolver extends RefCounted
 static func resolve(mode: int, selection: int, target: TapTarget, checks: CheckPort) -> TapAction
 
 # ajout à ADR-0004 (RuleTable) : méthode d'instance, la RuleTable détient catalogue et VisionContext ; le pipeline délègue
-func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array
+func check_move_range(view: StateView, faction: int, unit_id: int) -> PackedInt32Array
 ```
 
 ### Implementation Guidelines
