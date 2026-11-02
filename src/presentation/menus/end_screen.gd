@@ -39,7 +39,7 @@ func _init() -> void:
 	quote_label = MenuLayout.label(box)
 	quote_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	quote_label.modulate = Color("EADFC8")
-	back_button = MenuLayout.button(box, "Retour au menu", func() -> void: back_requested.emit())
+	back_button = MenuLayout.button(box, "Retour au menu", func() -> void: back_requested.emit(), "retour")
 	MenuLayout.make_primary(back_button)
 
 

@@ -40,18 +40,12 @@ func _init() -> void:
 	scroll.add_child(cards_box)
 	for card: Array in CARDS:
 		cards_box.add_child(_card(card[0], card[1]))
-	back_button = MenuLayout.button(column, "Retour", func() -> void: back_requested.emit())
+	back_button = MenuLayout.button(column, "Retour", func() -> void: back_requested.emit(), "retour")
 	MenuLayout.make_primary(back_button)
 
 
 static func _card(title: String, text: String) -> PanelContainer:
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("1E2329")
-	style.border_color = Color("1FA38F")
-	style.border_width_left = 4
-	style.set_content_margin_all(14)
-	panel.add_theme_stylebox_override("panel", style)
+	var panel := MenuLayout.framed_panel()
 	var box := VBoxContainer.new()
 	panel.add_child(box)
 	var head := MenuLayout.label(box, title)

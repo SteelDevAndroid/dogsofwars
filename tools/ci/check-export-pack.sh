@@ -21,7 +21,7 @@ for wav in assets/audio/*.wav; do
   grep -q "^res://.godot/imported/$(basename "$wav")-.*\.sample$" <<<"$stored" || { echo "sound not imported in the pack: $wav"; fail=1; }
 done
 # the delivered textures (terrain, nodes, ruins, units, effects) travel as compiled .ctex under .godot/imported
-for png in assets/art/*/*.png; do
+for png in assets/art/*/*.png assets/art/*/*.svg; do
   case "$png" in *_mask.png) continue ;; esac  # the faction masks equal the silhouettes: not shipped
   grep -q "^res://.godot/imported/$(basename "$png")-.*\.ctex$" <<<"$stored" || { echo "texture not imported in the pack: $png"; fail=1; }
 done

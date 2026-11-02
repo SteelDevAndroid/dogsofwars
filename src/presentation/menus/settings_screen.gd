@@ -66,6 +66,7 @@ func _init() -> void:
 	_volume(box, "Effets sonores", effects_slider, GameSettings.VOLUME_EFFECTS)
 	_volume(box, "Sons de l'interface", ui_slider, GameSettings.VOLUME_UI)
 	back_button.text = "Retour"
+	UiIcons.put(back_button, "retour")
 	back_button.custom_minimum_size = Vector2(0, 50)
 	back_button.pressed.connect(func() -> void: back_requested.emit())
 	box.add_child(back_button)

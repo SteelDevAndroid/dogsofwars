@@ -1,0 +1,70 @@
+Dogs of Gods — Chapitre 6 : Interface
+
+Icônes SVG : 18 fichiers, viewBox 24x24, trait 2, extrémités carrées, blanc uniquement.
+Direction visuelle : géométrique, industrielle, sobre, cohérente avec les ressources des chapitres 4 et 5.
+Le jeu dessine les boutons et panneaux ; ui_panneau.png est fourni comme 9-patch optionnel 96x96, marges de 24 px.
+Polices : non incluses. La spécification exige une police réelle sous licence, 3 graisses max, accents français complets et chiffres tabulaires ; aucune famille n'est désignée dans asset-specs.md.
+
+Validation SVG :
+- ui_icon_attaque.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_chronique.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_energie.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_menace.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_montee_niveau.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_noeud.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_pause.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_perte.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_recentrer.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_recherche.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_reglages.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_retour.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_reveil.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_ruine.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_tour.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_vitesse.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_zoom_moins.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+- ui_icon_zoom_plus.svg: OK {'viewBox_24': True, 'stroke_2': True, 'square_caps': True, 'white_only': True}
+
+Validation globale: OK
+
+Fichiers:
+- controle_interface.png
+- ui_icon_attaque.svg
+- ui_icon_chronique.svg
+- ui_icon_energie.svg
+- ui_icon_menace.svg
+- ui_icon_montee_niveau.svg
+- ui_icon_noeud.svg
+- ui_icon_pause.svg
+- ui_icon_perte.svg
+- ui_icon_recentrer.svg
+- ui_icon_recherche.svg
+- ui_icon_reglages.svg
+- ui_icon_retour.svg
+- ui_icon_reveil.svg
+- ui_icon_ruine.svg
+- ui_icon_tour.svg
+- ui_icon_vitesse.svg
+- ui_icon_zoom_moins.svg
+- ui_icon_zoom_plus.svg
+- ui_panneau.png
+
+
+--- Notes de l'équipe technique (2026-11-02) ---
+Livraison intégrée : 18 icônes SVG (les trois icônes provisoires tour, énergie et ruine sont remplacées à nom
+égal) et le panneau à neuf zones. Contrôles refaits : viewBox 24 x 24, trait de 2, extrémités carrées, blanc
+seul, dix-huit dessins tous différents.
+Attention : la planche `controle_interface.png` montre le même signe « + » pour toutes les icônes (ce n'est pas
+le rendu des fichiers, qui sont bien distincts) : à régénérer.
+Écarts au cahier des charges : (1) l'icône de ruine est faite de lignes droites (une silhouette de remparts),
+alors que l'arche brisée devait être la seule courbe de l'interface ; (2) zoom_plus et zoom_moins sont des
+loupes à cercle, courbe elle aussi ; (3) aucune icône « Comment jouer » ni « Quitter » (non demandées) ;
+(4) **polices : non livrées** (aucune famille n'était désignée) : le jeu garde la police par défaut de Godot
+en attendant le choix et la licence.
+Import : les SVG sont rastérisés à 4 fois (96 px) avec mipmaps, pour rester nets de 1 à 4 px par pt.
+Utilisation : icônes sur les boutons du HUD (pause, recherche, vitesse, attaque, zoom, recentrer), les actions
+du panneau (capturer, réveiller, monter), les puces d'alerte (menace, perte, ruine), les chiffres de la barre
+du haut (tour, énergie, ruines), les menus (chronique, réglages, retour) ; dans le rail du paysage, pause et
+recherche n'ont que leur icône (nom accessible et info-bulle conservés). Le panneau à neuf zones encadre
+les cartes de « Comment jouer » et de la chronique (son centre est presque transparent : il faut un fond
+sombre dessous).

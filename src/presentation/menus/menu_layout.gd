@@ -26,9 +26,11 @@ static func column(screen: Control, width: float = WIDTH, top_share: float = 0.0
 	return box
 
 
-static func button(parent: Control, text: String, action: Callable) -> Button:
+static func button(parent: Control, text: String, action: Callable, icon_name: String = "") -> Button:
 	var button := Button.new()
 	button.text = text
+	if icon_name != "":
+		UiIcons.put(button, icon_name)
 	button.custom_minimum_size = Vector2(0, BUTTON_HEIGHT)
 	button.pressed.connect(action)
 	parent.add_child(button)
@@ -83,6 +85,18 @@ static func make_primary(button: Button) -> void:
 ## A secondary action: smaller, the theme's own look.
 static func make_secondary(button: Button) -> void:
 	button.custom_minimum_size = Vector2(0, 48)
+
+
+## The panel frame of the interface (ui_panneau.png: corner brackets, nearly transparent centre), a
+## nine-patch with 24 px margins, for cards that stand on a dark ground.
+static func framed_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := StyleBoxTexture.new()
+	style.texture = load("res://assets/art/ui/ui_panneau.png")
+	style.set_texture_margin_all(24)
+	style.set_content_margin_all(22)
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
 
 
 ## A label that wraps inside the column.

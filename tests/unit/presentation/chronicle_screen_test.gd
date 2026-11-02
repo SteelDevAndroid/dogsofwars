@@ -9,7 +9,7 @@ func _screen(found: Array) -> ChronicleScreen:
 
 
 func _texts(screen: ChronicleScreen) -> Array:
-	return screen.entries_box.get_children().map(func(label: Label) -> String: return label.text)
+	return screen.entries_box.get_children().map(func(card: Node) -> String: return (card.get_child(0) as Label).text)
 
 
 func test_an_empty_chronicle_shows_five_empty_slots() -> void:
