@@ -17,6 +17,11 @@ var effects: Array[TileEffect] = []
 var clip_area := Rect2(-1e6, -1e6, 2e6, 2e6)
 var targets := PackedInt32Array()
 var chosen_target := -1
+var _terrain := {}
+var _fog_texture: Texture2D
+var _edge_texture: Texture2D
+var _corner_out_texture: Texture2D
+var _corner_in_texture: Texture2D
 ## The colour-blind palette of hud.md 10.5 (ownership colours only).
 var colorblind := false
 ## The tile of the unit to touch first (the advice of the first turns): a small arrow bobs above it.
@@ -24,17 +29,31 @@ var hint_tile := -1
 ## No movement of the arrow (reduced motion).
 var still := false
 
-const GRAIN := 0.03
+const ART := "res://assets/art/terrain/"
+const VARIANTS := 3
+const TERRAIN_NAMES := {TerrainGrid.PLAIN: "plaine", TerrainGrid.FOREST: "foret", TerrainGrid.MOUNTAIN: "montagne", TerrainGrid.WATER: "eau"}
+const CORNER_TL := 1
+const CORNER_TR := 2
+const CORNER_BR := 4
+const CORNER_BL := 8
 const SIDE_LEFT := 1
 const SIDE_RIGHT := 2
 const SIDE_UP := 4
 const SIDE_DOWN := 8
-const FOG_EDGE_DEPTH := 0.45
-const FOG_EDGE_ALPHA := 0.7
 
 
 func _init() -> void:
 	process_priority = 10
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # 256 px sources drawn at 24 to 64 pt
+	for code: int in TERRAIN_NAMES:
+		var variants: Array[Texture2D] = []
+		for k in VARIANTS:
+			variants.append(load("%sterrain_%s_%02d.png" % [ART, TERRAIN_NAMES[code], k + 1]))
+		_terrain[code] = variants
+	_fog_texture = load(ART + "terrain_brouillard_01.png")
+	_edge_texture = load(ART + "fog_lisiere_bord.png")
+	_corner_out_texture = load(ART + "fog_lisiere_angle_ext.png")
+	_corner_in_texture = load(ART + "fog_lisiere_angle_int.png")
 
 
 func show_state(state: GameState, catalog: DataCatalog) -> void:
@@ -127,16 +146,15 @@ func visible_tiles() -> PackedInt32Array:
 
 
 func _draw_tile(tile: int) -> void:
-	var rect := layout.rect_of(tile).intersection(clip_area)
+	var full := layout.rect_of(tile)
+	var rect := full.intersection(clip_area)
 	var level := snapshot.fog_at(tile)
 	if level == VisionService.FOG_UNDISCOVERED:
-		draw_rect(rect, TilePalette.FOG)
+		_draw_clipped(_fog_texture, full, Color.WHITE)
 		return
-	var color := TilePalette.terrain(snapshot.terrain[tile])
-	color = color.lightened(grain(tile)) if grain(tile) >= 0.0 else color.darkened(-grain(tile))
-	if level == VisionService.FOG_EXPLORED:
-		color = color.darkened(1.0 - TilePalette.MEMORY_DIM)
-	draw_rect(rect, color)
+	var textures: Array = _terrain[snapshot.terrain[tile]]
+	var dim := TilePalette.MEMORY_DIM if level == VisionService.FOG_EXPLORED else 1.0
+	_draw_clipped(textures[variant_of(tile)], full, Color(dim, dim, dim))
 	_draw_fog_edges(tile)
 	var owner: int = snapshot.owners[tile]
 	if owner != Faction.NONE:
@@ -150,35 +168,69 @@ func _draw_tile(tile: int) -> void:
 			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner, colorblind), 1.0)
 
 
-## A faint, fixed variation of a tile's value, in -GRAIN..GRAIN (the same for the same tile
-## whatever the zoom): the ground reads as ground, not as a flat colour. Never a signal.
-static func grain(tile: int) -> float:
-	var h := (tile * 2654435761) & 0xFFFF
-	return (float(h % 1000) / 999.0 - 0.5) * 2.0 * GRAIN
+## Which of the three variants of a terrain a tile shows: fixed for the tile whatever the zoom
+## (the edges of the variants are identical, so any neighbour may differ).
+static func variant_of(tile: int) -> int:
+	return int(((tile * 2654435761) & 0xFFFFFFFF) >> 8) % VARIANTS
 
 
-## Where a discovered tile touches the fog, a soft dark strip fades the edge in; a tile cut
-## by the edge of the map area keeps its hard edge.
+## The part of `texture` that falls inside the map area, drawn over the part of `full` that does.
+func _draw_clipped(texture: Texture2D, full: Rect2, modulate_color: Color) -> void:
+	var shown := full.intersection(clip_area)
+	if shown.size.x <= 0.0 or shown.size.y <= 0.0:
+		return
+	var scale := texture.get_size() / full.size
+	draw_texture_rect_region(texture, shown, Rect2((shown.position - full.position) * scale, shown.size * scale), modulate_color)
+
+
+## `texture` (drawn for the left or the top-left of a tile) turned by quarter turns clockwise
+## about the centre of `full`.
+func _draw_turned(texture: Texture2D, full: Rect2, quarter_turns: int) -> void:
+	draw_set_transform(full.get_center(), quarter_turns * PI / 2.0)
+	draw_texture_rect(texture, Rect2(-full.size / 2.0, full.size), false)
+	draw_set_transform(Vector2.ZERO)
+
+
+## Where a discovered tile meets the fog its edge is softened with the delivered strips: a side
+## touching the fog gets the edge strip, two sides in a corner the inner corner, a fog only on the
+## diagonal the outer corner. A tile cut by the edge of the map area keeps its hard edge.
 func _draw_fog_edges(tile: int) -> void:
 	var full := layout.rect_of(tile)
 	if not clip_area.encloses(full):
 		return
 	var sides := fog_sides(tile)
-	if sides == 0:
-		return
-	var depth := full.size.x * FOG_EDGE_DEPTH
-	var near := Color(TilePalette.FOG, FOG_EDGE_ALPHA)
-	var far := Color(TilePalette.FOG, 0.0)
-	if sides & SIDE_LEFT:
-		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(depth, 0), full.position + Vector2(depth, full.size.y), full.position + Vector2(0, full.size.y)]), PackedColorArray([near, far, far, near]))
-	if sides & SIDE_RIGHT:
-		var r := full.end.x
-		draw_polygon(PackedVector2Array([Vector2(r - depth, full.position.y), Vector2(r, full.position.y), Vector2(r, full.end.y), Vector2(r - depth, full.end.y)]), PackedColorArray([far, near, near, far]))
-	if sides & SIDE_UP:
-		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(full.size.x, 0), full.position + Vector2(full.size.x, depth), full.position + Vector2(0, depth)]), PackedColorArray([near, near, far, far]))
-	if sides & SIDE_DOWN:
-		var d := full.end.y
-		draw_polygon(PackedVector2Array([Vector2(full.position.x, d - depth), Vector2(full.end.x, d - depth), full.end, Vector2(full.position.x, d)]), PackedColorArray([far, far, near, near]))
+	var rest := sides
+	# (the two sides of a corner, the quarter turns from top-left)
+	for corner in [[SIDE_LEFT | SIDE_UP, 0], [SIDE_UP | SIDE_RIGHT, 1], [SIDE_RIGHT | SIDE_DOWN, 2], [SIDE_DOWN | SIDE_LEFT, 3]]:
+		if rest & corner[0] == corner[0]:
+			_draw_turned(_corner_in_texture, full, corner[1])
+			rest &= ~corner[0]
+	for side in [[SIDE_LEFT, 0], [SIDE_UP, 1], [SIDE_RIGHT, 2], [SIDE_DOWN, 3]]:
+		if rest & side[0]:
+			_draw_turned(_edge_texture, full, side[1])
+	var corners := fog_corners(tile)
+	for k in 4:
+		if corners & (1 << k):
+			_draw_turned(_corner_out_texture, full, k)
+
+
+## The corners of a tile where only the diagonal neighbour is fog (CORNER_* bits).
+func fog_corners(tile: int) -> int:
+	if snapshot == null or snapshot.fog_at(tile) == VisionService.FOG_UNDISCOVERED:
+		return 0
+	var sides := fog_sides(tile)
+	var x := tile % snapshot.columns
+	var y := tile / snapshot.columns
+	var corners := 0
+	for entry in [[-1, -1, SIDE_LEFT | SIDE_UP, CORNER_TL], [1, -1, SIDE_UP | SIDE_RIGHT, CORNER_TR],
+			[1, 1, SIDE_RIGHT | SIDE_DOWN, CORNER_BR], [-1, 1, SIDE_DOWN | SIDE_LEFT, CORNER_BL]]:
+		var nx: int = x + entry[0]
+		var ny: int = y + entry[1]
+		if nx < 0 or ny < 0 or nx >= snapshot.columns or ny >= snapshot.rows or sides & entry[2] != 0:
+			continue
+		if snapshot.fog_at(ny * snapshot.columns + nx) == VisionService.FOG_UNDISCOVERED:
+			corners |= entry[3]
+	return corners
 
 
 ## The sides of a tile that touch undiscovered ground (SIDE_* bits); 0 for an undiscovered tile.

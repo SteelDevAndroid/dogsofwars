@@ -42,9 +42,7 @@ func test_every_unit_type_has_its_own_silhouette() -> void:
 	assert_int(sides.size()).is_equal(5)
 
 
-func test_terrain_and_owner_colours_follow_the_art_bible() -> void:
-	assert_object(TilePalette.terrain(TerrainGrid.PLAIN)).is_equal(Color("4E5862"))
-	assert_object(TilePalette.terrain(TerrainGrid.WATER)).is_not_equal(TilePalette.terrain(TerrainGrid.PLAIN))
+func test_owner_colours_follow_the_art_bible() -> void:
 	assert_object(TilePalette.owner(Faction.PLAYER)).is_equal(Color("1FA38F"))
 	assert_object(TilePalette.owner(Faction.AI)).is_equal(Color("C49BEA"))
 	assert_object(TilePalette.owner(Faction.NONE)).is_equal(TilePalette.NEUTRAL)
@@ -58,20 +56,29 @@ func _snapshot(fog: Array, columns: int, rows: int) -> TileSnapshot:
 	return snapshot
 
 
-func test_the_grain_is_fixed_bounded_and_not_flat() -> void:
-	var seen := {}
+func test_a_tile_keeps_its_variant_and_the_three_are_used() -> void:
+	var counts := [0, 0, 0]
 	for tile in 144:
-		var grain := TileRenderer.grain(tile)
-		assert_float(grain).is_between(-TileRenderer.GRAIN, TileRenderer.GRAIN)
-		assert_float(TileRenderer.grain(tile)).is_equal(grain)  # the same tile, the same value
-		seen[snappedf(grain, 0.005)] = true
-	assert_int(seen.size()).is_greater(6)  # varied: it is not one constant
-	var low := 0
-	var high := 0
-	for tile in 144:
-		low += 1 if TileRenderer.grain(tile) < 0.0 else 0
-		high += 1 if TileRenderer.grain(tile) > 0.0 else 0
-	assert_bool(low > 20 and high > 20).is_true()  # darker and lighter alike
+		var variant := TileRenderer.variant_of(tile)
+		assert_int(variant).is_between(0, TileRenderer.VARIANTS - 1)
+		assert_int(TileRenderer.variant_of(tile)).is_equal(variant)  # the same tile, the same variant
+		counts[variant] += 1
+	for count in counts:
+		assert_int(count).is_greater(20)  # none is rare: 144 tiles, 48 each on average
+
+
+func test_every_terrain_has_its_three_textures_a_fog_tile_and_the_strips() -> void:
+	var renderer := TileRenderer.new()
+
+	for code in [TerrainGrid.PLAIN, TerrainGrid.FOREST, TerrainGrid.MOUNTAIN, TerrainGrid.WATER]:
+		var variants: Array = renderer._terrain[code]
+		assert_int(variants.size()).is_equal(3)
+		for texture: Texture2D in variants:
+			assert_array([texture.get_width(), texture.get_height()]).is_equal([256, 256])
+	for texture: Texture2D in [renderer._fog_texture, renderer._edge_texture, renderer._corner_out_texture, renderer._corner_in_texture]:
+		assert_array([texture.get_width(), texture.get_height()]).is_equal([256, 256])
+	assert_int(renderer.texture_filter).is_equal(CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS)
+	renderer.free()
 
 
 func test_a_tile_touching_the_fog_knows_which_sides() -> void:
@@ -118,4 +125,38 @@ func test_the_arrow_of_the_first_turns_needs_a_tile_and_moves_unless_still() -> 
 
 	assert_int(renderer.hint_tile).is_equal(-1)
 	assert_bool(renderer.still).is_true()
+	renderer.free()
+
+
+func test_a_fog_only_on_the_diagonal_is_an_outer_corner() -> void:
+	var renderer := TileRenderer.new()
+	var undiscovered := VisionService.FOG_UNDISCOVERED
+	var visible := VisionService.FOG_VISIBLE
+	# 3 x 3, the top-left tile is unknown: the centre meets it by its corner only
+	renderer.snapshot = _snapshot([undiscovered, visible, visible, visible, visible, visible, visible, visible, visible], 3, 3)
+
+	assert_int(renderer.fog_corners(4)).is_equal(TileRenderer.CORNER_TL)
+	assert_int(renderer.fog_sides(4)).is_equal(0)
+	assert_int(renderer.fog_corners(1)).is_equal(0)  # the tile beside it has a side, not a corner
+	assert_int(renderer.fog_sides(1)).is_equal(TileRenderer.SIDE_LEFT)
+	assert_int(renderer.fog_corners(0)).is_equal(0)  # an unknown tile has none
+	renderer.snapshot = _snapshot([visible, visible, visible, visible, visible, visible, visible, visible, undiscovered], 3, 3)
+	assert_int(renderer.fog_corners(4)).is_equal(TileRenderer.CORNER_BR)
+	renderer.snapshot = _snapshot([visible, visible, undiscovered, visible, visible, visible, undiscovered, visible, visible], 3, 3)
+	assert_int(renderer.fog_corners(4)).is_equal(TileRenderer.CORNER_TR | TileRenderer.CORNER_BL)
+	assert_int(renderer.fog_corners(0)).is_equal(0)
+	renderer.snapshot = null
+	assert_int(renderer.fog_corners(0)).is_equal(0)
+	renderer.free()
+
+
+func test_a_tile_beside_fog_on_a_side_has_no_outer_corner_for_that_side() -> void:
+	var renderer := TileRenderer.new()
+	var undiscovered := VisionService.FOG_UNDISCOVERED
+	var visible := VisionService.FOG_VISIBLE
+	# the left column is unknown: the middle tile has a left side, and neither left corner
+	renderer.snapshot = _snapshot([undiscovered, visible, visible, undiscovered, visible, visible, undiscovered, visible, visible], 3, 3)
+
+	assert_int(renderer.fog_sides(4)).is_equal(TileRenderer.SIDE_LEFT)
+	assert_int(renderer.fog_corners(4)).is_equal(0)
 	renderer.free()

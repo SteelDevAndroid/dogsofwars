@@ -20,6 +20,10 @@ done
 for wav in assets/audio/*.wav; do
   grep -q "^res://.godot/imported/$(basename "$wav")-.*\.sample$" <<<"$stored" || { echo "sound not imported in the pack: $wav"; fail=1; }
 done
+# the delivered terrain textures travel as compiled .ctex under .godot/imported
+for png in assets/art/terrain/*.png; do
+  grep -q "^res://.godot/imported/$(basename "$png")-.*\.ctex$" <<<"$stored" || { echo "texture not imported in the pack: $png"; fail=1; }
+done
 if grep -E '^res://(tests|addons|docs|design|tools|reports)/' <<<"$stored"; then
   echo "files that must not ship are in the pack"; fail=1
 fi

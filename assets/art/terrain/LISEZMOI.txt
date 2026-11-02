@@ -1,0 +1,46 @@
+Dogs of Gods — terrains, chapitre 4
+
+Spécifications appliquées:
+- 256 x 256 px
+- PNG RGBA 8 bits
+- terrains opaques, sans marge
+- 3 variantes par type
+- bords strictement identiques entre variantes d'un même type
+- aucune grille/cadre intégré
+- aplats, ombres graphiques, grain léger; aucune texture photographique
+- palette limitée aux couleurs du document
+
+Palette:
+- plaine: #4E5862
+- foret: #66717C
+- montagne: #808B96
+- eau: #2B323A
+- fog: #1E2329
+
+Contrôles automatiques:
+- plaine: bords=OK, opacite=ECHEC
+- foret: bords=OK, opacite=ECHEC
+- montagne: bords=OK, opacite=ECHEC
+- eau: bords=OK, opacite=ECHEC
+- brouillard: opacite=OK
+- controle_niveaux_gris.png inclus pour validation visuelle de l'ecart de valeur
+
+Validation finale:
+- raccords: {'plaine': True, 'foret': True, 'montagne': True, 'eau': True}
+- terrains opaques: {'plaine': True, 'foret': True, 'montagne': True, 'eau': True}
+- brouillard opaque: True
+- lisieres transparentes: {'fog_lisiere_bord.png': True, 'fog_lisiere_angle_ext.png': True, 'fog_lisiere_angle_int.png': True}
+
+
+--- Notes de l'équipe technique (2026-11-02) ---
+Livraison intégrée telle quelle : 13 tuiles (4 terrains x 3 variantes, brouillard) et 3 lisières, 256 x 256 px,
+186 Ko en tout. Contrôles refaits à la réception : tous les terrains opaques (alpha minimal 255, malgré les
+lignes "opacite=ECHEC" du contrôle automatique ci-dessus, contredites par la validation finale), bords
+gauche/droit et haut/bas identiques sur chaque tuile, bords identiques entre les trois variantes d'un terrain,
+brouillard opaque, lisières transparentes.
+Import : sans perte, avec mipmaps (les images de 256 px sont dessinées à 24 à 64 pt).
+Écart au cahier des charges : les motifs de bord (chevrons de la plaine, points de la forêt, losanges de la
+montagne, traits de l'eau) rendent la grille visible : chaque tuile se lit comme encadrée. À revoir avec
+l'art-director (motifs qui chevauchent le bord, ou retirés).
+Lisières : "bord" = bande à gauche ; "angle_int" = bandes gauche et haut ; "angle_ext" = coin haut gauche seul
+(brouillard en diagonale) ; le jeu les tourne par quarts de tour.
