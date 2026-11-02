@@ -11,6 +11,9 @@ var turn_text := ""
 var energy_text := ""
 var fragments_text := ""
 var score_text := ""
+## The two decisive scores, for the gauge under the top bar.
+var score_player := 0
+var score_ai := 0
 var can_end_turn := false
 var enemy_turn := false
 var threat_chip := ""
@@ -43,10 +46,12 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	var phase := state.header.value(HeaderSlice.PHASE)
 	var view := FactionView.new(state, Faction.PLAYER)
 	model.turn_text = "Tour %d / %d" % [state.turn(), state.header.value(HeaderSlice.T_MAX)]
-	model.energy_text = "Énergie %d" % view.energy(Faction.PLAYER)
-	model.fragments_text = "Ruines %d" % state.ruin_journal.read_by(Faction.PLAYER)
+	model.energy_text = "%d" % view.energy(Faction.PLAYER)  # the icon says what it is
+	model.fragments_text = "%d / %d" % [state.ruin_journal.read_by(Faction.PLAYER), view.ruin_ids().size()]
 	var weights := catalog.score
-	model.score_text = "Victoire : %d contre %d" % [ScoreRules.decisive(state, Faction.PLAYER, weights), ScoreRules.decisive(state, Faction.AI, weights)]
+	model.score_player = ScoreRules.decisive(state, Faction.PLAYER, weights)
+	model.score_ai = ScoreRules.decisive(state, Faction.AI, weights)
+	model.score_text = "%d contre %d" % [model.score_player, model.score_ai]
 	model.enemy_turn = phase == HeaderSlice.PHASE_ENEMY_EXECUTION or phase == HeaderSlice.PHASE_END_OF_TURN
 	model.can_end_turn = phase == HeaderSlice.PHASE_PLAYER and not locked
 	var threats := IntentionMarkers.visible_to_player(state)

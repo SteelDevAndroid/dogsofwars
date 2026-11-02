@@ -10,9 +10,11 @@ func _hud() -> Hud:
 func _model() -> HudModel:
 	var model := HudModel.new()
 	model.turn_text = "Tour 3 / 30"
-	model.energy_text = "Énergie 9"
-	model.fragments_text = "Ruines 1"
-	model.score_text = "Victoire : 40 contre 38"
+	model.energy_text = "9"
+	model.fragments_text = "1 / 3"
+	model.score_text = "40 contre 38"
+	model.score_player = 40
+	model.score_ai = 38
 	model.can_end_turn = true
 	return model
 
@@ -25,7 +27,7 @@ func test_the_hud_copies_the_model_to_its_widgets() -> void:
 	hud.show_model(model)
 
 	assert_array([hud.turn_label.text, hud.energy_label.text, hud.fragments_label.text, hud.score_label.text]) \
-			.is_equal(["Tour 3 / 30", "Énergie 9", "Ruines 1", "Victoire : 40 contre 38"])
+			.is_equal(["Tour 3 / 30", "9", "1 / 3", "40 contre 38"])
 	assert_str(hud.unit_title.text).is_equal("Assaut")
 	assert_str(hud.unit_lines.text).is_equal("PV 8 / 8\nA bougé")
 	assert_bool(hud.end_turn_button.disabled).is_false()
@@ -150,4 +152,38 @@ func test_the_camera_buttons_emit_their_signals() -> void:
 	assert_array(pressed).is_equal([1, 1, 2])
 	assert_int(hud.zoom_in_button.accessibility_name.length()).is_greater(0)
 	assert_float(hud.zoom_in_button.custom_minimum_size.x).is_equal(48.0)
+	hud.free()
+
+
+func test_the_score_gauge_shows_the_players_share() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+	model.score_text = "30 contre 10"
+	model.score_player = 30
+	model.score_ai = 10
+
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(75.0)
+	model.score_player = 0
+	model.score_ai = 0
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(50.0)  # nothing yet: the middle
+	model.score_player = 0
+	model.score_ai = 8
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(0.0)
+	hud.free()
+
+
+func test_each_figure_of_the_top_bar_has_an_icon_and_a_name() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	for label in [hud.turn_label, hud.energy_label, hud.fragments_label]:
+		var box := (label as Label).get_parent() as HBoxContainer
+		assert_str(box.tooltip_text).is_not_empty()
+		var icon := box.get_child(0) as TextureRect
+		assert_object(icon.texture).is_not_null()
+	assert_array([hud.energy_label.get_parent().tooltip_text, hud.fragments_label.get_parent().tooltip_text]).is_equal(["Énergie", "Ruines lues"])
 	hud.free()

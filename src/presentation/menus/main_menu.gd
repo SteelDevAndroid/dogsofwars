@@ -24,8 +24,8 @@ var _save_available := false
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var box := MenuLayout.column(self)
-	MenuLayout.label(box, "Dogs of Gods")
+	MenuLayout.illustrated_backdrop(self)
+	var box := MenuLayout.column(self, MenuLayout.WIDTH, 0.42)  # the logo of the artwork sits above
 	continue_button = _button(box, "Continuer", func() -> void: continue_requested.emit())
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
@@ -33,6 +33,12 @@ func _init() -> void:
 	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit())
 	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
+	for primary in [continue_button, new_game_button, confirm_button]:
+		MenuLayout.make_primary(primary)
+	for secondary in [cancel_button, chronicle_button, settings_button]:
+		MenuLayout.make_secondary(secondary)
+	MenuLayout.make_secondary(quit_button)
+	quit_button.flat = true  # the least used action stays discreet
 	best_label = MenuLayout.label(box)
 	notice_label = MenuLayout.label(box)
 	_reset_confirmation()

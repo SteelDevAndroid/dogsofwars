@@ -76,3 +76,19 @@ func test_the_menus_offer_the_settings() -> void:
 	assert_array(asked).is_equal([1, 1])
 	menu.free()
 	pause.free()
+
+
+func test_the_main_menu_puts_the_play_buttons_first_and_the_rest_in_the_background() -> void:
+	var menu := MainMenu.new()
+	add_child(menu)
+
+	assert_int(menu.new_game_button.get_theme_font_size("font_size")).is_equal(20)
+	assert_int(menu.continue_button.get_theme_font_size("font_size")).is_equal(20)
+	assert_int(menu.settings_button.get_theme_font_size("font_size")).is_not_equal(20)
+	assert_bool(menu.quit_button.flat).is_true()
+	assert_bool(menu.chronicle_button.flat).is_false()
+	assert_float(menu.chronicle_button.custom_minimum_size.y).is_greater_equal(48.0)
+	var pictures := menu.get_children().filter(func(child: Node) -> bool: return child is TextureRect)
+	assert_int(pictures.size()).is_equal(1)  # the illustration, behind the column
+	assert_object((pictures[0] as TextureRect).texture).is_not_null()
+	menu.free()

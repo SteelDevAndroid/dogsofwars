@@ -20,6 +20,14 @@ var chosen_target := -1
 ## The colour-blind palette of hud.md 10.5 (ownership colours only).
 var colorblind := false
 
+const GRAIN := 0.03
+const SIDE_LEFT := 1
+const SIDE_RIGHT := 2
+const SIDE_UP := 4
+const SIDE_DOWN := 8
+const FOG_EDGE_DEPTH := 0.45
+const FOG_EDGE_ALPHA := 0.7
+
 
 func _init() -> void:
 	process_priority = 10
@@ -118,9 +126,11 @@ func _draw_tile(tile: int) -> void:
 		draw_rect(rect, TilePalette.FOG)
 		return
 	var color := TilePalette.terrain(snapshot.terrain[tile])
+	color = color.lightened(grain(tile)) if grain(tile) >= 0.0 else color.darkened(-grain(tile))
 	if level == VisionService.FOG_EXPLORED:
 		color = color.darkened(1.0 - TilePalette.MEMORY_DIM)
 	draw_rect(rect, color)
+	_draw_fog_edges(tile)
 	var owner: int = snapshot.owners[tile]
 	if owner != Faction.NONE:
 		draw_rect(rect, Color(TilePalette.owner(owner, colorblind), 0.30))
@@ -131,6 +141,55 @@ func _draw_tile(tile: int) -> void:
 			draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(0, -s), c + Vector2(s, s)]), TilePalette.owner(owner, colorblind), 1.0)
 		else:
 			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner, colorblind), 1.0)
+
+
+## A faint, fixed variation of a tile's value, in -GRAIN..GRAIN (the same for the same tile
+## whatever the zoom): the ground reads as ground, not as a flat colour. Never a signal.
+static func grain(tile: int) -> float:
+	var h := (tile * 2654435761) & 0xFFFF
+	return (float(h % 1000) / 999.0 - 0.5) * 2.0 * GRAIN
+
+
+## Where a discovered tile touches the fog, a soft dark strip fades the edge in; a tile cut
+## by the edge of the map area keeps its hard edge.
+func _draw_fog_edges(tile: int) -> void:
+	var full := layout.rect_of(tile)
+	if not clip_area.encloses(full):
+		return
+	var sides := fog_sides(tile)
+	if sides == 0:
+		return
+	var depth := full.size.x * FOG_EDGE_DEPTH
+	var near := Color(TilePalette.FOG, FOG_EDGE_ALPHA)
+	var far := Color(TilePalette.FOG, 0.0)
+	if sides & SIDE_LEFT:
+		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(depth, 0), full.position + Vector2(depth, full.size.y), full.position + Vector2(0, full.size.y)]), PackedColorArray([near, far, far, near]))
+	if sides & SIDE_RIGHT:
+		var r := full.end.x
+		draw_polygon(PackedVector2Array([Vector2(r - depth, full.position.y), Vector2(r, full.position.y), Vector2(r, full.end.y), Vector2(r - depth, full.end.y)]), PackedColorArray([far, near, near, far]))
+	if sides & SIDE_UP:
+		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(full.size.x, 0), full.position + Vector2(full.size.x, depth), full.position + Vector2(0, depth)]), PackedColorArray([near, near, far, far]))
+	if sides & SIDE_DOWN:
+		var d := full.end.y
+		draw_polygon(PackedVector2Array([Vector2(full.position.x, d - depth), Vector2(full.end.x, d - depth), full.end, Vector2(full.position.x, d)]), PackedColorArray([far, far, near, near]))
+
+
+## The sides of a tile that touch undiscovered ground (SIDE_* bits); 0 for an undiscovered tile.
+func fog_sides(tile: int) -> int:
+	if snapshot == null or snapshot.fog_at(tile) == VisionService.FOG_UNDISCOVERED:
+		return 0
+	var x := tile % snapshot.columns
+	var y := tile / snapshot.columns
+	var sides := 0
+	if x > 0 and snapshot.fog_at(tile - 1) == VisionService.FOG_UNDISCOVERED:
+		sides |= SIDE_LEFT
+	if x < snapshot.columns - 1 and snapshot.fog_at(tile + 1) == VisionService.FOG_UNDISCOVERED:
+		sides |= SIDE_RIGHT
+	if y > 0 and snapshot.fog_at(tile - snapshot.columns) == VisionService.FOG_UNDISCOVERED:
+		sides |= SIDE_UP
+	if y < snapshot.rows - 1 and snapshot.fog_at(tile + snapshot.columns) == VisionService.FOG_UNDISCOVERED:
+		sides |= SIDE_DOWN
+	return sides
 
 
 func _draw_node(node: Array) -> void:

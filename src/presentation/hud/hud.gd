@@ -23,6 +23,8 @@ var turn_label := Label.new()
 var energy_label := Label.new()
 var fragments_label := Label.new()
 var score_label := Label.new()
+## Player share of the two decisive scores (teal against violet): the numbers say it too.
+var score_bar := ProgressBar.new()
 var alert_row := HBoxContainer.new()
 var unit_title := Label.new()
 var unit_lines := Label.new()
@@ -58,13 +60,15 @@ func _init() -> void:
 	var top := VBoxContainer.new()
 	top_panel = backdrop(top)
 	add_child(top_panel)
-	for label in [turn_label, energy_label, fragments_label]:
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for entry in [[turn_label, "ui_icon_tour", "Tour"], [energy_label, "ui_icon_energie", "Énergie"], [fragments_label, "ui_icon_ruine", "Ruines lues"]]:
+		var label: Label = entry[0]
 		label.clip_text = true  # a long text never pushes the buttons off the screen
-		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_font_size_override("font_size", 17)
 		label.custom_minimum_size = Vector2(0, 32)
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		bar.add_child(label)
+		var stat := _stat(entry[1], label, entry[2])
+		stat.size_flags_stretch_ratio = 1.8 if label == turn_label else 1.0  # "Tour 12 / 30" is the longest
+		bar.add_child(stat)
 	pause_button.text = "Pause"
 	pause_button.custom_minimum_size = Vector2(64, 48)
 	pause_button.pressed.connect(func() -> void: pause_pressed.emit())
@@ -74,8 +78,25 @@ func _init() -> void:
 	top.add_child(bar)
 	score_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	score_label.clip_text = true
+	score_label.add_theme_font_size_override("font_size", 15)
 	score_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	second.add_child(score_label)
+	var score_box := VBoxContainer.new()
+	score_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	score_box.add_theme_constant_override("separation", 2)
+	score_box.add_child(score_label)
+	score_bar.show_percentage = false
+	score_bar.custom_minimum_size = Vector2(0, 8)
+	score_bar.min_value = 0
+	score_bar.max_value = 100
+	score_bar.value = 50
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("1FA38F")
+	var back := StyleBoxFlat.new()
+	back.bg_color = Color("C49BEA")
+	score_bar.add_theme_stylebox_override("fill", fill)
+	score_bar.add_theme_stylebox_override("background", back)
+	score_box.add_child(score_bar)
+	second.add_child(score_box)
 	second.add_child(research_button)
 	second.add_child(pause_button)
 	top.add_child(second)
@@ -154,6 +175,26 @@ static func _place(control: Control, rect: Rect2) -> void:
 
 ## A panel with an opaque dark background around `content`: the HUD bars and panels never
 ## let the map show through their text.
+## An icon (white SVG, tinted by the label's colour) beside a value; the whole box is named for the accessibility tree.
+static func _stat(icon_name: String, label: Label, name: String) -> HBoxContainer:
+	var box := HBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 6)
+	box.tooltip_text = name
+	box.accessibility_name = name
+	var icon := TextureRect.new()
+	icon.texture = load("res://assets/art/ui/%s.svg" % icon_name)
+	icon.custom_minimum_size = Vector2(22, 22)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(icon)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(label)
+	return box
+
+
 static func backdrop(content: Control) -> PanelContainer:
 	var panel := PanelContainer.new()
 	var style := StyleBoxFlat.new()
@@ -175,6 +216,8 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	energy_label.text = model.energy_text
 	fragments_label.text = model.fragments_text
 	score_label.text = model.score_text
+	var total := model.score_player + model.score_ai
+	score_bar.value = 50.0 if total <= 0 else 100.0 * model.score_player / total
 	end_turn_button.disabled = not model.can_end_turn
 	end_turn_button.text = "Tour ennemi…" if model.enemy_turn else "Fin du tour"
 	for child in alert_row.get_children():
