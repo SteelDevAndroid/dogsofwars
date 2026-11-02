@@ -27,5 +27,14 @@ func length_error(_tiles: int, _factions: int) -> String:
 	return _parallel_error()
 
 
+## Ruins read by the faction in this match (GDD 3 formula 1, F).
+func read_by(faction: int) -> int:
+	var count := 0
+	for row in _jrn_faction.size():
+		if _jrn_faction[row] == faction:
+			count += 1
+	return count
+
+
 func faction_of(row: int) -> int:
 	return _jrn_faction[row]

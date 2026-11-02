@@ -40,6 +40,10 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	if previous != Faction.NONE and not _holds_a_node(state, previous):
 		EliminationRules.eliminate(state, previous, rules.catalog.nodes, result.events)
 		_territory_events(TerritoryRules.recompute(state, rules.catalog.nodes, MapSlice.CAUSE_CAPTURE), result.events)
+	if state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_FINISHED:
+		var submission := ScoreRules.submission(state, rules.catalog.score)
+		if submission != null:
+			result.profile_effects.append(submission)
 	result.vision = VisionService.recompute(state, rules.vision)
 	if not result.vision.discovered_tiles.is_empty():
 		result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))

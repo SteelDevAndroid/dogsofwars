@@ -29,6 +29,29 @@ static func decisive(state: GameState, faction: int, weights: ScoreParams, domin
 		+ weights.w_protocols() * protocols + weights.w_units() * mini(units, weights.unit_cap()) + domination_bonus
 
 
+## GDD 3 formula 2: w_d x remaining turns when the match ended by domination.
+static func domination_bonus(state: GameState, weights: ScoreParams) -> int:
+	return weights.w_domination() * (state.header.value(HeaderSlice.T_MAX) - state.turn())
+
+
+## GDD 3 rule 14 and formula 1 in full: the decisive score plus w_f x F (ruins read by
+## the faction, validated or not, GDD 3 formula 1), plus D for a domination.
+static func profile_score(state: GameState, faction: int, weights: ScoreParams, dominated: bool) -> int:
+	var bonus := domination_bonus(state, weights) if dominated else 0
+	return decisive(state, faction, weights, bonus) + weights.w_fragments() * state.ruin_journal.read_by(faction)
+
+
+## The profile effect of a match that has just ended, or null: only a domination or
+## the end of turn T_MAX submits a score; an elimination or an abandon does not.
+static func submission(state: GameState, weights: ScoreParams) -> SubmitScoreEffect:
+	var status := state.header.value(HeaderSlice.END_STATUS)
+	if status != HeaderSlice.END_DOMINATION and status != HeaderSlice.END_TURNS_WON \
+			and status != HeaderSlice.END_TURNS_LOST and status != HeaderSlice.END_TURNS_DRAW:
+		return null
+	return SubmitScoreEffect.new(state.header.value(HeaderSlice.MATCH_ID), Faction.PLAYER,
+			SubmitScoreEffect.DIFFICULTY_STANDARD, profile_score(state, Faction.PLAYER, weights, status == HeaderSlice.END_DOMINATION))
+
+
 ## End status of a match that reaches the end of turn T_MAX (GDD 3 rule 9): the
 ## higher decisive score wins, a tie is a draw; from the player's side.
 static func turn_limit_status(state: GameState, weights: ScoreParams) -> int:

@@ -32,6 +32,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		var status := ScoreRules.turn_limit_status(state, rules.catalog.score)
 		TurnWrites.finish(state, status)
 		result.events.append(MatchEndedEvent.new(status))
+		result.profile_effects.append(ScoreRules.submission(state, rules.catalog.score))
 		return result
 	var phase := HeaderSlice.PHASE_PLAYER if player else HeaderSlice.PHASE_ENEMY_EXECUTION
 	TurnWrites.begin_phase(state, command.faction, phase, player)

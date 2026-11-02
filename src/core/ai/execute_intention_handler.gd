@@ -43,6 +43,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		done = CaptureHandler.new().apply(state, CaptureCommand.new(Faction.AI, Command.EMITTER_SYS, author), rules)
 	result.events.append(IntentionExecutedEvent.new(intention_id, author, kind, target_tile))
 	result.events.append_array(done.events)
+	result.profile_effects.append_array(done.profile_effects)
 	return result
 
 
