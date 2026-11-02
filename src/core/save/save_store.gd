@@ -45,6 +45,11 @@ func save_match(state: GameState) -> Error:
 	return error
 
 
+## True when a current or backup save file exists (the menu offers Continue).
+func has_match() -> bool:
+	return _files.exists(_path("match.sav")) or _files.exists(_path("match.bak"))
+
+
 func load_match() -> LoadResult:
 	_files.delete(_path("match.tmp"))
 	var result := LoadResult.new()
