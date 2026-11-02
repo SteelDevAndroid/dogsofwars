@@ -30,6 +30,7 @@ var _ending := false
 
 func _ready() -> void:
 	_ui = CanvasLayer.new()
+	_ui.layer = 10  # menus, pause and settings above the match HUD (layer 1)
 	add_child(_ui)
 	data_source = data_source if data_source != null else ResDataSource.new()
 	file_store = file_store if file_store != null else RealFileStore.new()

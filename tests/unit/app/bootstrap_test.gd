@@ -331,3 +331,11 @@ func test_a_schema_two_match_in_the_player_phase_resumes_from_the_menu() -> void
 
 	assert_object(boot.match_screen).is_not_null()
 	await _finish(boot)
+
+
+func test_the_menus_are_drawn_above_the_hud_of_the_match() -> void:
+	var boot := _boot()
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+
+	assert_int(boot._ui.layer).is_greater(boot.match_screen.hud_layer.layer)
+	await _finish(boot)

@@ -32,9 +32,15 @@ func _init() -> void:
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	scroll.add_child(margin)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(box)
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
 	var title := Label.new()
 	title.text = "Réglages"
 	box.add_child(title)

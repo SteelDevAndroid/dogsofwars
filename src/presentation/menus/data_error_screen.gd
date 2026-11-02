@@ -10,18 +10,10 @@ var quit_button: Button
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	add_child(box)
-	var title := Label.new()
-	title.text = "Les données du jeu sont illisibles"
-	box.add_child(title)
-	errors_label = Label.new()
-	box.add_child(errors_label)
-	quit_button = Button.new()
-	quit_button.text = "Quitter"
-	quit_button.pressed.connect(func() -> void: quit_requested.emit())
-	box.add_child(quit_button)
+	var box := MenuLayout.column(self, 340.0)
+	MenuLayout.label(box, "Les données du jeu sont illisibles")
+	errors_label = MenuLayout.label(box)
+	quit_button = MenuLayout.button(box, "Quitter", func() -> void: quit_requested.emit())
 
 
 ## At most `limit` errors are listed, the rest counted.

@@ -16,9 +16,11 @@ var settings_button: Button
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	add_child(box)
+	var dim := ColorRect.new()  # the match below is dimmed and gets no tap
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
+	var box := MenuLayout.column(self)
 	resume_button = _button(box, "Reprendre", func() -> void: resume_requested.emit())
 	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	menu_button = _button(box, "Menu (la partie est gardée)", func() -> void: menu_requested.emit())
@@ -26,8 +28,4 @@ func _init() -> void:
 
 
 func _button(parent: Control, text: String, action: Callable) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(action)
-	parent.add_child(button)
-	return button
+	return MenuLayout.button(parent, text, action)
