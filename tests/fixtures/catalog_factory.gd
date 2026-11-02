@@ -60,7 +60,9 @@ static func documents() -> Dictionary:
 		]},
 		"score.json": {"schema_version": 1, "w_tiles": 1, "w_nodes": 8, "w_levels": 4, "w_protocols": 0,
 			"w_units": 2, "unit_cap": 20, "w_fragments": 60, "w_domination": 8},
-		"ai.json": {"schema_version": 1, "track_ttl": 4, "protocol_calendar": [
+		"ai.json": {"schema_version": 1, "track_ttl": 4, "planner": {
+			"w_damage": 10, "w_lethal": 30, "w_loss": 8, "w_danger": 6, "w_node": 12, "w_leash": 3, "w_progress": 2,
+			"leash": 4, "k_dest": 6, "state_margin": 2, "return_after": 2, "evals_per_call": 2000, "refusals_max": 32}, "protocol_calendar": [
 			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
 	}
 

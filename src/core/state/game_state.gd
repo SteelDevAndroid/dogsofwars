@@ -6,7 +6,8 @@ extends RefCounted
 
 ## Content schema of to_bytes; carried by the save envelope only (ADR-0006).
 ## 2: nodes gain since_turn and upgraded_turn (GDD 11 rule 1), 2026-11-01.
-const SCHEMA_VERSION := 2
+## 3: the AI cursor slice gains the turn of the last announcement, 2026-11-02.
+const SCHEMA_VERSION := 3
 
 const MAX_MAP_SIZE := 16
 const MAX_UNITS := 60

@@ -60,6 +60,7 @@ func test_an_announcement_stores_its_intentions_and_changes_nothing_else() -> vo
 		var expected := initial.duplicate_state()
 		expected.intentions.copy_from(state.intentions)
 		expected.ai_agents.copy_from(state.ai_agents)
+		expected.ai_cursor.copy_from(state.ai_cursor)
 		expected.header.copy_from(state.header)
 		expected.command_log.copy_from(state.command_log)
 		assert_bool(expected.equals(state)).override_failure_message(context).is_true()

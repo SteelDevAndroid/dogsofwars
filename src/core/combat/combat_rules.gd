@@ -13,10 +13,14 @@ static func distance(width: int, tile_a: int, tile_b: int) -> int:
 ## GDD 8 F1: the defender's DÉF (protocols of its owner included) plus the defense
 ## class of the tile it stands on.
 static func defense_effective(view: StateView, unit_id: int, catalog: DataCatalog) -> int:
-	var defense := ProtocolEffects.unit_stat(view, view.unit_faction(unit_id), view.unit_type(unit_id),
-			ProtocolEffects.DEFENSE, catalog)
-	var tile_class := catalog.terrain.defense_class(view.terrain_at(view.unit_tile(unit_id)))
-	return defense + catalog.combat.def_per_tile_class() * tile_class
+	return defense_on(view, view.unit_faction(unit_id), view.unit_type(unit_id), view.unit_tile(unit_id), catalog)
+
+
+## The same defense for a unit of `faction` and `type` standing on `tile` (the AI planner
+## tries tiles the unit is not on yet).
+static func defense_on(view: StateView, faction: int, type: int, tile: int, catalog: DataCatalog) -> int:
+	var defense := ProtocolEffects.unit_stat(view, faction, type, ProtocolEffects.DEFENSE, catalog)
+	return defense + catalog.combat.def_per_tile_class() * catalog.terrain.defense_class(view.terrain_at(tile))
 
 
 ## GDD 8 F2: damage of one strike, 0 without attack, else at least DMG_MIN. All
@@ -25,12 +29,15 @@ static func defense_effective(view: StateView, unit_id: int, catalog: DataCatalo
 static func damage(view: StateView, striker_id: int, defender_id: int, catalog: DataCatalog) -> int:
 	var type := view.unit_type(striker_id)
 	var attack := ProtocolEffects.unit_stat(view, view.unit_faction(striker_id), type, ProtocolEffects.ATTACK, catalog)
+	return damage_of(attack, view.unit_hp(striker_id), catalog.units.hp(type), defense_effective(view, defender_id, catalog), catalog.combat)
+
+
+## F2 on plain numbers: `attack` and `defense` already effective.
+@warning_ignore("integer_division")
+static func damage_of(attack: int, hp: int, max_hp: int, defense: int, combat: CombatParams) -> int:
 	if attack == 0:
 		return 0
-	var combat := catalog.combat
-	var numerator := combat.dmg_scale() * combat.def_base() * attack * view.unit_hp(striker_id)
-	var denominator := catalog.units.hp(type) * (combat.def_base() + defense_effective(view, defender_id, catalog))
-	return maxi(combat.dmg_min(), numerator / denominator)
+	return maxi(combat.dmg_min(), combat.dmg_scale() * combat.def_base() * attack * hp / (max_hp * (combat.def_base() + defense)))
 
 
 ## résoudre_attaque (GDD 8 rules 1 and 6): the strike, the attacker's action, then

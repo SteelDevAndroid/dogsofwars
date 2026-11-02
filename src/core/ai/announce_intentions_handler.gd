@@ -69,6 +69,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		AiWrites.set_agent(state, announce.agents[at], announce.agents[at + 1], announce.agents[at + 2],
 				announce.agents[at + 3], announce.agents[at + 4])
 	AiWrites.set_siege(state, announce.siege_node, announce.siege_count)
+	AiWrites.mark_announced(state)
 	return result
 
 

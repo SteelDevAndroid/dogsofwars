@@ -8,6 +8,11 @@ static func reset_cursor(state: GameState) -> void:
 	state.ai_cursor._ai_cursor[0] = 0
 
 
+## ANNONCER_LES_INTENTIONS made this turn: a resumed phase must not announce again.
+static func mark_announced(state: GameState) -> void:
+	state.ai_cursor._ai_cursor[1] = state.turn()
+
+
 ## GDD 1 formula 4: only the intentions of the current and of the previous turn stay
 ## (their ids stay consumed).
 static func prune_intentions(state: GameState) -> void:
