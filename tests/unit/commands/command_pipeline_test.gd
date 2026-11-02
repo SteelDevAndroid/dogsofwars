@@ -170,6 +170,29 @@ func test_preview_is_the_command_on_the_faction_view_and_writes_nothing() -> voi
 	assert_array(fx.sink.batches).is_empty()
 
 
+## The same move discovers tiles 3 to 5 when applied for real; on a copy the simulation
+## rules recompute no view, so nothing is revealed (architecture review 2026-11-01, B1).
+func test_preview_and_apply_on_never_recompute_the_view_of_a_copy() -> void:
+	var state := MapBuilder.state(PackedStringArray(["........"]))
+	var unit := MapBuilder.unit(state, ASSAUT, Faction.PLAYER, 0, 0)
+	var fx := PipelineFixture.new(MapBuilder.ready(state))
+	var command := MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit, state.tile_index(3, 0))
+
+	var preview := fx.pipeline.preview(command)
+
+	assert_bool(preview.validation.permitted).is_true()
+	assert_int(preview.events.size()).is_equal(1)
+	assert_bool(preview.events[0] is UnitMovedEvent).is_true()
+
+	var copy := state.filtered_copy(Faction.PLAYER)
+	var discovered := copy.visibility._vis_discovered.duplicate()
+	var seen := copy.view_cache.duplicate().seen
+
+	assert_bool(fx.pipeline.apply_on(copy, command).permitted).is_true()
+	assert_array(copy.visibility._vis_discovered).is_equal(discovered)
+	assert_array(copy.view_cache.seen).is_equal(seen)
+
+
 func test_apply_on_chains_moves_on_a_copy_only() -> void:
 	var fx := _open_map()
 	var copy := fx.state.filtered_copy(Faction.PLAYER)
