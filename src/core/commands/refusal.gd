@@ -43,6 +43,8 @@ const ATTACKER_WITHOUT_ATTACK := &"ATTAQUANT_SANS_ATTAQUE"
 const TARGET_NOT_VISIBLE := &"CIBLE_NON_VISIBLE"
 const TARGET_NOT_HOSTILE := &"CIBLE_NON_HOSTILE"
 const TARGET_OUT_OF_RANGE := &"CIBLE_HORS_DE_PORTÉE"
+## VALIDER_LA_LECTURE: no pending journal entry for this ruin.
+const NO_PENDING_READ := &"LECTURE_NON_EN_ATTENTE"
 ## ANNONCER_LES_INTENTIONS: no announcement against a passive AI (GDD 9 rule 25).
 const AI_PASSIVE := &"IA_PASSIVE"
 ## EXÉCUTER_UNE_INTENTION: no such intention, already settled, not due this turn, or a

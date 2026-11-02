@@ -44,6 +44,10 @@ static func documents() -> Dictionary:
 		"reveil.json": {"schema_version": 1, "prices": [
 			{"type": "eclaireur", "price": 4}, {"type": "ouvrier", "price": 5},
 			{"type": "assaut", "price": 6}, {"type": "rempart", "price": 8}]},
+		"fragments.json": {"schema_version": 1, "zone_radius": 2, "fragments": [
+			{"id": 1, "faction": "meute", "act": 1}, {"id": 2, "faction": "meute", "act": 1},
+			{"id": 3, "faction": "meute", "act": 2}, {"id": 4, "faction": "meute", "act": 3},
+			{"id": 5, "faction": "meute", "act": 3}]},
 		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
 		"protocoles.json": {"schema_version": 1, "protocols": [

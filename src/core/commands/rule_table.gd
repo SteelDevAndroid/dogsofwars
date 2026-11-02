@@ -27,6 +27,7 @@ static func standard(p_catalog: DataCatalog, p_vision: VisionContext) -> RuleTab
 	handlers[CommandType.UPGRADE_NODE] = UpgradeNodeHandler.new()
 	handlers[CommandType.ANNOUNCE_INTENTIONS] = AnnounceIntentionsHandler.new()
 	handlers[CommandType.EXECUTE_INTENTION] = ExecuteIntentionHandler.new()
+	handlers[CommandType.VALIDATE_RUIN_READ] = ValidateRuinReadHandler.new()
 	handlers[CommandType.BEGIN_TURN] = BeginTurnHandler.new()
 	handlers[CommandType.END_TURN] = EndTurnHandler.new()
 	handlers[CommandType.RESEARCH] = ResearchHandler.new()

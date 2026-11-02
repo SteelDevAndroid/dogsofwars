@@ -90,6 +90,11 @@ func intention_executable(intention_id: int) -> bool:
 	return true
 
 
+## True when the ruin has a journal entry waiting for its profile write (GDD 13 rule 14).
+func ruin_read_pending(ruin_id: int) -> bool:
+	return _state.ruin_journal.pending_row(ruin_id) >= 0
+
+
 func max_turn() -> int:
 	return _state.header.value(HeaderSlice.T_MAX)
 

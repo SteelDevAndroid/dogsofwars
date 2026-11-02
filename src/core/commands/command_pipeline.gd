@@ -17,6 +17,7 @@ var _post_commit: PostCommitPort
 var _profile: ProfilePort
 var _sink: EventSink
 var _submitting := false
+var _follow_ups: Array[Command] = []
 
 
 func _init(state: GameState, rules: RuleTable, gate: CommandGate, undo: UndoSlot, log: CommandLog,
@@ -38,6 +39,11 @@ func submit(command: Command) -> ValidationResult:
 		_submitting = true
 		_apply(command)
 		_submitting = false
+		# ADR-0004 §5: once the profile write succeeded, the follow-up command validates the
+		# journal entry; a failed write leaves it pending for a retry.
+		for follow_up in _follow_ups:
+			submit(follow_up)
+		_follow_ups.clear()
 	return result
 
 
@@ -121,11 +127,14 @@ func _apply(command: Command) -> void:
 		_undo.disarm(Refusal.MOVE_REVEALED)
 	elif command.type() == CommandType.UNDO_MOVE:
 		_undo.disarm(Refusal.NOTHING_TO_UNDO)
+	elif command.type() == CommandType.VALIDATE_RUIN_READ:
+		pass  # a follow-up of the reading: the move already disarmed the slot with its own reason
 	else:
 		_undo.disarm(Refusal.OTHER_ACTION_SINCE)
 	_post_commit.on_commit(_state, command, result)
 	for effect in result.profile_effects:
-		_profile.apply(effect)
+		if _profile.apply(effect) and effect is RecordFragmentEffect and (effect as RecordFragmentEffect).ruin_id >= 0:
+			_follow_ups.append(ValidateRuinReadCommand.new((effect as RecordFragmentEffect).faction, (effect as RecordFragmentEffect).ruin_id))
 	_sink.push(EventBatch.new(_state.revision(), _player_events(result.events, before)))
 	_log.append(command)
 

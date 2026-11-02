@@ -42,6 +42,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	# An ambush (case d of GDD 5 rule 13) always reveals the enemy: it stands on a
 	# neighbour, never hidden (GDD 5 rule 8), so case b covers it.
 	result.revealed = move.faction == Faction.PLAYER and result.vision.revealed
+	RuinRules.read_on_arrival(state, move.unit_id, rules, result)
 	result.events.append(UnitMovedEvent.new(move.faction, move.unit_id, start, at, move.tile))
 	if not result.vision.discovered_tiles.is_empty():
 		result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))

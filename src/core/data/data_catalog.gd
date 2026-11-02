@@ -18,6 +18,7 @@ var ai: AiParams
 var score: ScoreParams
 var combat: CombatParams
 var wake: WakeParams
+var fragments: FragmentPool
 
 
 ## Domain files expected at the data root, with the class that checks (SCHEMA) and
@@ -25,7 +26,7 @@ var wake: WakeParams
 static func domains() -> Dictionary:
 	return {
 		"ai.json": AiParams, "brouillard.json": FogParams, "combat.json": CombatParams, "energie.json": EnergyParams,
-		"noeuds.json": NodeParams, "reveil.json": WakeParams,
+		"noeuds.json": NodeParams, "reveil.json": WakeParams, "fragments.json": FragmentPool,
 		"protocoles.json": ProtocolTree, "score.json": ScoreParams, "terrain.json": TerrainParams, "units.json": UnitTypes,
 	}
 
@@ -65,6 +66,7 @@ static func load_all(source: DataSource) -> DataCatalogResult:
 	catalog.score = built["score.json"]
 	catalog.combat = built["combat.json"]
 	catalog.wake = built["reveil.json"]
+	catalog.fragments = built["fragments.json"]
 	catalog.fog = built["brouillard.json"]
 	catalog.nodes = built["noeuds.json"]
 	catalog.terrain = built["terrain.json"]

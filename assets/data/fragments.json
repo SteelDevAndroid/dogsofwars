@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "zone_radius": 2,
+  "fragments": [
+    {"id": 1, "faction": "meute", "act": 1},
+    {"id": 2, "faction": "meute", "act": 1},
+    {"id": 3, "faction": "meute", "act": 2},
+    {"id": 4, "faction": "meute", "act": 3},
+    {"id": 5, "faction": "meute", "act": 3}
+  ]
+}

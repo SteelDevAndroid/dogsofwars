@@ -46,7 +46,7 @@ func _first_divergence(view: StateView, copy_view: StateView, state: GameState) 
 	var families := [
 		[HeaderSlice.NEXT_UNIT_ID, [&"unit_tile", &"unit_faction", &"unit_hp", &"unit_type", &"unit_moved", &"unit_acted", &"unit_asleep", &"announced_this_turn"]],
 		[HeaderSlice.NEXT_NODE_ID, [&"node_tile", &"node_owner", &"node_level", &"node_since_turn", &"node_upgraded_turn"]],
-		[HeaderSlice.NEXT_RUIN_ID, [&"ruin_tile"]],
+		[HeaderSlice.NEXT_RUIN_ID, [&"ruin_tile", &"ruin_read_pending"]],
 	]
 	for family: Array in families:
 		for id in state.header.value(family[0]) + EXTRA_IDS:

@@ -46,6 +46,31 @@ func append(id: int, tile: int, zone: int, memory_faction: int) -> void:
 	_ruin_reader.append(Faction.NONE)
 
 
+func zone_of(row: int) -> int:
+	return _ruin_zone[row]
+
+
+func memory_faction_of(row: int) -> int:
+	return _ruin_memory_faction[row]
+
+
+func is_read(row: int) -> bool:
+	return _ruin_read[row] == 1
+
+
+func read_turn_of(row: int) -> int:
+	return _ruin_read_turn[row]
+
+
+func reader_of(row: int) -> int:
+	return _ruin_reader[row]
+
+
+## Row of the ruin standing on `tile`, -1 when none.
+func row_at_tile(tile: int) -> int:
+	return _ruin_tile.find(tile)
+
+
 func tile_of(row: int) -> int:
 	return _ruin_tile[row]
 

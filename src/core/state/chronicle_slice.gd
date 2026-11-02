@@ -28,5 +28,13 @@ func append(faction: int, fragment_id: int) -> void:
 	_chron_fragment.append(fragment_id)
 
 
+## True when the snapshot holds the fragment of the faction.
+func has(faction: int, fragment_id: int) -> bool:
+	for row in _chron_faction.size():
+		if _chron_faction[row] == faction and _chron_fragment[row] == fragment_id:
+			return true
+	return false
+
+
 func faction_of(row: int) -> int:
 	return _chron_faction[row]
