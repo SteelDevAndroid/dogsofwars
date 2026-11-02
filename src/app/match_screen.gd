@@ -27,6 +27,13 @@ var mode := Mode.IDLE
 var target_tiles := PackedInt32Array()
 var target_unit := -1
 var preview: CombatPreview
+## What a chosen target will do, in words: the attack preview or the wake price.
+var preview_text := ""
+## What the targeting is for: "attack" or "wake".
+var target_action := &"attack"
+## The node selected by a tap on an owned node of the player's (-1 for none).
+var selected_node := -1
+var research_open := false
 var camera: MapCamera
 
 var clock := PresentationClock.new()
@@ -53,6 +60,10 @@ func _ready() -> void:
 	hud.attack_pressed.connect(begin_targeting)
 	hud.confirm_pressed.connect(confirm_attack)
 	hud.cancel_pressed.connect(cancel_targeting)
+	hud.action_pressed.connect(do_action)
+	hud.research_pressed.connect(toggle_research)
+	hud.research_closed.connect(toggle_research)
+	hud.research_row_pressed.connect(do_action)
 	input_surface.pointer.connect(_on_pointer)
 	_pacing = SequencerPacingGate.new(sequencer)
 	sequencer.clock = source
@@ -121,9 +132,7 @@ func refresh(show_new_state: bool = false) -> void:
 	renderer.set_targets(target_tiles, session.state.view().unit_tile(target_unit) if target_unit >= 0 else -1)
 	hud.show_model(HudModel.build(session.state, session.catalog,
 			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
-			{"can_attack": mode == Mode.SELECTED and not _attack_targets(selected_unit).is_empty(),
-			"targeting": mode == Mode.TARGETING, "preview": preview if mode == Mode.CONFIRMING else null}),
-			presenter.notice)
+			_hud_actions()), presenter.notice)
 
 
 ## A tap on the map: on a unit of the player, select it; on a tile it can reach, move it;
@@ -153,28 +162,71 @@ func on_tap_tile(tile: int) -> void:
 		return
 	var view := FactionView.new(session.state, Faction.PLAYER)
 	var unit := view.unit_at(tile)
-	select_unit(unit if unit >= 0 and view.unit_faction(unit) == Faction.PLAYER else -1)
+	if unit >= 0 and view.unit_faction(unit) == Faction.PLAYER:
+		select_unit(unit)
+		return
+	select_unit(-1)
+	var node := view.node_at(tile)
+	if node >= 0 and view.node_owner(node) == Faction.PLAYER:
+		selected_node = node
+		refresh()
 
 
 func select_unit(unit_id: int) -> void:
 	selected_unit = unit_id
+	selected_node = -1
 	reachable = PackedInt32Array()
 	mode = Mode.SELECTED if unit_id >= 0 else Mode.IDLE
 	target_tiles = PackedInt32Array()
 	target_unit = -1
 	preview = null
+	preview_text = ""
+	target_action = &"attack"
 	if unit_id >= 0 and session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER:
 		reachable = session.pipeline.check_move_range(FactionView.new(session.state, Faction.PLAYER), Faction.PLAYER, unit_id)
 	refresh()
 
 
-## "Attaquer": the units the selected one may strike are marked, the map waits for a choice.
-func begin_targeting() -> void:
+## A button of the context panel or a row of the research panel (the id says which).
+func do_action(id: StringName) -> void:
+	if session == null or not sequencer.is_idle() or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
+		return
+	var unit := selected_unit
+	var node := selected_node
+	if id == &"wake":
+		begin_targeting(&"wake")
+		return
+	if id == &"capture" and unit >= 0:
+		select_unit(-1)
+		session.pipeline.submit(CaptureCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
+	elif id == &"upgrade":
+		if unit >= 0:
+			node = FactionView.new(session.state, Faction.PLAYER).node_at(session.state.view().unit_tile(unit))
+		select_unit(-1)
+		if node >= 0:
+			session.pipeline.submit(UpgradeNodeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, node))
+	elif String(id).begins_with("research:"):
+		research_open = false
+		session.pipeline.submit(ResearchCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, String(id).trim_prefix("research:").to_int()))
+		refresh()
+
+
+func toggle_research() -> void:
+	if session == null:
+		return
+	research_open = not research_open
+	refresh()
+
+
+## "Attaquer" or "Réveiller": the units the selected one may act on are marked, the map waits
+## for a choice.
+func begin_targeting(action: StringName = &"attack") -> void:
 	if session == null or mode != Mode.SELECTED:
 		return
-	var targets := _attack_targets(selected_unit)
+	var targets := _attack_targets(selected_unit) if action == &"attack" else ContextActions.wake_targets(session.state, session.pipeline, selected_unit, false)
 	if targets.is_empty():
 		return
+	target_action = action
 	target_tiles = PackedInt32Array()
 	var view := FactionView.new(session.state, Faction.PLAYER)
 	for id in targets:
@@ -187,8 +239,12 @@ func begin_targeting() -> void:
 ## A target is chosen: the preview of the blow comes from the pipeline, as the real one will.
 func choose_target(unit_id: int) -> void:
 	target_unit = unit_id
-	preview = CombatPreview.of(session.pipeline.preview(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, selected_unit, unit_id)),
-			selected_unit, unit_id)
+	if target_action == &"attack":
+		preview = CombatPreview.of(session.pipeline.preview(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, selected_unit, unit_id)),
+				selected_unit, unit_id)
+		preview_text = preview.text()
+	else:
+		preview_text = ContextActions.wake_text(session.state, session.catalog, unit_id)
 	mode = Mode.CONFIRMING
 	refresh()
 
@@ -196,10 +252,14 @@ func choose_target(unit_id: int) -> void:
 func confirm_attack() -> void:
 	if session == null or mode != Mode.CONFIRMING:
 		return
-	var attacker := selected_unit
+	var actor := selected_unit
 	var target := target_unit
+	var action := target_action
 	select_unit(-1)
-	session.pipeline.submit(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, attacker, target))
+	if action == &"attack":
+		session.pipeline.submit(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
+	else:
+		session.pipeline.submit(WakeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
 
 
 ## Back to the selected unit, nothing struck.
@@ -248,6 +308,21 @@ func _attack_targets(unit_id: int) -> Array[int]:
 				and session.pipeline.check(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit_id, id)).permitted:
 			targets.append(id)
 	return targets
+
+
+func _hud_actions() -> Dictionary:
+	var extras: Array[ContextAction] = []
+	var panel := {}
+	if mode == Mode.SELECTED or (mode == Mode.IDLE and selected_node >= 0):
+		extras = ContextActions.for_selection(session.state, session.catalog, session.pipeline, selected_unit, selected_node)
+		panel = ContextActions.node_panel(session.state, session.catalog, selected_node)
+	return {
+		"can_attack": mode == Mode.SELECTED and not _attack_targets(selected_unit).is_empty(),
+		"targeting": mode == Mode.TARGETING, "preview": preview if mode == Mode.CONFIRMING else null,
+		"preview_text": preview_text if mode == Mode.CONFIRMING else "", "extras": extras, "panel": panel,
+		"research_open": research_open,
+		"research": ContextActions.research_rows(session.state, session.catalog, session.pipeline) if research_open else [],
+	}
 
 
 func _on_pointer(event: PointerEvent) -> void:

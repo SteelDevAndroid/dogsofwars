@@ -34,7 +34,7 @@ func test_the_top_bar_and_the_score_row_read_the_state() -> void:
 
 	assert_str(model.turn_text).is_equal("Tour 4 / 30")
 	assert_str(model.energy_text).is_equal("Énergie 17")
-	assert_str(model.fragments_text).is_equal("Ruines lues 0")
+	assert_str(model.fragments_text).is_equal("Ruines 0")
 	var weights := _catalog().score
 	assert_str(model.score_text).is_equal("Victoire : %d contre %d" % [ScoreRules.decisive(state, 0, weights), ScoreRules.decisive(state, 1, weights)])
 
@@ -104,3 +104,28 @@ func test_the_journal_has_a_line_per_event_that_matters() -> void:
 	assert_str(HudModel.journal_line(UnitMovedEvent.new(Faction.AI, 1, 2, 3, 3))).is_not_empty()
 	assert_str(HudModel.journal_line(UnitMovedEvent.new(Faction.PLAYER, 1, 2, 3, 3))).is_empty()
 	assert_str(HudModel.journal_line(EnergyChangedEvent.new(0, 1, 2))).is_empty()
+
+
+func test_the_context_actions_hide_under_a_lock_or_while_targeting_and_the_research_rows_grey_out() -> void:
+	var state := _board()
+	var extras: Array[ContextAction] = [ContextAction.new(&"capture", "Capturer", false, "A déjà agi")]
+	var rows: Array[ContextAction] = [ContextAction.new(&"research:0", "Veille", true)]
+	var actions := {"extras": extras, "research_open": true, "research": rows}
+
+	var free := _model_with(state, false, actions)
+	assert_array(free.extra_actions.map(func(a: ContextAction) -> StringName: return a.id)).is_equal([&"capture"])
+	assert_str(free.reason_text).is_equal("A déjà agi")
+	assert_bool(free.research_open).is_true()
+	assert_bool(free.research_rows[0].enabled).is_true()
+
+	var locked := _model_with(state, true, actions)
+	assert_int(locked.extra_actions.size()).is_equal(0)
+	assert_bool(locked.research_rows[0].enabled).is_false()
+	assert_str(locked.research_rows[0].reason).is_equal("Patientez")
+
+	actions["targeting"] = true
+	assert_int(_model_with(state, false, actions).extra_actions.size()).is_equal(0)
+
+
+func _model_with(state: GameState, locked: bool, actions: Dictionary) -> HudModel:
+	return HudModel.build(state, _catalog(), locked, -1, [], actions)

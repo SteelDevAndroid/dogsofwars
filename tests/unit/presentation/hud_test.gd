@@ -11,7 +11,7 @@ func _model() -> HudModel:
 	var model := HudModel.new()
 	model.turn_text = "Tour 3 / 30"
 	model.energy_text = "Énergie 9"
-	model.fragments_text = "Ruines lues 1"
+	model.fragments_text = "Ruines 1"
 	model.score_text = "Victoire : 40 contre 38"
 	model.can_end_turn = true
 	return model
@@ -25,7 +25,7 @@ func test_the_hud_copies_the_model_to_its_widgets() -> void:
 	hud.show_model(model)
 
 	assert_array([hud.turn_label.text, hud.energy_label.text, hud.fragments_label.text, hud.score_label.text]) \
-			.is_equal(["Tour 3 / 30", "Énergie 9", "Ruines lues 1", "Victoire : 40 contre 38"])
+			.is_equal(["Tour 3 / 30", "Énergie 9", "Ruines 1", "Victoire : 40 contre 38"])
 	assert_str(hud.unit_title.text).is_equal("Assaut")
 	assert_str(hud.unit_lines.text).is_equal("PV 8 / 8\nA bougé")
 	assert_bool(hud.end_turn_button.disabled).is_false()

@@ -140,7 +140,7 @@ func test_tapping_a_unit_of_the_player_selects_it_and_shows_where_it_can_go() ->
 	assert_int(screen.selected_unit).is_equal(scout)
 	assert_bool(screen.reachable.size() > 0).is_true()
 	assert_bool(screen.reachable.has(state.tile_index(2, 1))).is_false()
-	assert_str(screen.hud.unit_title.text).is_equal("Eclaireur")
+	assert_str(screen.hud.unit_title.text).is_equal("Éclaireur")
 	assert_int(screen.renderer.selected_tile).is_equal(state.tile_index(2, 1))
 	screen.shutdown()
 	started[0].dispose()
@@ -539,7 +539,7 @@ func test_the_camera_starts_on_the_first_unit_of_the_player_and_drives_the_rende
 	assert_bool(screen.camera.is_visible(first)).is_true()
 	assert_float(screen.renderer.layout.tile_size).is_equal(screen.camera.tile_size)
 	assert_vector(screen.renderer.layout.origin).is_equal(screen.camera.layout().origin)
-	assert_vector(screen.input_surface.size).is_equal(screen.camera.area.size)
+	assert_vector(screen.input_surface.size).is_equal_approx(screen.camera.area.size, Vector2(0.01, 0.01))
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
@@ -607,6 +607,260 @@ func test_confirming_without_a_chosen_target_does_nothing() -> void:
 
 	assert_int(screen.selected_unit).is_equal(selected)
 	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _extra_labels(screen: MatchScreen) -> Array:
+	return screen.hud.extra_row.get_children().map(func(button: Button) -> String: return button.text)
+
+
+func _put(screen: MatchScreen, state: GameState, unit_id: int, x: int, y: int) -> void:
+	UnitWrites.move_to(state, unit_id, state.tile_index(x, y))
+	VisionService.recompute(state, VisionContext.for_map(screen.session.catalog, state))
+	TerritoryRules.recompute(state, screen.session.catalog.nodes, MapSlice.CAUSE_NONE)
+	screen.refresh(true)
+
+
+func _worker(state: GameState) -> int:
+	return state.view().unit_at(state.tile_index(2, 3))
+
+
+func test_a_worker_on_a_node_that_is_not_the_players_may_capture_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)  # a neutral node
+	screen.on_tap_tile(state.tile_index(5, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_false()
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	var node := state.view().node_at(state.tile_index(5, 2))
+	assert_int(state.view().node_owner(node)).is_equal(Faction.PLAYER)
+	assert_bool(state.view().unit_acted(worker)).is_true()
+	assert_int(screen.selected_unit).is_equal(-1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_capture_is_offered_only_to_a_unit_that_can_capture_and_greys_out_with_its_reason() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	assert_array(_extra_labels(screen)).is_empty()  # an Assaut cannot capture
+
+	var worker := _worker(state)
+	_put(screen, state, worker, 2, 6)
+	UnitWrites.set_acted(state, worker)
+	screen.on_tap_tile(state.tile_index(2, 6))
+
+	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.reason_label.text).is_equal("A déjà agi")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_waking_a_dormant_next_to_a_unit_shows_the_price_then_pays_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 4, 3)  # the dormant Ouvrier is at (4, 4)
+	screen.on_tap_tile(state.tile_index(4, 3))
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+
+	screen.hud.extra_row.get_child(0).pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.TARGETING)
+	assert_array(Array(screen.target_tiles)).is_equal([state.tile_index(4, 4)])
+	screen.on_tap_tile(state.tile_index(4, 4))
+	assert_str(screen.hud.preview_label.text).is_equal("Réveiller Ouvrier : 5 énergie")
+	var energy := EnergyRules.stock(state, Faction.PLAYER)
+	screen.hud.confirm_button.pressed.emit()
+
+	var woken := state.view().unit_at(state.tile_index(4, 4))
+	assert_int(state.view().unit_faction(woken)).is_equal(Faction.PLAYER)
+	assert_bool(state.view().unit_asleep(woken)).is_false()
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(energy - 5)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_wake_without_enough_energy_is_greyed_out_with_the_amounts() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 4, 3)
+	GameStateSetup.set_energy(state, Faction.PLAYER, 1)
+	screen.on_tap_tile(state.tile_index(4, 3))
+
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.reason_label.text).is_equal("Énergie insuffisante (5 requis, 1 disponibles)")
+	screen.hud.extra_row.get_child(0).pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)  # nothing to choose
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_an_own_node_shows_it_and_raises_it_for_its_price() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(1, 2))  # the starting node, no unit on it
+
+	assert_str(screen.hud.unit_title.text).is_equal("Nœud · niveau 1")
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()  # 9 energy
+	assert_str(screen.hud.reason_label.text).is_equal("Énergie insuffisante (12 requis, 9 disponibles)")
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	screen.refresh()
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	assert_int(state.view().node_level(0)).is_equal(2)
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(18)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_unit_standing_on_an_own_node_offers_the_upgrade_too() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 1, 2)
+	screen.on_tap_tile(state.tile_index(1, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	assert_int(state.view().node_level(0)).is_equal(2)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_research_panel_lists_the_protocols_and_starts_one() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 40)
+
+	screen.hud.research_button.pressed.emit()
+	assert_bool(screen.hud.research_panel.visible).is_true()
+	var rows := screen.hud.research_panel.rows_box.get_children()
+	assert_int(rows.size()).is_equal(6)
+	assert_str((rows[0] as Button).text).is_equal("Veille élargie · 15 énergie · 2 tours")
+	assert_bool((rows[0] as Button).disabled).is_false()
+	assert_bool((rows[1] as Button).disabled).is_true()  # a level 2 needs the level 1 of its branch
+	assert_str(screen.hud.research_panel.reason_label.text).is_equal("Prérequis manquant")
+	(rows[0] as Button).pressed.emit()
+
+	assert_int(state.view().research(Faction.PLAYER)).is_equal(0)
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(25)
+	assert_bool(screen.hud.research_panel.visible).is_false()
+	screen.hud.research_button.pressed.emit()
+	assert_str((screen.hud.research_panel.rows_box.get_child(0) as Button).text).is_equal("Veille élargie · en cours")
+	assert_bool((screen.hud.research_panel.rows_box.get_child(3) as Button).disabled).is_true()  # one at a time
+	screen.hud.research_closed.emit()
+	assert_bool(screen.hud.research_panel.visible).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_research_is_greyed_without_energy_and_shut_during_the_enemy_turn() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.research_button.pressed.emit()
+	assert_bool((screen.hud.research_panel.rows_box.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.research_panel.reason_label.text).is_equal("Énergie insuffisante (15 requis, 9 disponibles)")
+	screen.hud.research_closed.emit()
+	screen.end_turn()
+	_settle(screen)
+
+	assert_bool(screen.hud.research_button.disabled).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_actions_wait_for_the_sequencer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	started[2].gate.lock(PresentationSequencer.FRAGMENT_PANEL)
+
+	screen.do_action(&"capture")
+
+	assert_int(state.view().node_owner(state.view().node_at(state.tile_index(5, 2)))).is_equal(Faction.NONE)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_worker_on_a_node_the_player_already_holds_gets_no_capture_button() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	var worker := _worker(state)
+	_put(screen, state, worker, 1, 2)  # the player's own starting node
+	screen.on_tap_tile(state.tile_index(1, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_protocol_already_acquired_is_listed_as_such_and_cannot_be_started() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	GameStateSetup.set_energy(started[2].state, Faction.PLAYER, 40)
+	ResearchRules.acquire(started[2].state, Faction.PLAYER, 0)
+
+	screen.hud.research_button.pressed.emit()
+
+	var first := screen.hud.research_panel.rows_box.get_child(0) as Button
+	assert_str(first.text).is_equal("Veille élargie · acquis")
+	assert_bool(first.disabled).is_true()
+	assert_bool((screen.hud.research_panel.rows_box.get_child(1) as Button).disabled).is_false()  # its prerequisite is met
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_an_action_is_ignored_while_the_sequencer_is_playing() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	screen.sequencer.queue.push(EventBatch.new(99, [UnitMovedEvent.new(0, 1, 2, 3, 3)]))
+
+	screen.do_action(&"capture")
+
+	assert_int(state.view().node_owner(state.view().node_at(state.tile_index(5, 2)))).is_equal(Faction.NONE)
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()

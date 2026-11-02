@@ -73,3 +73,9 @@ static func set_phase(state: GameState, phase: int, active_faction: int) -> void
 ## First-match option (GDD 3 rule 8), chosen at the match setup.
 static func set_ai_passive(state: GameState, passive: bool) -> void:
 	state.header._header[HeaderSlice.AI_PASSIVE] = 1 if passive else 0
+
+
+## A faction's energy stock (tests and setup; in a match, commands change it).
+static func set_energy(state: GameState, faction: int, value: int) -> void:
+	state.factions._fac_energy[faction] = value
+

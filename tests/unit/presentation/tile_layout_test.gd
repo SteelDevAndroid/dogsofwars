@@ -30,6 +30,6 @@ func test_a_tiny_area_still_gives_a_positive_tile() -> void:
 func test_the_hud_leaves_the_map_the_middle_of_the_screen() -> void:
 	var area := HudModel.map_area(Vector2(390, 844))
 
-	assert_float(area.position.y).is_equal_approx(844 * 0.14, 0.01)
-	assert_float(area.end.y).is_equal_approx(844 * 0.76, 0.01)
+	assert_float(area.position.y).is_equal_approx(844 * 0.18, 0.01)
+	assert_float(area.end.y).is_equal_approx(844 * 0.66, 0.01)
 	assert_float(area.size.x).is_equal(390.0)

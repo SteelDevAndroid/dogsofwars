@@ -24,11 +24,19 @@ var can_attack := false
 var targeting := false
 var confirming := false
 var preview_text := ""
+## Capture, wake and upgrade for the selection, and the first reason one of them is greyed.
+var extra_actions: Array[ContextAction] = []
+var reason_text := ""
+## The research panel: open or not, and its rows.
+var research_open := false
+var research_rows: Array[ContextAction] = []
 var journal: Array[String] = []
 
 
 ## `locked`: a player lock is up (attack animation, fragment panel). `selected`: unit id or -1.
-## `actions`: {"can_attack": bool, "targeting": bool, "preview": CombatPreview or null}.
+## `actions`: {"can_attack": bool, "targeting": bool, "preview": CombatPreview or null, "preview_text": String,
+## "extras": Array[ContextAction], "panel": Dictionary (a selected node), "research_open": bool,
+## "research": Array[ContextAction]}.
 static func build(state: GameState, catalog: DataCatalog, locked: bool, selected: int, journal_lines: Array[String],
 		actions: Dictionary = {}) -> HudModel:
 	var model := HudModel.new()
@@ -36,7 +44,7 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	var view := FactionView.new(state, Faction.PLAYER)
 	model.turn_text = "Tour %d / %d" % [state.turn(), state.header.value(HeaderSlice.T_MAX)]
 	model.energy_text = "Énergie %d" % view.energy(Faction.PLAYER)
-	model.fragments_text = "Ruines lues %d" % state.ruin_journal.read_by(Faction.PLAYER)
+	model.fragments_text = "Ruines %d" % state.ruin_journal.read_by(Faction.PLAYER)
 	var weights := catalog.score
 	model.score_text = "Victoire : %d contre %d" % [ScoreRules.decisive(state, Faction.PLAYER, weights), ScoreRules.decisive(state, Faction.AI, weights)]
 	model.enemy_turn = phase == HeaderSlice.PHASE_ENEMY_EXECUTION or phase == HeaderSlice.PHASE_END_OF_TURN
@@ -59,10 +67,22 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	model.unit_panel = _unit_panel(view, catalog, selected)
 	model.journal = journal_lines.duplicate()
 	var preview: CombatPreview = actions.get("preview")
-	model.confirming = preview != null and not locked
 	model.targeting = actions.get("targeting", false) and not locked
-	model.preview_text = preview.text() if preview != null else ""
+	model.preview_text = actions.get("preview_text", "") if actions.get("preview_text", "") != "" else (preview.text() if preview != null else "")
+	model.confirming = (preview != null or model.preview_text != "") and not locked
 	model.can_attack = actions.get("can_attack", false) and not locked and not model.targeting and not model.confirming
+	if model.unit_panel.is_empty():
+		model.unit_panel = actions.get("panel", {})
+	if not locked and not model.targeting and not model.confirming:
+		var extras: Array = actions.get("extras", [])
+		for extra: ContextAction in extras:
+			model.extra_actions.append(extra)
+			if not extra.enabled and model.reason_text == "":
+				model.reason_text = extra.reason
+	model.research_open = actions.get("research_open", false)
+	var rows: Array = actions.get("research", [])
+	for row: ContextAction in rows:
+		model.research_rows.append(row if not locked else ContextAction.new(row.id, row.label, false, "Patientez"))
 	return model
 
 
@@ -82,7 +102,7 @@ static func _unit_panel(view: FactionView, catalog: DataCatalog, selected: int) 
 		lines.append("A bougé")
 	if view.unit_acted(selected):
 		lines.append("A agi")
-	return {"title": String(catalog.units.key(type)).capitalize(), "lines": lines}
+	return {"title": DisplayNames.unit(catalog.units.key(type)), "lines": lines}
 
 
 ## One line of the enemy-turn journal for an event the player was allowed to see, or "".
@@ -107,6 +127,6 @@ static func journal_line(event: PresentationEvent) -> String:
 ## The part of the screen left to the map (portrait): the top bar and the alert row above,
 ## the context panel below (design/ux/hud.md section 3.1).
 static func map_area(screen: Vector2) -> Rect2:
-	var top := screen.y * 0.14
-	var bottom := screen.y * 0.24
+	var top := screen.y * 0.18
+	var bottom := screen.y * 0.34
 	return Rect2(0.0, top, screen.x, screen.y - top - bottom)

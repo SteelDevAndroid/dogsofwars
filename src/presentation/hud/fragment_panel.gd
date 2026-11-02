@@ -19,6 +19,15 @@ var _close_delay := 0.5
 func _init() -> void:
 	visible = false
 	set_anchors_preset(Control.PRESET_CENTER)
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_BOTH
+	custom_minimum_size = Vector2(330, 0)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("1E2329")
+	style.border_color = Color("C8955A")
+	style.set_border_width_all(2)
+	style.set_content_margin_all(12)
+	add_theme_stylebox_override("panel", style)
 	var box := VBoxContainer.new()
 	add_child(box)
 	box.add_child(title_label)
