@@ -15,6 +15,8 @@ var save_dir := "user://"
 var forced_seed := -1
 ## The screen density in DPI; -1 asks the display (tests set it).
 var screen_dpi := -1
+## Whether the title screen ("Touchez pour jouer") comes before the main menu (tests turn it off).
+var show_title := true
 
 var app: AppContext
 var profile: ProfileStore
@@ -41,7 +43,10 @@ func _ready() -> void:
 	get_window().size_changed.connect(_apply_text_scale)
 	app = AppContext.create(data_source, file_store, profile, save_dir)
 	if app.is_ready():
-		show_menu()
+		if show_title:
+			_show_title()
+		else:
+			show_menu()
 	else:
 		_show_data_errors(app.errors)
 
@@ -55,10 +60,16 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if match_screen != null and not _ending:
 			toggle_pause()
-		elif screen is MainMenu:
+		elif screen is MainMenu or screen is TitleScreen:
 			get_tree().quit()
 	elif what == NOTIFICATION_APPLICATION_PAUSED and match_screen != null and match_screen.session != null:
 		(match_screen.session.post_commit as SaveCoordinator).retry(match_screen.session.state)
+
+
+func _show_title() -> void:
+	var title := TitleScreen.new()
+	title.started.connect(func() -> void: show_menu())
+	_show(title)
 
 
 func show_menu(notice: String = "") -> void:

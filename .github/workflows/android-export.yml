@@ -74,9 +74,9 @@ jobs:
       - name: Export the debug APK
         run: |
           mkdir -p build
-          "$GODOT" --headless --export-debug "Android" build/dogs-of-wars-debug.apk
-          test -s build/dogs-of-wars-debug.apk
-          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-wars-debug.apk
+          "$GODOT" --headless --export-debug "Android" build/dogs-of-gods-debug.apk
+          test -s build/dogs-of-gods-debug.apk
+          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-gods-debug.apk
       - name: Export the release APK
         if: ${{ env.HAS_RELEASE_KEYSTORE == 'true' }}
         env:
@@ -86,8 +86,8 @@ jobs:
         run: |
           echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
-          "$GODOT" --headless --export-release "Android" build/dogs-of-wars-release.apk
-          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-wars-release.apk
+          "$GODOT" --headless --export-release "Android" build/dogs-of-gods-release.apk
+          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-gods-release.apk
       - uses: actions/upload-artifact@v4
         with:
           name: apk
