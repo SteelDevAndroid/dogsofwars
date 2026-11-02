@@ -25,4 +25,4 @@ Les ADR citent, dans **References Consulted** et ailleurs, des sources qui ne so
 | Doublures des ports `DataSource`, `FileStore`, `EventSink`, `PacingGate`, `ClockSource` (`tests/fixtures/`) | ADR-0011 §4 | Fait (2026-11-01) |
 | `StateFactory`, `StatePayload` | ADR-0011 §4 | Fait (2026-11-01) |
 | `NullProfilePort`, `RecordingProfilePort` | ADR-0011 §4 | Fait (2026-11-01) |
-| `export_presets.cfg` (preset Android, `include_filter="assets/data/*.json"`) | ADR-0009 §9 | À faire avec le premier export Android |
+| `export_presets.cfg` (preset Android, `include_filter="assets/data/*.json"`) | ADR-0009 §9 | Fait (2026-11-02) ; l'export réel (modèles d'export, keystore, vérification sur appareil) reste à faire |
