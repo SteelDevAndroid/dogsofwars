@@ -28,6 +28,7 @@ func test_it_shows_the_given_settings_without_announcing_a_change() -> void:
 	assert_bool(screen.reduced_motion_check.button_pressed).is_false()
 	assert_bool(screen.left_panel_check.button_pressed).is_false()
 	assert_bool(screen.hints_check.button_pressed).is_true()
+	assert_array([screen.effects_slider.value, screen.ui_slider.value]).is_equal([80.0, 80.0])
 	assert_array(seen).is_empty()
 	screen.free()
 
@@ -45,10 +46,12 @@ func test_each_control_announces_its_key_and_value() -> void:
 	screen.left_panel_check.button_pressed = true
 	screen.left_panel_check.button_pressed = false
 	screen.hints_check.button_pressed = false
+	screen.effects_slider.value = 30
+	screen.ui_slider.value = 0
 
 	assert_array(seen).is_equal([
 		[GameSettings.TEXT_SCALE, 125], [GameSettings.ENEMY_SPEED, 1], [GameSettings.REDUCED_MOTION, 1],
-		[GameSettings.SHOW_RANGE, 0], [GameSettings.COLORBLIND, 1], [GameSettings.LEFT_PANEL, 1], [GameSettings.LEFT_PANEL, 0], [GameSettings.HINTS, 0]])
+		[GameSettings.SHOW_RANGE, 0], [GameSettings.COLORBLIND, 1], [GameSettings.LEFT_PANEL, 1], [GameSettings.LEFT_PANEL, 0], [GameSettings.HINTS, 0], [GameSettings.VOLUME_EFFECTS, 30], [GameSettings.VOLUME_UI, 0]])
 	screen.free()
 
 

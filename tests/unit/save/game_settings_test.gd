@@ -12,7 +12,7 @@ func test_a_new_profile_has_the_default_settings() -> void:
 
 	assert_dict(store.settings()).is_equal({
 		GameSettings.TEXT_SCALE: 100, GameSettings.COLORBLIND: 0, GameSettings.REDUCED_MOTION: 0,
-		GameSettings.SHOW_RANGE: 1, GameSettings.ENEMY_SPEED: 0, GameSettings.LEFT_PANEL: 0, GameSettings.HINTS: 1})
+		GameSettings.SHOW_RANGE: 1, GameSettings.ENEMY_SPEED: 0, GameSettings.LEFT_PANEL: 0, GameSettings.HINTS: 1, GameSettings.VOLUME_EFFECTS: 80, GameSettings.VOLUME_UI: 80})
 
 
 func test_a_setting_survives_a_restart_and_a_reset_of_the_progress() -> void:
@@ -96,3 +96,13 @@ func test_the_settings_returned_are_a_copy() -> void:
 	copy[GameSettings.TEXT_SCALE] = 150
 
 	assert_int(store.setting(GameSettings.TEXT_SCALE)).is_equal(100)
+
+
+func test_the_volumes_are_percentages() -> void:
+	var store := _store(FaultInjectingFileStore.new())
+
+	assert_bool(store.set_setting(GameSettings.VOLUME_EFFECTS, 0)).is_true()
+	assert_bool(store.set_setting(GameSettings.VOLUME_UI, 100)).is_true()
+	assert_bool(store.set_setting(GameSettings.VOLUME_EFFECTS, 101)).is_false()
+	assert_bool(store.set_setting(GameSettings.VOLUME_UI, -1)).is_false()
+	assert_int(store.setting(GameSettings.VOLUME_EFFECTS)).is_equal(0)

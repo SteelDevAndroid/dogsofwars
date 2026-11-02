@@ -57,6 +57,8 @@ var _gestures := GestureInterpreter.new()
 var _needs := Vector2.ZERO
 var _runner_port: NodeAiRunnerPort
 var _pulsed_unit := -1
+## The sound effects, set by the app (null in a bare screen: silent).
+var sounds: SoundBank
 var _pacing: PacingGate
 var _queue: EventQueue
 
@@ -156,6 +158,8 @@ func bind(p_session: GameSession) -> void:
 	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
 			TileRendererHandler.new(renderer, session.catalog.presentation), presenter]
+	if sounds != null:
+		sequencer.handlers.append(SoundHandler.new(sounds))
 	session.turns.start()
 	refresh()  # the HUD has its content, so its real heights are known
 	_center_on_first_unit()
@@ -232,6 +236,8 @@ func select_unit(unit_id: int) -> void:
 	target_action = &"attack"
 	if unit_id >= 0 and session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER:
 		reachable = session.pipeline.check_move_range(FactionView.new(session.state, Faction.PLAYER), Faction.PLAYER, unit_id)
+		if unit_id != _pulsed_unit:
+			_sound(&"select")
 		if not sequencer.reduced_motion and unit_id != _pulsed_unit:  # a ring on the tile: "this one"
 			var pulse := TileEffect.new(TileEffect.Kind.PULSE, clock.current(), 0.25)
 			pulse.tile = session.state.view().unit_tile(unit_id)
@@ -269,9 +275,15 @@ func _submit(command: Command) -> ValidationResult:
 	return _told(session.pipeline.submit(command))
 
 
+func _sound(cue: StringName) -> void:
+	if sounds != null:
+		sounds.play(cue)
+
+
 func _told(result: ValidationResult) -> ValidationResult:
 	if not result.permitted:
 		hud.show_toast(RefusalText.of(result), clock.current())
+		_sound(&"refusal")
 	return result
 
 
