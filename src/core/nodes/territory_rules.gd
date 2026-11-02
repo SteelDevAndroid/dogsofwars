@@ -23,6 +23,8 @@ static func recompute(state: GameState, nodes: NodeParams, cause: int) -> Array:
 		state.map._tile_prev_owner[tile] = old
 		state.map._tile_change_turn[tile] = state.turn()
 		state.map._tile_change_cause[tile] = cause
+		if old == Faction.PLAYER:
+			RecallWrites.tile_lost(state, tile)
 		var key := Vector2i(_sort_key(old), _sort_key(owner))
 		if not changed.has(key):
 			changed[key] = PackedInt32Array()

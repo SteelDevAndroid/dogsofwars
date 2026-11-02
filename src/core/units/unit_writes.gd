@@ -64,4 +64,5 @@ static func destroy(state: GameState, unit_id: int) -> bool:
 	if row < 0 or state.units._unit_alive[row] == 0:
 		return false
 	state.units._unit_alive[row] = 0
+	RecallWrites.unit_lost(state, state.units.tile_of(row), state.units.faction_of(row))
 	return true

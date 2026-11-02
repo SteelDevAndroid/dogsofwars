@@ -15,5 +15,6 @@ func validate(_view: StateView, command: Command, _rules: RuleTable) -> Validati
 func apply(state: GameState, command: Command, _rules: RuleTable) -> ApplyResult:
 	var result := ApplyResult.new()
 	TurnWrites.end_phase(state)
+	RecallWrites.clear(state)
 	result.events.append(TurnEndedEvent.new(state.turn(), command.faction))
 	return result

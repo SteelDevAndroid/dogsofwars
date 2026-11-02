@@ -19,6 +19,22 @@ func columns() -> Array:
 	return COLUMNS
 
 
+func unit_count() -> int:
+	return _recall_unit_tile.size()
+
+
+func unit_tile_of(row: int) -> int:
+	return _recall_unit_tile[row]
+
+
+func unit_side_of(row: int) -> int:
+	return _recall_unit_side[row]
+
+
+func lost_tiles() -> PackedInt32Array:
+	return _recall_lost_tile.duplicate()
+
+
 ## Recalls of what the player lost, for the HUD only: not the AI's knowledge.
 func private_to() -> int:
 	return Faction.PLAYER

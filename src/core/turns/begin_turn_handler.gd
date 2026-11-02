@@ -41,6 +41,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	UnitWrites.start_turn(state, command.faction)
 	if not player:
 		AiWrites.reset_cursor(state)
+		RecallWrites.clear(state)
 	result.events.append(TurnStartedEvent.new(state.turn(), command.faction, phase))
 	result.events.append_array(healed)
 	EnergyRules.pay_income(state, command.faction, rules.catalog.energy, result.events)
