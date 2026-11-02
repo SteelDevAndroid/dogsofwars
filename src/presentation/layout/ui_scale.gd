@@ -8,11 +8,11 @@ const MIN_FACTOR := 1.0
 const MAX_FACTOR := 4.0
 
 
-## dpi / 160, bounded; 1 when the DPI is unknown (headless gives 0 or a desktop value).
+## dpi / 160 times the text scale (1.0 to 1.5), bounded; the DPI counts as 160 when it is
+## unknown (headless gives 0 or a desktop value).
 static func factor(dpi: int, text_scale: float = 1.0) -> float:
-	if dpi <= 0:
-		return MIN_FACTOR
-	return clampf(dpi / REFERENCE_DPI * text_scale, MIN_FACTOR, MAX_FACTOR)
+	var density := dpi / REFERENCE_DPI if dpi > 0 else 1.0
+	return clampf(density * text_scale, MIN_FACTOR, MAX_FACTOR)
 
 
 ## Sets the scale of a window from the screen it is on.

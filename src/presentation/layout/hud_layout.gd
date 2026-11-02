@@ -1,6 +1,7 @@
 # Where the HUD zones and the map go (design/ux/hud.md section 3), pure. Portrait: a bar on top
 # and a context panel at the bottom, the map between them. Landscape: a rail on the left
-# (140 pt), the context panel on the right (224 pt), the map in the middle. Everything stays
+# (140 pt), the context panel on the right (224 pt), the map in the middle; with `mirrored`
+# (setting "panel on the left") the two swap sides. Everything stays
 # inside the safe area; the heights of the portrait bars are the ones the widgets really need,
 # so nothing is guessed as a share of the screen.
 class_name HudLayout
@@ -26,14 +27,18 @@ var camera_buttons := Rect2()
 
 
 ## `top_height` and `bottom_height`: what the portrait bars need (their minimum sizes).
-static func compute(screen: Vector2, safe_area: Rect2, top_height: float, bottom_height: float) -> HudLayout:
+static func compute(screen: Vector2, safe_area: Rect2, top_height: float, bottom_height: float, mirrored: bool = false) -> HudLayout:
 	var layout := HudLayout.new()
 	layout.safe = safe_area
 	layout.landscape = screen.x > screen.y
 	if layout.landscape:
-		layout.top_zone = Rect2(safe_area.position, Vector2(RAIL_WIDTH, safe_area.size.y))
-		layout.panel_zone = Rect2(Vector2(safe_area.end.x - PANEL_WIDTH, safe_area.position.y), Vector2(PANEL_WIDTH, safe_area.size.y))
-		layout.map_area = Rect2(layout.top_zone.end.x, safe_area.position.y, safe_area.size.x - RAIL_WIDTH - PANEL_WIDTH, safe_area.size.y)
+		var left := PANEL_WIDTH if mirrored else RAIL_WIDTH
+		var right := RAIL_WIDTH if mirrored else PANEL_WIDTH
+		var left_zone := Rect2(safe_area.position, Vector2(left, safe_area.size.y))
+		var right_zone := Rect2(Vector2(safe_area.end.x - right, safe_area.position.y), Vector2(right, safe_area.size.y))
+		layout.top_zone = right_zone if mirrored else left_zone
+		layout.panel_zone = left_zone if mirrored else right_zone
+		layout.map_area = Rect2(left_zone.end.x, safe_area.position.y, safe_area.size.x - RAIL_WIDTH - PANEL_WIDTH, safe_area.size.y)
 	else:
 		var floor_height := screen.y * MIN_MAP_SHARE
 		var bars := minf(top_height + bottom_height, maxf(safe_area.size.y - floor_height, 0.0))

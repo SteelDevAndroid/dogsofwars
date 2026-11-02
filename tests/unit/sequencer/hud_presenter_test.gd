@@ -87,3 +87,17 @@ func test_the_panel_cannot_be_closed_before_its_delay() -> void:
 	assert_bool(panel.visible).is_false()
 	assert_int(closed[0]).is_equal(1)
 	panel.free()
+
+
+func test_the_panel_shows_the_text_of_the_fragment_from_the_pool() -> void:
+	var set_up := _setup()
+	var hud: Hud = set_up[1]
+	var pool := CatalogFactory.standard().fragments
+	var presenter := HudPresenter.new(hud, set_up[2], set_up[3], CatalogFactory.standard().presentation, pool)
+
+	presenter.handle(RuinReadEvent.new(0, 1, 2, 5), SequenceContext.new(2.0, set_up[4]))
+
+	assert_str(hud.fragment_panel.title_label.text).is_equal("Fragment")
+	assert_str(hud.fragment_panel.body_label.text).is_equal("On allume les balises.")
+	assert_str(hud.fragment_panel.source_label.text).is_equal("Journal")
+	_free(set_up)

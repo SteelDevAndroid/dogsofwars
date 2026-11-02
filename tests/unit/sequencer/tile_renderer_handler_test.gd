@@ -142,3 +142,30 @@ func test_only_the_tiles_inside_the_map_area_are_drawn() -> void:
 	renderer.set_clip_rect(Rect2(70, 40, 40, 20))  # cuts tiles in the middle: partly shown
 	assert_int(renderer.visible_tiles().size()).is_equal(2)
 	renderer.free()
+
+
+func test_the_colour_wave_follows_the_colour_blind_palette() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	var wave := TileOwnersChangedEvent.new(PackedInt32Array([1]), Faction.NONE, Faction.PLAYER)
+
+	handler.handle(wave, _context(clock))
+	renderer.colorblind = true
+	handler.handle(wave, _context(clock))
+
+	assert_object(renderer.effects[0].color).is_equal(TilePalette.PLAYER)
+	assert_object(renderer.effects[1].color).is_equal(TilePalette.PLAYER_ALT)
+	renderer.free()
+
+
+func test_only_the_ownership_colours_change_in_the_colour_blind_palette() -> void:
+	assert_object(TilePalette.owner(Faction.PLAYER, true)).is_equal(Color("3A8EE6"))
+	assert_object(TilePalette.owner(Faction.AI, true)).is_equal(Color("F0DC6E"))
+	assert_object(TilePalette.owner(Faction.NONE, true)).is_equal(Color("5F6266"))
+	assert_object(TilePalette.owner(Faction.PLAYER)).is_equal(TilePalette.PLAYER)
+	assert_object(TilePalette.owner(Faction.AI)).is_equal(TilePalette.ENEMY)
+	assert_object(TilePalette.owner(Faction.NONE)).is_equal(TilePalette.NEUTRAL)
+	assert_object(TilePalette.THREAT).is_equal(Color("FF6A3D"))
+	assert_object(TilePalette.RUIN).is_equal(Color("C8955A"))

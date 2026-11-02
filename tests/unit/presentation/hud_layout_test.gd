@@ -97,3 +97,32 @@ func test_the_camera_buttons_sit_at_the_bottom_right_of_the_map() -> void:
 		assert_float(layout.camera_buttons.end.x).is_equal(layout.map_area.end.x - 8.0)
 		assert_float(layout.camera_buttons.end.y).is_equal(layout.map_area.end.y - 8.0)
 		assert_bool(layout.map_area.encloses(layout.camera_buttons)).is_true()
+
+
+func test_the_text_scale_counts_even_when_the_dpi_is_unknown() -> void:
+	assert_float(UiScale.factor(0, 1.5)).is_equal(1.5)
+	assert_float(UiScale.factor(0, 1.25)).is_equal(1.25)
+	assert_float(UiScale.factor(160, 1.25)).is_equal(1.25)
+	assert_float(UiScale.factor(1000, 1.5)).is_equal(4.0)
+
+
+func test_a_mirrored_landscape_swaps_the_rail_and_the_panel_and_keeps_the_map_inside() -> void:
+	var safe := Rect2(Vector2.ZERO, LANDSCAPE)
+
+	var normal := HudLayout.compute(LANDSCAPE, safe, 0.0, 0.0)
+	var mirrored := HudLayout.compute(LANDSCAPE, safe, 0.0, 0.0, true)
+
+	assert_object(normal.top_zone).is_equal(Rect2(0, 0, 140, 390))
+	assert_object(normal.panel_zone).is_equal(Rect2(620, 0, 224, 390))
+	assert_object(mirrored.panel_zone).is_equal(Rect2(0, 0, 224, 390))
+	assert_object(mirrored.top_zone).is_equal(Rect2(704, 0, 140, 390))
+	assert_object(mirrored.map_area).is_equal(Rect2(224, 0, 480, 390))
+	assert_float(normal.map_area.size.x).is_equal(mirrored.map_area.size.x)
+
+
+func test_mirroring_changes_nothing_in_portrait() -> void:
+	var a := HudLayout.compute(PORTRAIT, Rect2(Vector2.ZERO, PORTRAIT), 130.0, 300.0)
+	var b := HudLayout.compute(PORTRAIT, Rect2(Vector2.ZERO, PORTRAIT), 130.0, 300.0, true)
+
+	assert_object(b.map_area).is_equal(a.map_area)
+	assert_object(b.top_zone).is_equal(a.top_zone)

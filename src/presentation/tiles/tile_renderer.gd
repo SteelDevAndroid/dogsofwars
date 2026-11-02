@@ -17,6 +17,8 @@ var effects: Array[TileEffect] = []
 var clip_area := Rect2(-1e6, -1e6, 2e6, 2e6)
 var targets := PackedInt32Array()
 var chosen_target := -1
+## The colour-blind palette of hud.md 10.5 (ownership colours only).
+var colorblind := false
 
 
 func _init() -> void:
@@ -121,14 +123,14 @@ func _draw_tile(tile: int) -> void:
 	draw_rect(rect, color)
 	var owner: int = snapshot.owners[tile]
 	if owner != Faction.NONE:
-		draw_rect(rect, Color(TilePalette.owner(owner), 0.30))
+		draw_rect(rect, Color(TilePalette.owner(owner, colorblind), 0.30))
 		# A pattern besides the colour (accessibility): a chevron for the pack, a bar for the enemy.
 		var c := rect.get_center()
 		var s := layout.tile_size * 0.12
 		if owner == Faction.PLAYER:
-			draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(0, -s), c + Vector2(s, s)]), TilePalette.owner(owner), 1.0)
+			draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(0, -s), c + Vector2(s, s)]), TilePalette.owner(owner, colorblind), 1.0)
 		else:
-			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner), 1.0)
+			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner, colorblind), 1.0)
 
 
 func _draw_node(node: Array) -> void:
@@ -140,7 +142,7 @@ func _draw_node(node: Array) -> void:
 	var c := rect.get_center()
 	var r := layout.tile_size * 0.36
 	var diamond := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
-	draw_colored_polygon(diamond, TilePalette.owner(node[1]))
+	draw_colored_polygon(diamond, TilePalette.owner(node[1], colorblind))
 	draw_polyline(diamond + PackedVector2Array([diamond[0]]), TilePalette.OUTLINE, 1.5)
 	for k in node[2]:  # the level, one pip per level
 		draw_circle(c + Vector2((k - (node[2] - 1) / 2.0) * layout.tile_size * 0.14, 0), layout.tile_size * 0.04, TilePalette.OUTLINE)
@@ -166,7 +168,7 @@ func _draw_unit(unit: Array) -> void:
 		rect.position += moving - c
 		c = moving
 	var r := layout.tile_size * 0.30
-	var fill := TilePalette.owner(unit[2]) if not unit[6] else TilePalette.NEUTRAL.darkened(0.3)
+	var fill := TilePalette.owner(unit[2], colorblind) if not unit[6] else TilePalette.owner(Faction.NONE, colorblind).darkened(0.3)
 	var outline := TilePalette.ENEMY_OUTLINE if unit[2] == Faction.AI else TilePalette.OUTLINE
 	var points := _shape(unit[3], c, r)
 	draw_colored_polygon(points, fill)
@@ -176,7 +178,7 @@ func _draw_unit(unit: Array) -> void:
 	if unit[4] < unit[5]:
 		var bar := Rect2(rect.position + Vector2(layout.tile_size * 0.1, layout.tile_size * 0.86), Vector2(layout.tile_size * 0.8, 3.0))
 		draw_rect(bar, TilePalette.OUTLINE)
-		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(unit[4]) / unit[5], bar.size.y)), TilePalette.PLAYER)
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(unit[4]) / unit[5], bar.size.y)), TilePalette.owner(Faction.PLAYER, colorblind))
 
 
 ## Where an animated unit is drawn: along its MOVE effect, (-1, -1) when it is not moving.

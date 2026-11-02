@@ -44,10 +44,10 @@ static func documents() -> Dictionary:
 		"reveil.json": {"schema_version": 1, "prices": [
 			{"type": "eclaireur", "price": 4}, {"type": "ouvrier", "price": 5},
 			{"type": "assaut", "price": 6}, {"type": "rempart", "price": 8}]},
-		"fragments.json": {"schema_version": 1, "zone_radius": 2, "fragments": [
-			{"id": 1, "faction": "meute", "act": 1}, {"id": 2, "faction": "meute", "act": 1},
-			{"id": 3, "faction": "meute", "act": 2}, {"id": 4, "faction": "meute", "act": 3},
-			{"id": 5, "faction": "meute", "act": 3}]},
+		"fragments.json": {"schema_version": 1, "zone_radius": 2, "act3_link_percent": 50, "act1_verb_min": 1, "fragments": [
+			_fragment(1, 1, "aucun", "Un ordre."), _fragment(2, 1, "verbe", "On allume les balises."),
+			_fragment(3, 2, "verbe", "On a allumé le relais."), _fragment(4, 3, "verbe", "Les lampes s'allument."),
+			_fragment(5, 3, "question", "Pour qui allume-t-on ?")]},
 		"presentation.json": {"schema_version": 1, "move_step_ms": 120, "attack_line_ms": 250, "hit_ms": 350, "destroy_ms": 400,
 			"recolor_ms": 400, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
 			"enemy_action_ms": 500, "recenter_ms": 300, "reduced_slot_ms": 334, "queue_max": 256},
@@ -80,3 +80,8 @@ static func _unit(id: int, key: String, side: String, hp: int, attack: int, defe
 		move: int, vision: int) -> Dictionary:
 	return {"id": id, "key": key, "side": side, "hp": hp, "attack": attack, "defense": defense,
 		"move": move, "range": 1, "vision": vision, "captures": 1 if key in ["ouvrier", "bastion"] else 0}
+
+
+static func _fragment(id: int, act: int, link: String, text: String) -> Dictionary:
+	return {"id": id, "faction": "meute", "act": act, "title": "Fragment", "text": text, "source": "Journal",
+			"tones": ["doute"], "link": link}

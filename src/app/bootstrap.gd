@@ -13,6 +13,8 @@ var file_store: FileStore
 var save_dir := "user://"
 ## A fixed seed for the next new game, -1 for a random one.
 var forced_seed := -1
+## The screen density in DPI; -1 asks the display (tests set it).
+var screen_dpi := -1
 
 var app: AppContext
 var profile: ProfileStore
@@ -22,18 +24,19 @@ var screen: Control
 
 var _ui: CanvasLayer
 var _pause: PauseMenu
+var _settings_screen: SettingsScreen
 var _ending := false
 
 
 func _ready() -> void:
-	UiScale.apply(get_window(), DisplayServer.screen_get_dpi())
-	get_window().size_changed.connect(func() -> void: UiScale.apply(get_window(), DisplayServer.screen_get_dpi()))
 	_ui = CanvasLayer.new()
 	add_child(_ui)
 	data_source = data_source if data_source != null else ResDataSource.new()
 	file_store = file_store if file_store != null else RealFileStore.new()
 	profile = ProfileStore.new(file_store, save_dir)
 	profile.load_profile()
+	_apply_text_scale()  # the settings are read before the first screen (GDD 22 rule 14)
+	get_window().size_changed.connect(_apply_text_scale)
 	app = AppContext.create(data_source, file_store, profile, save_dir)
 	if app.is_ready():
 		show_menu()
@@ -62,6 +65,7 @@ func show_menu() -> void:
 	menu.configure(app.save_store.has_match(), best)
 	menu.continue_requested.connect(continue_match)
 	menu.new_game_requested.connect(start_new_game)
+	menu.settings_requested.connect(show_settings)
 	menu.quit_requested.connect(func() -> void: get_tree().quit())
 	_show(menu)
 
@@ -101,7 +105,29 @@ func toggle_pause() -> void:
 	_pause.resume_requested.connect(toggle_pause)
 	_pause.menu_requested.connect(_to_menu_keeping_match)
 	_pause.abandon_requested.connect(abandon_match)
+	_pause.settings_requested.connect(show_settings)
 	_ui.add_child(_pause)
+
+
+## The settings screen, over whatever is showing; "Retour" closes it.
+func show_settings() -> void:
+	if _settings_screen != null:
+		return
+	_settings_screen = SettingsScreen.new()
+	_settings_screen.configure(profile.settings())
+	_settings_screen.changed.connect(change_setting)
+	_settings_screen.back_requested.connect(func() -> void:
+		_settings_screen.queue_free()
+		_settings_screen = null)
+	_ui.add_child(_settings_screen)
+
+
+## Stores a setting and applies it at once (a refused change puts the screen back as it was).
+func change_setting(key: StringName, value: int) -> void:
+	if profile.set_setting(key, value):
+		_apply_settings()
+	elif _settings_screen != null:
+		_settings_screen.configure(profile.settings())
 
 
 func abandon_match() -> void:
@@ -127,6 +153,8 @@ func _new_match_screen() -> MatchScreen:
 	var node: MatchScreen = load("res://src/app/match_screen.tscn").instantiate()
 	add_child(node)
 	node.pause_requested.connect(toggle_pause)
+	node.speed_changed.connect(func(speed: int) -> void: profile.set_setting(GameSettings.ENEMY_SPEED, speed))
+	node.apply_settings(profile.settings())
 	return node
 
 
@@ -135,6 +163,16 @@ func _bind(node: MatchScreen, session: GameSession) -> void:
 	match_screen = node
 	_ending = false
 	node.bind(session)
+
+
+func _apply_settings() -> void:
+	_apply_text_scale()
+	if match_screen != null:
+		match_screen.apply_settings(profile.settings())
+
+
+func _apply_text_scale() -> void:
+	UiScale.apply(get_window(), screen_dpi if screen_dpi >= 0 else DisplayServer.screen_get_dpi(), profile.setting(GameSettings.TEXT_SCALE) / 100.0)
 
 
 func _show_end() -> void:

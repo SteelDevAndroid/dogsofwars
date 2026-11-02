@@ -6,10 +6,12 @@ extends Control
 signal resume_requested
 signal abandon_requested
 signal menu_requested
+signal settings_requested
 
 var resume_button: Button
 var abandon_button: Button
 var menu_button: Button
+var settings_button: Button
 
 
 func _init() -> void:
@@ -18,6 +20,7 @@ func _init() -> void:
 	box.set_anchors_preset(Control.PRESET_CENTER)
 	add_child(box)
 	resume_button = _button(box, "Reprendre", func() -> void: resume_requested.emit())
+	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	menu_button = _button(box, "Menu (la partie est gardée)", func() -> void: menu_requested.emit())
 	abandon_button = _button(box, "Abandonner", func() -> void: abandon_requested.emit())
 

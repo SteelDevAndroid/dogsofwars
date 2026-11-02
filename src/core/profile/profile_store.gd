@@ -1,4 +1,4 @@
-# The profile (GDD 22, ADR-0006): what survives a match. The chronicle (fragments found, per
+# The profile (GDD 22, ADR-0006): what survives a match. The settings, the chronicle (fragments found, per
 # faction), the best scores per (faction, difficulty), the match counter and the reset epoch.
 # It is the real ProfilePort: a fragment is kept once (idempotent by id), a score keeps the
 # maximum and is ignored for a match id already taken (the last 8 are remembered). Each change
@@ -24,6 +24,7 @@ var _fragments: Array = []
 var _best := {}
 var _recent: Array = []
 var _next_match := 1
+var _settings := GameSettings.defaults()
 
 
 func _init(files: FileStore, dir: String = "user://") -> void:
@@ -74,6 +75,30 @@ func next_match_id() -> int:
 	return id
 
 
+## A copy of the settings (every key of GameSettings.TABLE).
+func settings() -> Dictionary:
+	return _settings.duplicate()
+
+
+func setting(key: StringName) -> int:
+	return _settings[key]
+
+
+## Changes one setting and writes it at once. False for an unknown key, an invalid value or a
+## read-only profile; the setting is then left as it was.
+func set_setting(key: StringName, value: Variant) -> bool:
+	if read_only or not GameSettings.is_valid(key, value):
+		return false
+	if _settings[key] == value:
+		return true
+	var before: int = _settings[key]
+	_settings[key] = value
+	if _write():
+		return true
+	_settings[key] = before
+	return false
+
+
 func apply(effect: ProfileEffect) -> bool:
 	if read_only:
 		return false
@@ -98,7 +123,7 @@ func apply(effect: ProfileEffect) -> bool:
 	return false
 
 
-## Progress reset (GDD 22): chronicle and scores gone, the epoch moves on.
+## Progress reset (GDD 22): chronicle and scores gone, the epoch moves on, the settings stay.
 func reset_progress() -> bool:
 	_fragments = []
 	_best = {}
@@ -116,11 +141,12 @@ func _adopt(data: Dictionary) -> bool:
 	_recent = data["recent"]
 	epoch = data["epoch"]
 	_next_match = data["next_match"]
+	_settings = GameSettings.clean(data.get("settings"))
 	return true
 
 
 func _write() -> bool:
-	var data := {"fragments": _fragments, "best": _best, "recent": _recent, "epoch": epoch, "next_match": _next_match}
+	var data := {"fragments": _fragments, "best": _best, "recent": _recent, "epoch": epoch, "next_match": _next_match, "settings": _settings}
 	var bytes := SaveEnvelope.encode(var_to_bytes(data), SCHEMA_VERSION, 0)
 	last_error = _files.write(_path + ".tmp", bytes)
 	if last_error == OK and SaveEnvelope.decode(_files.read(_path + ".tmp"), [SaveEnvelope.OK]) == null:

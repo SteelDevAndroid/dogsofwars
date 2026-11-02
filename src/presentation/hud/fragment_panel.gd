@@ -1,14 +1,17 @@
 # The fragment panel (hud.md rule 15, GDD 13 rule 15): it opens once the colour wave is over,
 # blocks the player's commands, cannot be folded, and is closed by "Continuer", ignored until
-# `close_delay` after it opened. The fragment texts belong to the content (not written yet):
-# the panel shows the fragment's number for now.
+# `close_delay` after it opened. It shows the title, the in-world source and the text of the
+# fragment (the content of the pool); without a text it falls back to the fragment's number.
+# The text scrolls inside the panel rather than being cut (hud.md 10.2).
 class_name FragmentPanel
 extends PanelContainer
 
 signal closed
 
 var title_label := Label.new()
+var source_label := Label.new()
 var body_label := Label.new()
+var scroll := ScrollContainer.new()
 var continue_button := Button.new()
 var is_open := false
 
@@ -31,20 +34,29 @@ func _init() -> void:
 	var box := VBoxContainer.new()
 	add_child(box)
 	box.add_child(title_label)
+	source_label.modulate = Color(1, 1, 1, 0.7)
+	box.add_child(source_label)
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	box.add_child(body_label)
+	body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, 120)
+	scroll.add_child(body_label)
+	box.add_child(scroll)
 	continue_button.text = "Continuer"
 	continue_button.custom_minimum_size = Vector2(0, 50)
 	continue_button.pressed.connect(close)
 	box.add_child(continue_button)
 
 
-func open(fragment_id: int, now: float, close_delay: float) -> void:
+func open(fragment_id: int, now: float, close_delay: float, title: String = "", text: String = "", source: String = "") -> void:
 	is_open = true
 	_opened_at = now
 	_close_delay = close_delay
-	title_label.text = "Fragment %d" % fragment_id
-	body_label.text = "Un fragment rejoint la chronique."
+	title_label.text = title if title != "" else "Fragment %d" % fragment_id
+	source_label.text = source
+	source_label.visible = source != ""
+	body_label.text = text if text != "" else "Un fragment rejoint la chronique."
+	scroll.scroll_vertical = 0
 	continue_button.disabled = true
 	visible = true
 

@@ -38,7 +38,7 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 		return PresentationHold.new(_params.value("hit_ms"))
 	if event is UnitHealedEvent:
 		var healed := event as UnitHealedEvent
-		_float(healed.tile, "+%d" % (healed.hp_after - healed.hp_before), TilePalette.PLAYER, context)
+		_float(healed.tile, "+%d" % (healed.hp_after - healed.hp_before), TilePalette.owner(Faction.PLAYER, _renderer.colorblind), context)
 		return PresentationHold.new(0)
 	if event is UnitDestroyedEvent:
 		var destroyed := event as UnitDestroyedEvent
@@ -52,7 +52,7 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 		var changed := event as TileOwnersChangedEvent
 		var wave := _effect(TileEffect.Kind.WAVE, context, _ms("recolor_ms", context))
 		wave.tiles = changed.changed_tiles
-		wave.color = TilePalette.owner(changed.new_owner)
+		wave.color = TilePalette.owner(changed.new_owner, _renderer.colorblind)
 		_renderer.add_effect(wave)
 		return PresentationHold.new(_ms("recolor_ms", context))
 	return PresentationHold.new(0)

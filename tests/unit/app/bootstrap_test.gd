@@ -12,8 +12,9 @@ func _texts(broken: bool = false) -> Dictionary:
 	return texts
 
 
-func _boot(files: FaultInjectingFileStore = null, broken: bool = false) -> Bootstrap:
+func _boot(files: FaultInjectingFileStore = null, broken: bool = false, dpi: int = -1) -> Bootstrap:
 	var boot := Bootstrap.new()
+	boot.screen_dpi = dpi
 	boot.data_source = MemoryDataSource.new(_texts(broken))
 	boot.file_store = files if files != null else FaultInjectingFileStore.new()
 	boot.forced_seed = 11
@@ -222,3 +223,81 @@ func test_continue_without_a_save_falls_back_to_the_menu() -> void:
 	assert_object(boot.match_screen).is_null()
 	assert_object(boot.screen).is_instanceof(MainMenu)
 	await _finish(boot)
+
+
+func test_a_setting_changed_in_the_menu_is_stored_applied_and_found_again_after_a_restart() -> void:
+	var files := FaultInjectingFileStore.new()
+	var boot := _boot(files, false, 240)
+	(boot.screen as MainMenu).settings_button.pressed.emit()
+	var screen := boot._settings_screen
+	assert_object(screen).is_not_null()
+
+	screen.colorblind_check.button_pressed = true
+	screen.scale_option.item_selected.emit(2)
+
+	assert_int(boot.profile.setting(GameSettings.COLORBLIND)).is_equal(1)
+	assert_float(boot.get_window().content_scale_factor).is_equal_approx(2.25, 0.0001)  # 240 dpi x 150 %
+	screen.back_button.pressed.emit()
+	await await_idle_frame()
+	assert_object(boot._settings_screen).is_null()
+	await _finish(boot)
+
+	get_window().content_scale_factor = 1.0  # the window outlives the first boot
+	var again := _boot(files.restarted(), false, 240)
+	assert_float(again.get_window().content_scale_factor).is_equal_approx(2.25, 0.0001)  # read before the first screen
+	assert_int(again.profile.setting(GameSettings.COLORBLIND)).is_equal(1)
+	assert_int(again.profile.setting(GameSettings.TEXT_SCALE)).is_equal(150)
+	(again.screen as MainMenu).settings_button.pressed.emit()
+	assert_bool(again._settings_screen.colorblind_check.button_pressed).is_true()
+	assert_int(again._settings_screen.scale_option.selected).is_equal(2)
+	get_window().content_scale_factor = 1.0
+	await _finish(again)
+
+
+func test_a_match_starts_with_the_stored_settings_and_changes_apply_to_it_at_once() -> void:
+	var files := FaultInjectingFileStore.new()
+	var first := _boot(files)
+	first.profile.set_setting(GameSettings.REDUCED_MOTION, 1)
+	first.profile.set_setting(GameSettings.ENEMY_SPEED, 1)
+	await _finish(first)
+
+	var boot := _boot(files.restarted())
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	var screen := boot.match_screen
+	assert_bool(screen.sequencer.reduced_motion).is_true()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.FAST)
+
+	boot.toggle_pause()
+	boot._pause.settings_button.pressed.emit()
+	boot._settings_screen.colorblind_check.button_pressed = true
+	assert_bool(screen.renderer.colorblind).is_true()
+
+	screen.hud.speed_button.pressed.emit()  # fast -> instant, remembered
+	assert_int(boot.profile.setting(GameSettings.ENEMY_SPEED)).is_equal(2)
+	await _finish(boot)
+
+
+func test_a_refused_change_puts_the_screen_back() -> void:
+	var files := FaultInjectingFileStore.new()
+	var boot := _boot(files)
+	boot.show_settings()
+	files.storage_full = true
+
+	boot._settings_screen.reduced_motion_check.button_pressed = true
+
+	assert_int(boot.profile.setting(GameSettings.REDUCED_MOTION)).is_equal(0)
+	assert_bool(boot._settings_screen.reduced_motion_check.button_pressed).is_false()
+	await _finish(boot)
+
+
+func test_the_text_scale_is_applied_again_when_the_window_changes() -> void:
+	var files := FaultInjectingFileStore.new()
+	var first := _boot(files, false, 240)
+	first.profile.set_setting(GameSettings.TEXT_SCALE, 150)
+	get_window().content_scale_factor = 1.0
+
+	get_window().size_changed.emit()
+
+	assert_float(get_window().content_scale_factor).is_equal_approx(2.25, 0.0001)
+	get_window().content_scale_factor = 1.0
+	await _finish(first)

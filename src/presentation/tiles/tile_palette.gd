@@ -14,6 +14,11 @@ const ENEMY_OUTLINE := Color("B07CE0")
 const THREAT := Color("FF6A3D")
 const RUIN := Color("C8955A")
 const NEUTRAL := Color("A3ACB5")
+## The colour-blind palette (art bible 4, hud.md 10.5): the sides and the unclaimed grey change,
+## threat and ruins do not.
+const PLAYER_ALT := Color("3A8EE6")
+const ENEMY_ALT := Color("F0DC6E")
+const NEUTRAL_ALT := Color("5F6266")
 const OUTLINE := Color("1E2329")
 const SELECTION := Color("EADFC8")
 ## An explored tile that is not in view is dimmed.
@@ -31,10 +36,10 @@ static func terrain(code: int) -> Color:
 	return PLAIN
 
 
-static func owner(faction: int) -> Color:
+static func owner(faction: int, colorblind: bool = false) -> Color:
 	match faction:
 		Faction.PLAYER:
-			return PLAYER
+			return PLAYER_ALT if colorblind else PLAYER
 		Faction.AI:
-			return ENEMY
-	return NEUTRAL
+			return ENEMY_ALT if colorblind else ENEMY
+	return NEUTRAL_ALT if colorblind else NEUTRAL

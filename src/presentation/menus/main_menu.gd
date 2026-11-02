@@ -6,10 +6,12 @@ extends Control
 
 signal continue_requested
 signal new_game_requested
+signal settings_requested
 signal quit_requested
 
 var continue_button: Button
 var new_game_button: Button
+var settings_button: Button
 var quit_button: Button
 var confirm_button: Button
 var cancel_button: Button
@@ -29,6 +31,7 @@ func _init() -> void:
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
 	cancel_button = _button(box, "Annuler", _reset_confirmation)
+	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
 	best_label = Label.new()
 	box.add_child(best_label)

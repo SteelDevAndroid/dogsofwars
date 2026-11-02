@@ -1026,3 +1026,73 @@ func test_the_bars_that_grow_with_their_content_move_the_map_area_a_frame_later(
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+func _settings(changes: Dictionary) -> Dictionary:
+	var settings := GameSettings.defaults()
+	settings.merge(changes, true)
+	return settings
+
+
+func test_the_settings_reach_the_sequencer_the_clock_the_renderer_and_the_layout() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	screen.screen_size_override = Vector2(844, 390)
+	screen.relayout()
+	var rail_map_x := screen.layout.map_area.position.x
+
+	screen.apply_settings(_settings({GameSettings.REDUCED_MOTION: 1, GameSettings.ENEMY_SPEED: 2,
+			GameSettings.COLORBLIND: 1, GameSettings.SHOW_RANGE: 0, GameSettings.LEFT_PANEL: 1}))
+
+	assert_bool(screen.sequencer.reduced_motion).is_true()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.INSTANT)
+	assert_str(screen.hud.speed_button.text).is_equal("Vitesse : instantanée")
+	assert_bool(screen.renderer.colorblind).is_true()
+	assert_bool(screen.show_range).is_false()
+	assert_float(rail_map_x).is_equal(HudLayout.RAIL_WIDTH)
+	assert_float(screen.layout.map_area.position.x).is_equal(HudLayout.PANEL_WIDTH)
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
+
+	screen.apply_settings(GameSettings.defaults())
+	assert_bool(screen.sequencer.reduced_motion).is_false()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.NORMAL)
+	assert_bool(screen.renderer.colorblind).is_false()
+	assert_bool(screen.show_range).is_true()
+	assert_float(screen.layout.map_area.position.x).is_equal(HudLayout.RAIL_WIDTH)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_range_stays_usable_but_is_not_drawn_when_hidden() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.apply_settings(_settings({GameSettings.SHOW_RANGE: 0}))
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_bool(screen.reachable.size() > 0).is_true()
+	assert_bool(screen.renderer.highlighted.is_empty()).is_true()
+	assert_int(screen.renderer.selected_tile).is_equal(state.tile_index(2, 1))
+	screen.apply_settings(_settings({GameSettings.SHOW_RANGE: 1}))
+	assert_int(screen.renderer.highlighted.size()).is_equal(screen.reachable.size())
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_cycling_the_speed_tells_the_app_so_it_can_remember_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var told := []
+	screen.speed_changed.connect(func(speed: int) -> void: told.append(speed))
+
+	screen.hud.speed_button.pressed.emit()
+	screen.hud.speed_button.pressed.emit()
+	screen.apply_settings(_settings({GameSettings.ENEMY_SPEED: 1}))  # applying a setting does not echo
+
+	assert_array(told).is_equal([1, 2])
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

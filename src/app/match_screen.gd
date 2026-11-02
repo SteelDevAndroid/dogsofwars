@@ -8,6 +8,8 @@ class_name MatchScreen
 extends Node
 
 signal pause_requested
+## The player cycled the enemy-turn speed with the HUD button (0 normal, 1 fast, 2 instant).
+signal speed_changed(speed: int)
 
 @onready var ai_runner: AiRunner = $AiRunner
 @onready var world: Node2D = $World
@@ -40,6 +42,10 @@ var layout: HudLayout
 var safe_area_override := Rect2()
 ## The size of the screen when it is not the window's (tests): empty means the window's.
 var screen_size_override := Vector2.ZERO
+## Whether the move range of the selected unit is drawn (setting "Portée de déplacement").
+var show_range := true
+## Landscape with the rail and the context panel swapped (setting "Panneau à gauche").
+var mirrored := false
 
 var clock := PresentationClock.new()
 var sequencer := PresentationSequencer.new()
@@ -93,8 +99,25 @@ func _process(_delta: float) -> void:
 
 ## The enemy turn's speed: normal, fast, instant (hud.md section 8).
 func cycle_speed() -> void:
-	clock.speed = (clock.speed + 1) % PresentationClock.Speed.size()
+	set_speed((clock.speed + 1) % PresentationClock.Speed.size())
+	speed_changed.emit(clock.speed)
+
+
+func set_speed(speed: int) -> void:
+	clock.speed = speed
 	hud.speed_button.text = ["Vitesse : normale", "Vitesse : rapide", "Vitesse : instantanée"][clock.speed]
+
+
+## The settings that live in the match (GameSettings keys); the text scale is the window's.
+func apply_settings(settings: Dictionary) -> void:
+	sequencer.reduced_motion = settings[GameSettings.REDUCED_MOTION] == 1
+	set_speed(settings[GameSettings.ENEMY_SPEED])
+	renderer.colorblind = settings[GameSettings.COLORBLIND] == 1
+	show_range = settings[GameSettings.SHOW_RANGE] == 1
+	mirrored = settings[GameSettings.LEFT_PANEL] == 1
+	relayout()
+	refresh()
+	renderer.queue_redraw()
 
 
 func is_idle() -> bool:
@@ -121,7 +144,7 @@ func bind(p_session: GameSession) -> void:
 	sequencer.gate = session.gate
 	sequencer.params = session.catalog.presentation
 	sequencer.state = session.state
-	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation)
+	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation, session.catalog.fragments)
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
 	relayout()
 	get_viewport().size_changed.connect(relayout)
@@ -140,7 +163,7 @@ func refresh(show_new_state: bool = false) -> void:
 		return
 	if show_new_state or renderer.snapshot == null or sequencer.is_idle():
 		renderer.show_state(session.state, session.catalog)
-	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable)
+	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable if show_range else PackedInt32Array())
 	renderer.set_targets(target_tiles, session.state.view().unit_tile(target_unit) if target_unit >= 0 else -1)
 	hud.show_model(HudModel.build(session.state, session.catalog,
 			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
@@ -360,7 +383,7 @@ func relayout() -> void:
 		safe = Rect2(Vector2.ZERO, screen_size_override) if screen_size_override.x > 0.0 else SafeArea.of_window(get_window())
 	var needs := hud.measure()
 	_needs = needs
-	var next := HudLayout.compute(_screen_size(), safe, needs.x, needs.y)
+	var next := HudLayout.compute(_screen_size(), safe, needs.x, needs.y, mirrored)
 	var changed := layout == null or next.map_area != layout.map_area or next.landscape != layout.landscape
 	layout = next
 	hud.apply_layout(layout)

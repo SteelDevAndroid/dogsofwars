@@ -13,10 +13,12 @@ var _hud: Hud
 var _gate: CommandGate
 var _sequencer: PresentationSequencer
 var _params: PresentationParams
+var _fragments: FragmentPool
 var _wave_tiles := 0
 
 
-func _init(hud: Hud, gate: CommandGate, sequencer: PresentationSequencer, params: PresentationParams) -> void:
+func _init(hud: Hud, gate: CommandGate, sequencer: PresentationSequencer, params: PresentationParams, fragments: FragmentPool = null) -> void:
+	_fragments = fragments
 	_hud = hud
 	_gate = gate
 	_sequencer = sequencer
@@ -34,7 +36,12 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 	if event is RuinReadEvent:
 		var read := event as RuinReadEvent
 		if read.fragment_id > 0:
-			_hud.fragment_panel.open(read.fragment_id, context.t0, _params.value("close_delay_ms") / 1000.0)
+			var delay: float = _params.value("close_delay_ms") / 1000.0
+			if _fragments != null:
+				_hud.fragment_panel.open(read.fragment_id, context.t0, delay, _fragments.title_of(read.fragment_id),
+						_fragments.text_of(read.fragment_id), _fragments.source_of(read.fragment_id))
+			else:
+				_hud.fragment_panel.open(read.fragment_id, context.t0, delay)
 			_gate.lock(PresentationSequencer.FRAGMENT_PANEL)
 			_sequencer.panel_open = true
 		else:

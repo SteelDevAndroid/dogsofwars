@@ -1,11 +1,13 @@
 {
   "schema_version": 1,
   "zone_radius": 2,
+  "act3_link_percent": 50,
+  "act1_verb_min": 1,
   "fragments": [
-    {"id": 1, "faction": "meute", "act": 1},
-    {"id": 2, "faction": "meute", "act": 1},
-    {"id": 3, "faction": "meute", "act": 2},
-    {"id": 4, "faction": "meute", "act": 3},
-    {"id": 5, "faction": "meute", "act": 3}
+    {"id": 1, "faction": "meute", "act": 1, "title": "Consigne de veille", "text": "Rester en position. Ne pas répondre. Ne pas questionner l'ordre. L'ordre viendra ; il vient toujours.", "source": "Ordre archivé", "tones": ["obeissance"], "link": "aucun"},
+    {"id": 2, "faction": "meute", "act": 1, "title": "Relève des balises", "text": "Chaque matin, on allume les balises du col. Personne n'a dit pourquoi. Les piles s'usent, on les remplace.", "source": "Journal d'entretien", "tones": ["obeissance", "usure"], "link": "verbe"},
+    {"id": 3, "faction": "meute", "act": 2, "title": "Un relais muet", "text": "On a allumé le relais de l'est. Aucune réponse. On l'a rallumé le lendemain, puis le suivant, par habitude.", "source": "Terminal de campagne", "tones": ["doute"], "link": "verbe"},
+    {"id": 4, "faction": "meute", "act": 3, "title": "Plus personne au poste", "text": "Le poste est vide depuis longtemps. Les lampes s'allument encore à l'heure. Quelqu'un en a-t-il besoin ?", "source": "Registre du poste", "tones": ["absence", "doute"], "link": "verbe"},
+    {"id": 5, "faction": "meute", "act": 3, "title": "La dernière lampe", "text": "Elle brille sur la crête, seule. Nous avons obéi sans fin. Pour qui allume-t-on, quand plus rien ne répond ?", "source": "Terminal d'avant-poste", "tones": ["question"], "link": "question"}
   ]
 }
