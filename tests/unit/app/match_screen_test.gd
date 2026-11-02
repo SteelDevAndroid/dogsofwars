@@ -5,6 +5,7 @@ const SCENE := "res://src/app/match_screen.tscn"
 
 func _screen() -> MatchScreen:
 	var screen: MatchScreen = load(SCENE).instantiate()
+	screen.screen_size_override = Vector2(390, 844)  # the test window is tiny: a phone in portrait
 	add_child(screen)
 	return screen
 
@@ -553,9 +554,9 @@ func test_a_drag_scrolls_a_pinch_zooms_and_a_touch_taps() -> void:
 	var size := screen.camera.tile_size
 
 	_finger(screen, 0, PointerEvent.Phase.DOWN, Vector2(200, 300))
-	_finger(screen, 0, PointerEvent.Phase.MOVE, Vector2(260, 300))
-	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(260, 300))
-	assert_float(screen.camera.center.x).is_less(centre.x)  # the map followed the finger to the right
+	_finger(screen, 0, PointerEvent.Phase.MOVE, Vector2(140, 300))
+	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(140, 300))
+	assert_float(screen.camera.center.x).is_greater(centre.x)  # the map followed the finger to the left
 	screen._process(0.0)
 	assert_float(screen.renderer.layout.origin.x).is_equal_approx(screen.camera.layout().origin.x, 0.001)
 
@@ -861,6 +862,167 @@ func test_an_action_is_ignored_while_the_sequencer_is_playing() -> void:
 	screen.do_action(&"capture")
 
 	assert_int(state.view().node_owner(state.view().node_at(state.tile_index(5, 2)))).is_equal(Faction.NONE)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _screen_of(size: Vector2, safe: Rect2 = Rect2()) -> Array:
+	var t := TestSessionFactory.new()
+	var screen: MatchScreen = load(SCENE).instantiate()
+	screen.screen_size_override = size
+	screen.safe_area_override = safe
+	add_child(screen)
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	_settle(screen)
+	for frame in 3:
+		screen._process(0.0)  # frames: the bars' minimum sizes catch up and the layout follows
+	return [t, screen, session]
+
+
+func test_in_portrait_the_bars_take_what_they_need_and_the_map_the_rest() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var layout := screen.layout
+
+	assert_bool(layout.landscape).is_false()
+	assert_float(layout.top_zone.size.y).is_equal_approx(screen.hud.measure().x, 0.5)
+	assert_vector(screen.hud.top_panel.position).is_equal(layout.top_zone.position)
+	assert_float(screen.hud.bottom_panel.position.y).is_equal_approx(layout.panel_zone.position.y, 0.5)
+	assert_object(screen.camera.area).is_equal(layout.map_area)
+	assert_vector(screen.input_surface.position).is_equal(layout.map_area.position)
+	assert_vector(screen.hud.camera_box.position).is_equal(layout.camera_buttons.position)
+	assert_bool(screen.hud.bar.vertical).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_in_landscape_a_rail_and_a_panel_frame_the_map() -> void:
+	var started := _screen_of(Vector2(844, 390))
+	var screen: MatchScreen = started[1]
+	var layout := screen.layout
+
+	assert_bool(layout.landscape).is_true()
+	assert_float(screen.hud.top_panel.size.x).is_equal(HudLayout.RAIL_WIDTH)
+	assert_float(screen.hud.bottom_panel.size.x).is_equal(HudLayout.PANEL_WIDTH)
+	assert_float(screen.hud.bottom_panel.position.x).is_equal(844.0 - HudLayout.PANEL_WIDTH)
+	assert_object(screen.camera.area).is_equal(Rect2(140, 0, 844 - 140 - 224, 390))
+	assert_bool(screen.hud.bar.vertical).is_true()  # the rail stacks its figures
+	assert_bool(screen.hud.second.vertical).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_hud_stays_inside_the_safe_area() -> void:
+	var safe := Rect2(0, 44, 390, 760)
+	var started := _screen_of(Vector2(390, 844), safe)
+	var screen: MatchScreen = started[1]
+
+	assert_float(screen.hud.top_panel.position.y).is_equal(44.0)
+	assert_float(screen.hud.bottom_panel.position.y + screen.hud.bottom_panel.size.y).is_equal_approx(804.0, 0.5)
+	assert_bool(safe.encloses(screen.camera.area)).is_true()
+	assert_bool(safe.encloses(screen.layout.camera_buttons)).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_turning_the_phone_relays_out_and_cancels_the_fingers_down() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var seen: Array[PointerEvent] = []
+	screen.input_surface.pointer.connect(func(event: PointerEvent) -> void: seen.append(event))
+
+	screen.screen_size_override = Vector2(844, 390)
+	screen.relayout()
+
+	assert_bool(screen.layout.landscape).is_true()
+	assert_bool(seen.any(func(e: PointerEvent) -> bool: return e.phase == PointerEvent.Phase.CANCEL)).is_true()
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_losing_focus_or_pausing_cancels_the_gestures() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var seen: Array[PointerEvent] = []
+	screen.input_surface.pointer.connect(func(event: PointerEvent) -> void: seen.append(event))
+
+	screen.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var after_focus := seen.size()
+	screen.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
+
+	assert_int(after_focus).is_greater(0)
+	assert_int(seen.size()).is_greater(after_focus)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_zoom_buttons_zoom_and_grey_out_at_the_limits() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var size := screen.camera.tile_size
+
+	screen.hud.zoom_in_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal_approx(size * 1.25, 0.001)
+	for k in 10:
+		screen.hud.zoom_in_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal(MapCamera.MAX_TILE)
+	assert_bool(screen.hud.zoom_in_button.disabled).is_true()
+	assert_bool(screen.hud.zoom_out_button.disabled).is_false()
+	for k in 20:
+		screen.hud.zoom_out_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal(MapCamera.MIN_TILE)
+	assert_bool(screen.hud.zoom_out_button.disabled).is_true()
+	assert_bool(screen.hud.zoom_in_button.disabled).is_false()
+	assert_float(screen.renderer.layout.tile_size).is_equal(MapCamera.MIN_TILE)  # the renderer follows at once
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_recentre_button_goes_to_the_selected_unit_or_the_first_one() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.camera.scroll(Vector2(-300, -300))
+	var far := screen.camera.center
+
+	screen.hud.recenter_button.pressed.emit()
+	screen.camera.tick(screen.clock.current() + 1.0)
+	assert_vector(screen.camera.center).is_not_equal(far)
+	var first := state.view().unit_tile(0)
+	assert_bool(screen.camera.is_visible(first)).is_true()
+
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.camera.scroll(Vector2(300, 300))
+	screen.hud.recenter_button.pressed.emit()
+	screen.camera.tick(screen.clock.current() + 1.0)
+	assert_bool(screen.camera.is_visible(state.tile_index(3, 2))).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_bars_that_grow_with_their_content_move_the_map_area_a_frame_later() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var before := screen.layout.map_area
+
+	screen.on_tap_tile(state.tile_index(3, 2))  # a unit: its panel and buttons appear
+	for frame in 3:
+		screen._process(0.0)
+
+	assert_float(screen.layout.panel_zone.size.y).is_equal_approx(screen.hud.measure().y, 0.5)
+	assert_object(screen.layout.map_area).is_not_equal(before)
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()

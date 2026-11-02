@@ -127,3 +127,18 @@ func test_effects_expire_with_the_clock_and_a_rebuild_clears_them() -> void:
 
 	assert_int(renderer.effects.size()).is_equal(0)
 	renderer.free()
+
+
+func test_only_the_tiles_inside_the_map_area_are_drawn() -> void:
+	var set_up := _setup()
+	var renderer: TileRenderer = set_up[1]
+	renderer.layout = TileLayout.new(12, 12, 32.0, Vector2(0, 0))
+
+	renderer.set_clip_rect(Rect2(64, 32, 96, 64))  # 3 columns x 2 rows, x 2..4, y 1..2
+	var shown := Array(renderer.visible_tiles())
+	shown.sort()
+
+	assert_array(shown).is_equal([14, 15, 16, 26, 27, 28])
+	renderer.set_clip_rect(Rect2(70, 40, 40, 20))  # cuts tiles in the middle: partly shown
+	assert_int(renderer.visible_tiles().size()).is_equal(2)
+	renderer.free()

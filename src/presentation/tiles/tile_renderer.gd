@@ -13,6 +13,8 @@ var highlighted: PackedInt32Array = PackedInt32Array()
 var clock: ClockSource
 var effects: Array[TileEffect] = []
 ## Tiles of the units the selected one may strike, and the one chosen.
+## The map shows inside this rectangle only (the engine clip is not relied on: tiles are cut here).
+var clip_area := Rect2(-1e6, -1e6, 2e6, 2e6)
 var targets := PackedInt32Array()
 var chosen_target := -1
 
@@ -31,10 +33,11 @@ func add_effect(effect: TileEffect) -> void:
 	queue_redraw()
 
 
-## The map shows inside this rectangle only: scrolled tiles never cover the HUD bars.
+## The map shows inside this rectangle only: scrolled tiles never cover the HUD bars. The cut is
+## made here, in the drawing, not by the engine's canvas clip (which left stray tiles outside).
 func set_clip_rect(rect: Rect2) -> void:
-	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, rect)
-	RenderingServer.canvas_item_set_clip(get_canvas_item(), true)
+	clip_area = rect
+	queue_redraw()
 
 
 func set_targets(tiles: PackedInt32Array, chosen: int) -> void:
@@ -71,7 +74,7 @@ func fit(area: Rect2) -> void:
 func _draw() -> void:
 	if snapshot == null:
 		return
-	for tile in snapshot.columns * snapshot.rows:
+	for tile in visible_tiles():
 		_draw_tile(tile)
 	for node: Array in snapshot.nodes:
 		_draw_node(node)
@@ -85,15 +88,29 @@ func _draw() -> void:
 	for effect in effects:
 		_draw_effect(effect)
 	for tile in targets:
-		_draw_brackets(tile, TilePalette.THREAT, 3.0 if tile == chosen_target else 2.0)
+		if _inside(tile):
+			_draw_brackets(tile, TilePalette.THREAT, 3.0 if tile == chosen_target else 2.0)
 	for tile in highlighted:
-		draw_rect(layout.rect_of(tile).grow(-2.0), Color(TilePalette.SELECTION, 0.35))
-	if selected_tile >= 0:
+		var shown := layout.rect_of(tile).grow(-2.0).intersection(clip_area)
+		if shown.size.x > 0.0 and shown.size.y > 0.0:
+			draw_rect(shown, Color(TilePalette.SELECTION, 0.35))
+	if selected_tile >= 0 and _inside(selected_tile):
 		draw_rect(layout.rect_of(selected_tile), TilePalette.SELECTION, false, 2.0)
 
 
+## The tiles that show, at least in part, inside the map area.
+func visible_tiles() -> PackedInt32Array:
+	var shown := PackedInt32Array()
+	if snapshot == null:
+		return shown
+	for tile in snapshot.columns * snapshot.rows:
+		if layout.rect_of(tile).intersects(clip_area):
+			shown.append(tile)
+	return shown
+
+
 func _draw_tile(tile: int) -> void:
-	var rect := layout.rect_of(tile)
+	var rect := layout.rect_of(tile).intersection(clip_area)
 	var level := snapshot.fog_at(tile)
 	if level == VisionService.FOG_UNDISCOVERED:
 		draw_rect(rect, TilePalette.FOG)
@@ -115,6 +132,8 @@ func _draw_tile(tile: int) -> void:
 
 
 func _draw_node(node: Array) -> void:
+	if not clip_area.encloses(layout.rect_of(node[0]).grow(-layout.tile_size * 0.2)):
+		return
 	var rect := layout.rect_of(node[0])
 	if snapshot.fog_at(node[0]) == VisionService.FOG_UNDISCOVERED:
 		return
@@ -128,6 +147,8 @@ func _draw_node(node: Array) -> void:
 
 
 func _draw_ruin(ruin: Array) -> void:
+	if not clip_area.encloses(layout.rect_of(ruin[0]).grow(-layout.tile_size * 0.2)):
+		return
 	var rect := layout.rect_of(ruin[0])
 	var c := rect.get_center()
 	var s := layout.tile_size * 0.28
@@ -136,6 +157,8 @@ func _draw_ruin(ruin: Array) -> void:
 
 
 func _draw_unit(unit: Array) -> void:
+	if not clip_area.encloses(layout.rect_of(unit[1]).grow(-layout.tile_size * 0.2)):
+		return
 	var rect := layout.rect_of(unit[1])
 	var c := rect.get_center()
 	var moving := _moving_center(unit[0])
@@ -184,14 +207,23 @@ func _draw_effect(effect: TileEffect) -> void:
 			draw_colored_polygon(points, Color(TilePalette.NEUTRAL, 0.8 * (1.0 - p)))
 		TileEffect.Kind.WAVE:
 			for tile in effect.tiles:
-				draw_rect(layout.rect_of(tile), Color(effect.color, 0.30 * p))
+				var shown := layout.rect_of(tile).intersection(clip_area)
+				if shown.size.x > 0.0 and shown.size.y > 0.0:
+					draw_rect(shown, Color(effect.color, 0.30 * p))
 
 
 func _draw_threat(threat: Array) -> void:
 	_draw_brackets(threat[2], TilePalette.THREAT, 2.0)
 
 
+## True when the whole tile is inside the shown part of the map.
+func _inside(tile: int) -> bool:
+	return clip_area.encloses(layout.rect_of(tile))
+
+
 func _draw_brackets(tile: int, color: Color, width: float) -> void:
+	if not _inside(tile):
+		return
 	var rect := layout.rect_of(tile).grow(-3.0)
 	var corner := layout.tile_size * 0.25
 	for sx in [0, 1]:

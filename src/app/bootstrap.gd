@@ -26,6 +26,8 @@ var _ending := false
 
 
 func _ready() -> void:
+	UiScale.apply(get_window(), DisplayServer.screen_get_dpi())
+	get_window().size_changed.connect(func() -> void: UiScale.apply(get_window(), DisplayServer.screen_get_dpi()))
 	_ui = CanvasLayer.new()
 	add_child(_ui)
 	data_source = data_source if data_source != null else ResDataSource.new()

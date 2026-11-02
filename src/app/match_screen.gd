@@ -35,12 +35,18 @@ var target_action := &"attack"
 var selected_node := -1
 var research_open := false
 var camera: MapCamera
+var layout: HudLayout
+## The usable part of the screen: empty (the default) means ask the display, tests set it.
+var safe_area_override := Rect2()
+## The size of the screen when it is not the window's (tests): empty means the window's.
+var screen_size_override := Vector2.ZERO
 
 var clock := PresentationClock.new()
 var sequencer := PresentationSequencer.new()
 var presenter: HudPresenter
 
 var _gestures := GestureInterpreter.new()
+var _needs := Vector2.ZERO
 var _runner_port: NodeAiRunnerPort
 var _pacing: PacingGate
 var _queue: EventQueue
@@ -56,6 +62,9 @@ func _ready() -> void:
 	hud.end_turn_pressed.connect(end_turn)
 	hud.pause_pressed.connect(func() -> void: pause_requested.emit())
 	hud.speed_pressed.connect(cycle_speed)
+	hud.zoom_in_pressed.connect(func() -> void: zoom_by(1.25))
+	hud.zoom_out_pressed.connect(func() -> void: zoom_by(0.8))
+	hud.recenter_pressed.connect(recenter)
 	hud.fragment_panel.closed.connect(_on_panel_closed)
 	hud.attack_pressed.connect(begin_targeting)
 	hud.confirm_pressed.connect(confirm_attack)
@@ -75,6 +84,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	hud.fragment_panel.tick(clock.current())
 	if camera != null:
+		if hud.measure() != _needs:  # a container updates its minimum size a frame late
+			relayout()
 		camera.tick(clock.current())
 		if camera.dirty:
 			_apply_camera()
@@ -111,14 +122,15 @@ func bind(p_session: GameSession) -> void:
 	sequencer.params = session.catalog.presentation
 	sequencer.state = session.state
 	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation)
-	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), HudModel.map_area(_screen_size()))
-	_center_on_first_unit()
-	get_viewport().size_changed.connect(func() -> void: camera.set_area(HudModel.map_area(_screen_size())))
+	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
+	relayout()
+	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
 			TileRendererHandler.new(renderer, session.catalog.presentation), presenter]
-	_apply_camera()
 	session.turns.start()
-	refresh()
+	refresh()  # the HUD has its content, so its real heights are known
+	_center_on_first_unit()
+	_apply_camera()
 
 
 ## Redraws the map and the HUD from the state. While a batch is playing the map keeps showing
@@ -133,6 +145,7 @@ func refresh(show_new_state: bool = false) -> void:
 	hud.show_model(HudModel.build(session.state, session.catalog,
 			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
 			_hud_actions()), presenter.notice)
+	relayout()  # the bars may have grown or shrunk with what they now show
 
 
 ## A tap on the map: on a unit of the player, select it; on a tile it can reach, move it;
@@ -337,8 +350,50 @@ func _on_pointer(event: PointerEvent) -> void:
 				camera.zoom(gesture.factor, gesture.position)
 
 
+## Places the HUD zones and the map for the screen, its safe area and what the bars need.
+## Fingers down are cancelled: a rotation or a resize must not turn into a tap (ADR-0010 §1).
+func relayout() -> void:
+	if camera == null:
+		return
+	var safe := safe_area_override
+	if safe.size.x <= 0.0:
+		safe = Rect2(Vector2.ZERO, screen_size_override) if screen_size_override.x > 0.0 else SafeArea.of_window(get_window())
+	var needs := hud.measure()
+	_needs = needs
+	var next := HudLayout.compute(_screen_size(), safe, needs.x, needs.y)
+	var changed := layout == null or next.map_area != layout.map_area or next.landscape != layout.landscape
+	layout = next
+	hud.apply_layout(layout)
+	if changed:
+		camera.set_area(layout.map_area)
+		_apply_camera()
+		if hud.is_inside_tree():
+			input_surface.cancel_all()
+
+
+func zoom_by(factor: float) -> void:
+	camera.zoom(factor, camera.area.get_center())
+	_apply_camera()
+
+
+## The recentre button: on the selected unit, else on the first unit of the player.
+func recenter() -> void:
+	if selected_unit >= 0:
+		camera.start_recenter(session.state.view().unit_tile(selected_unit), clock.current(), session.catalog.presentation.value("recenter_ms") / 1000.0)
+	else:
+		_center_on_first_unit(true)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		if input_surface != null:
+			input_surface.cancel_all()
+
+
 func _apply_camera() -> void:
 	camera.dirty = false
+	hud.zoom_in_button.disabled = not camera.can_zoom_in()
+	hud.zoom_out_button.disabled = not camera.can_zoom_out()
 	renderer.layout = camera.layout()
 	renderer.set_clip_rect(camera.area)
 	renderer.queue_redraw()
@@ -347,11 +402,11 @@ func _apply_camera() -> void:
 
 
 ## The first look: on the player's unit with the lowest id (ADR-0010 §8).
-func _center_on_first_unit() -> void:
+func _center_on_first_unit(animated: bool = false) -> void:
 	var view := FactionView.new(session.state, Faction.PLAYER)
 	for id in view.unit_ids():
 		if view.unit_faction(id) == Faction.PLAYER:
-			camera.start_recenter(view.unit_tile(id), 0.0, 0.0)
+			camera.start_recenter(view.unit_tile(id), clock.current(), session.catalog.presentation.value("recenter_ms") / 1000.0 if animated else 0.0)
 			return
 
 
@@ -362,4 +417,6 @@ func _on_panel_closed() -> void:
 
 
 func _screen_size() -> Vector2:
+	if screen_size_override.x > 0.0:
+		return screen_size_override
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(390, 844)

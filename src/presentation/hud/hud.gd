@@ -15,6 +15,9 @@ signal action_pressed(id: StringName)
 signal research_pressed
 signal research_row_pressed(id: StringName)
 signal research_closed
+signal zoom_in_pressed
+signal zoom_out_pressed
+signal recenter_pressed
 
 var turn_label := Label.new()
 var energy_label := Label.new()
@@ -37,16 +40,23 @@ var extra_row := HBoxContainer.new()
 var reason_label := Label.new()
 var research_button := Button.new()
 var research_panel := ResearchPanel.new()
+var zoom_in_button := Button.new()
+var zoom_out_button := Button.new()
+var recenter_button := Button.new()
+var camera_box := VBoxContainer.new()
+var top_panel: PanelContainer
+var bottom_panel: PanelContainer
+## The rows that stack when the rail is narrow (landscape).
+var bar := BoxContainer.new()
+var second := BoxContainer.new()
 
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var top := VBoxContainer.new()
-	var top_panel := backdrop(top)
-	top_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top_panel = backdrop(top)
 	add_child(top_panel)
-	var bar := HBoxContainer.new()
 	for label in [turn_label, energy_label, fragments_label]:
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.clip_text = true  # a long text never pushes the buttons off the screen
@@ -61,7 +71,6 @@ func _init() -> void:
 	research_button.custom_minimum_size = Vector2(88, 48)
 	research_button.pressed.connect(func() -> void: research_pressed.emit())
 	top.add_child(bar)
-	var second := HBoxContainer.new()
 	score_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	score_label.clip_text = true
 	score_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -72,9 +81,7 @@ func _init() -> void:
 	top.add_child(notice_label)
 	top.add_child(alert_row)
 	var bottom := VBoxContainer.new()
-	var bottom_panel := backdrop(bottom)
-	bottom_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN  # the panel grows upward from the bottom edge
+	bottom_panel = backdrop(bottom)
 	add_child(bottom_panel)
 	bottom.add_child(unit_title)
 	bottom.add_child(unit_lines)
@@ -99,10 +106,44 @@ func _init() -> void:
 	speed_button.custom_minimum_size = Vector2(0, 40)
 	speed_button.pressed.connect(func() -> void: speed_pressed.emit())
 	bottom.add_child(speed_button)
+	for entry in [[zoom_in_button, "+", "Zoom avant", zoom_in_pressed], [zoom_out_button, "−", "Zoom arrière", zoom_out_pressed],
+			[recenter_button, "◎", "Recentrer", recenter_pressed]]:
+		var button: Button = entry[0]
+		button.text = entry[1]
+		button.tooltip_text = entry[2]
+		button.accessibility_name = entry[2]
+		button.custom_minimum_size = Vector2(HudLayout.BUTTON, HudLayout.BUTTON)
+		button.pressed.connect(func() -> void: (entry[3] as Signal).emit())
+		camera_box.add_child(button)
+	camera_box.add_theme_constant_override("separation", int(HudLayout.BUTTON_GAP))
+	add_child(camera_box)
 	add_child(fragment_panel)
 	add_child(research_panel)
 	research_panel.row_pressed.connect(func(id: StringName) -> void: research_row_pressed.emit(id))
 	research_panel.close_pressed.connect(func() -> void: research_closed.emit())
+
+
+## What the two bars need in portrait: (top height, bottom height).
+func measure() -> Vector2:
+	return Vector2(top_panel.get_combined_minimum_size().y, bottom_panel.get_combined_minimum_size().y)
+
+
+## Puts the bars, the rail or the panel and the camera buttons where the layout says (hud.md 3.1).
+func apply_layout(layout: HudLayout) -> void:
+	bar.vertical = layout.landscape
+	second.vertical = layout.landscape
+	# the narrow rail wraps the score on a width it is given; the wide bar clips it instead
+	score_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if layout.landscape else TextServer.AUTOWRAP_OFF
+	score_label.custom_minimum_size.x = HudLayout.RAIL_WIDTH - 24.0 if layout.landscape else 0.0
+	_place(top_panel, layout.top_zone)
+	_place(bottom_panel, layout.panel_zone)
+	_place(camera_box, layout.camera_buttons)
+
+
+static func _place(control: Control, rect: Rect2) -> void:
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	control.position = rect.position
+	control.size = rect.size
 
 
 ## A panel with an opaque dark background around `content`: the HUD bars and panels never

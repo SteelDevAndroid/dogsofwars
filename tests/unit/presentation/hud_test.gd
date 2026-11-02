@@ -114,3 +114,40 @@ func test_the_input_surface_turns_fingers_into_pointer_events_and_ignores_the_mo
 	assert_array([events[0].index, events[0].position]).is_equal([1, Vector2(10, 20)])
 	assert_vector(events[1].position).is_equal(Vector2(15, 25))
 	surface.free()
+
+
+func test_the_layout_places_the_zones_and_switches_the_rows_between_portrait_and_rail() -> void:
+	var hud := _hud()
+	var portrait := HudLayout.compute(Vector2(390, 844), Rect2(0, 0, 390, 844), 130.0, 300.0)
+	var landscape := HudLayout.compute(Vector2(844, 390), Rect2(0, 0, 844, 390), 130.0, 300.0)
+
+	hud.apply_layout(portrait)
+	assert_vector(hud.top_panel.position).is_equal(Vector2(0, 0))
+	assert_vector(hud.top_panel.size).is_equal(Vector2(390, 130))
+	assert_vector(hud.camera_box.position).is_equal(portrait.camera_buttons.position)
+	assert_bool(hud.bar.vertical).is_false()
+	hud.apply_layout(landscape)
+
+	assert_vector(hud.top_panel.size).is_equal(Vector2(140, 390))
+	assert_vector(hud.bottom_panel.position).is_equal(Vector2(620, 0))
+	assert_bool(hud.bar.vertical).is_true()
+	assert_bool(hud.measure().x > 0.0 and hud.measure().y > 0.0).is_true()
+	hud.free()
+
+
+func test_the_camera_buttons_emit_their_signals() -> void:
+	var hud := _hud()
+	var pressed := [0, 0, 0]
+	hud.zoom_in_pressed.connect(func() -> void: pressed[0] += 1)
+	hud.zoom_out_pressed.connect(func() -> void: pressed[1] += 1)
+	hud.recenter_pressed.connect(func() -> void: pressed[2] += 1)
+
+	hud.zoom_in_button.pressed.emit()
+	hud.zoom_out_button.pressed.emit()
+	hud.recenter_button.pressed.emit()
+	hud.recenter_button.pressed.emit()
+
+	assert_array(pressed).is_equal([1, 1, 2])
+	assert_int(hud.zoom_in_button.accessibility_name.length()).is_greater(0)
+	assert_float(hud.zoom_in_button.custom_minimum_size.x).is_equal(48.0)
+	hud.free()

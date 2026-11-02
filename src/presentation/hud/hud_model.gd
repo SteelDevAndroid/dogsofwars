@@ -122,11 +122,3 @@ static func journal_line(event: PresentationEvent) -> String:
 	if event is UnitMovedEvent and (event as UnitMovedEvent).faction == Faction.AI:
 		return "Un Gardien se déplace"
 	return ""
-
-
-## The part of the screen left to the map (portrait): the top bar and the alert row above,
-## the context panel below (design/ux/hud.md section 3.1).
-static func map_area(screen: Vector2) -> Rect2:
-	var top := screen.y * 0.18
-	var bottom := screen.y * 0.34
-	return Rect2(0.0, top, screen.x, screen.y - top - bottom)
