@@ -12,6 +12,8 @@ const MAX_MAP_SIZE := 16
 const MAX_UNITS := 60
 const MAX_NODES := 10
 const MAX_INTENTIONS := 120
+## GDD 1 formula 4: the intentions of the current turn and of the previous one are kept.
+const INTENT_RETENTION_TURNS := 2
 const MAX_TRACKS := 16
 const MAX_TURN := 30
 const DRAW_MAX := 65536

@@ -36,6 +36,8 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	var phase := HeaderSlice.PHASE_PLAYER if player else HeaderSlice.PHASE_ENEMY_EXECUTION
 	TurnWrites.begin_phase(state, command.faction, phase, player)
 	UnitWrites.start_turn(state, command.faction)
+	if not player:
+		AiWrites.reset_cursor(state)
 	result.events.append(TurnStartedEvent.new(state.turn(), command.faction, phase))
 	EnergyRules.pay_income(state, command.faction, rules.catalog.energy, result.events)
 	var before_research := state.protocols.row_count()

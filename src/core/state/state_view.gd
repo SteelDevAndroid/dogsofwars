@@ -53,6 +53,29 @@ func has_protocol(faction: int, protocol: int) -> bool:
 	return _state.protocols.has(faction, protocol)
 
 
+## GDD 3 rule 8: the first match may be played against a passive AI.
+func ai_passive() -> bool:
+	return _state.header.value(HeaderSlice.AI_PASSIVE) == 1
+
+
+## Node under siege (-1 when none) and the announcements made on it (GDD 9 rule 13).
+## Public: the player sees the "1 / 2" on the node.
+func siege_node() -> int:
+	return _state.siege.node_of()
+
+
+func siege_count() -> int:
+	return _state.siege.count_of()
+
+
+## True when the unit already carries an intention announced this turn (GDD 9 rule 15).
+func announced_this_turn(unit_id: int) -> bool:
+	for row in _state.intentions.row_count():
+		if _state.intentions.author_of(row) == unit_id and _state.intentions.announced_turn_of(row) == _state.turn():
+			return true
+	return false
+
+
 func max_turn() -> int:
 	return _state.header.value(HeaderSlice.T_MAX)
 

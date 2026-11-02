@@ -68,3 +68,8 @@ static func set_turn(state: GameState, turn: int) -> void:
 static func set_phase(state: GameState, phase: int, active_faction: int) -> void:
 	state.header._header[HeaderSlice.PHASE] = phase
 	state.header._header[HeaderSlice.ACTIVE_FACTION] = active_faction
+
+
+## First-match option (GDD 3 rule 8), chosen at the match setup.
+static func set_ai_passive(state: GameState, passive: bool) -> void:
+	state.header._header[HeaderSlice.AI_PASSIVE] = 1 if passive else 0

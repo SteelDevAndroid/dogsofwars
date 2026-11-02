@@ -65,6 +65,17 @@ func capture(unit_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
 	return pipeline.submit(CaptureCommand.new(faction, emitter, unit_id))
 
 
+## Intentions as flat [author, kind, target, action, motive], agents as [unit, role, idle, post, motive].
+func announce(intentions: Array = [], agents: Array = [], siege_node: int = -1, siege_count: int = 0) -> ValidationResult:
+	var flat_intentions := PackedInt64Array()
+	for values: Array in intentions:
+		flat_intentions.append_array(PackedInt64Array(values))
+	var flat_agents := PackedInt64Array()
+	for values: Array in agents:
+		flat_agents.append_array(PackedInt64Array(values))
+	return pipeline.submit(AnnounceIntentionsCommand.new(siege_node, siege_count, flat_intentions, flat_agents))
+
+
 func abandon() -> ValidationResult:
 	return pipeline.submit(AbandonCommand.new())
 

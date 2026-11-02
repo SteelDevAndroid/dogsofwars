@@ -28,7 +28,7 @@ func test_parity_detects_a_divergent_view() -> void:
 
 
 func _first_divergence(view: StateView, copy_view: StateView, state: GameState) -> String:
-	for query in [&"width", &"height", &"tile_count", &"faction_count", &"turn", &"phase", &"max_turn", &"active_faction",
+	for query in [&"width", &"height", &"tile_count", &"faction_count", &"turn", &"phase", &"max_turn", &"active_faction", &"ai_passive", &"siege_node", &"siege_count",
 			&"revision", &"unit_ids", &"node_ids", &"ruin_ids"]:
 		if view.call(query) != copy_view.call(query):
 			return "%s: %s != %s" % [query, view.call(query), copy_view.call(query)]
@@ -44,7 +44,7 @@ func _first_divergence(view: StateView, copy_view: StateView, state: GameState) 
 			if view.has_protocol(f, protocol) != copy_view.has_protocol(f, protocol):
 				return "has_protocol(%d, %d)" % [f, protocol]
 	var families := [
-		[HeaderSlice.NEXT_UNIT_ID, [&"unit_tile", &"unit_faction", &"unit_hp", &"unit_type", &"unit_moved", &"unit_acted", &"unit_asleep"]],
+		[HeaderSlice.NEXT_UNIT_ID, [&"unit_tile", &"unit_faction", &"unit_hp", &"unit_type", &"unit_moved", &"unit_acted", &"unit_asleep", &"announced_this_turn"]],
 		[HeaderSlice.NEXT_NODE_ID, [&"node_tile", &"node_owner", &"node_level", &"node_since_turn", &"node_upgraded_turn"]],
 		[HeaderSlice.NEXT_RUIN_ID, [&"ruin_tile"]],
 	]

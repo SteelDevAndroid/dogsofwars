@@ -17,5 +17,13 @@ func columns() -> Array:
 	return COLUMNS
 
 
+func node_of() -> int:
+	return _siege[NODE]
+
+
+func count_of() -> int:
+	return _siege[COUNT]
+
+
 func length_error(_tiles: int, _factions: int) -> String:
 	return _sized_error(&"_siege", SIZE)

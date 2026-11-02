@@ -43,6 +43,11 @@ const ATTACKER_WITHOUT_ATTACK := &"ATTAQUANT_SANS_ATTAQUE"
 const TARGET_NOT_VISIBLE := &"CIBLE_NON_VISIBLE"
 const TARGET_NOT_HOSTILE := &"CIBLE_NON_HOSTILE"
 const TARGET_OUT_OF_RANGE := &"CIBLE_HORS_DE_PORTÉE"
+## ANNONCER_LES_INTENTIONS: no announcement against a passive AI (GDD 9 rule 25).
+const AI_PASSIVE := &"IA_PASSIVE"
+## ANNONCER_LES_INTENTIONS: malformed content (motive, shape, duplicate author, siege,
+## role). Params: index of the offending intention or agent (-1 for the siege).
+const INVALID_ANNOUNCEMENT := &"ANNONCE_INVALIDE"
 ## Internal turn commands out of their sequence (GDD 3, States and Transitions).
 const WRONG_PHASE := &"PHASE_INCORRECTE"
 ## COMMENCER_LE_TOUR beyond T_MAX: the match must end instead (GDD 3 rule 6).
