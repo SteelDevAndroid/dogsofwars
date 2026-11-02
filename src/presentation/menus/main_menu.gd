@@ -25,7 +25,7 @@ var _save_available := false
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var box := MenuLayout.column(self)
-	MenuLayout.label(box, "Dogs of Wars")
+	MenuLayout.label(box, "Dogs of Gods")
 	continue_button = _button(box, "Continuer", func() -> void: continue_requested.emit())
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
