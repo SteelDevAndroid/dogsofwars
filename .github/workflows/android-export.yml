@@ -4,6 +4,14 @@ name: android-export
 # its export templates. A debug-signed APK is always produced; a release APK only when the
 # keystore secrets exist. Run by hand, or by pushing a tag v*. Not verified on a device.
 on:
+  # a manual run needs this file on the default branch; until then a change to the export
+  # configuration on a pull request runs it
+  pull_request:
+    paths:
+      - export_presets.cfg
+      - project.godot
+      - .github/workflows/android-export.yml
+      - tools/ci/check-export-pack.sh
   workflow_dispatch:
   push:
     tags: ["v*"]
