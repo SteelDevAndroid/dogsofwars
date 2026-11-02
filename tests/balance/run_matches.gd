@@ -1,7 +1,7 @@
 # Balance run: whole matches of the AI against the scripted player over many seeds, with the
 # shipped data, printing the outcomes. Usage:
 #   godot --headless -s tests/balance/run_matches.gd -- [first_seed] [count]
-# Further arguments override data (see _catalog). Output: one line per match, then the totals (JSON-ish, for a spreadsheet).
+# A further argument "map=marais" picks the map. Further arguments override data (see _catalog). Output: one line per match, then the totals (JSON-ish, for a spreadsheet).
 extends SceneTree
 
 const MAX_ROUNDS := 35
@@ -12,21 +12,25 @@ func _init() -> void:
 	var first := int(args[0]) if args.size() > 0 else 1
 	var count := int(args[1]) if args.size() > 1 else 20
 	var overrides := {}
+	var map_name := "plaine"
 	for k in range(2, args.size()):  # "file.key=value", e.g. ai.json.w_danger=3 (ai.json: planner weights)
 		var pair := args[k].split("=")
-		overrides[pair[0]] = int(pair[1])
+		if pair[0] == "map":
+			map_name = pair[1]
+		else:
+			overrides[pair[0]] = int(pair[1])
 	var catalog := _catalog(overrides)
 	var results := []
 	for seed_value in range(first, first + count):
-		results.append(play(seed_value, catalog))
+		results.append(play(seed_value, catalog, map_name))
 		print(JSON.stringify(results[-1]))
 	print("SUMMARY ", JSON.stringify(summarize(results)))
 	quit()
 
 
-static func play(seed_value: int, catalog: DataCatalog) -> Dictionary:
+static func play(seed_value: int, catalog: DataCatalog, map_name: String = "plaine") -> Dictionary:
 	var errors: Array[DataError] = []
-	var map := MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/plaine.json"), "plaine.json", catalog, errors)
+	var map := MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/%s.json" % map_name), map_name + ".json", catalog, errors)
 	var fx := PipelineFixture.new(GameStateFactory.new_game(catalog, map, seed_value), true)
 	var bot := ScriptedPlayer.new()
 	var refusals := 0
@@ -87,7 +91,8 @@ static func _catalog(overrides: Dictionary) -> DataCatalog:
 	var texts := {}
 	for file in DirAccess.get_files_at("res://assets/data"):
 		texts[file] = FileAccess.get_file_as_string("res://assets/data/" + file)
-	texts["maps/plaine.json"] = FileAccess.get_file_as_string("res://assets/data/maps/plaine.json")
+	for file in DirAccess.get_files_at("res://assets/data/maps"):
+		texts["maps/" + file] = FileAccess.get_file_as_string("res://assets/data/maps/" + file)
 	for key: String in overrides:
 		var parts := key.split(".json.")
 		var doc: Dictionary = JSON.parse_string(texts[parts[0] + ".json"])

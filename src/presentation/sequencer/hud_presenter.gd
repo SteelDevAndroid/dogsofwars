@@ -9,12 +9,21 @@ var journal: Array[String] = []
 ## "Ruine lue · +n tuiles" when a ruin gave no fragment; emptied with the journal.
 var notice := ""
 
+const SUMMARY_SECONDS := 4.0
+
 var _hud: Hud
 var _gate: CommandGate
 var _sequencer: PresentationSequencer
 var _params: PresentationParams
 var _fragments: FragmentPool
 var _wave_tiles := 0
+## What the player saw of the enemy phase, told as a line when their turn begins.
+var summary := ""
+var _enemy_played := false
+var _lost := 0
+var _kills := 0
+var _nodes_taken := 0
+var _threats := 0
 
 
 func _init(hud: Hud, gate: CommandGate, sequencer: PresentationSequencer, params: PresentationParams, fragments: FragmentPool = null) -> void:
@@ -26,9 +35,28 @@ func _init(hud: Hud, gate: CommandGate, sequencer: PresentationSequencer, params
 
 
 func handle(event: PresentationEvent, context: SequenceContext) -> PresentationHold:
+	if event is TurnStartedEvent and (event as TurnStartedEvent).turn_faction == Faction.AI:
+		_enemy_played = true
+		_lost = 0
+		_kills = 0
+		_nodes_taken = 0
+		_threats = 0
+	if event is UnitDestroyedEvent:
+		if event.faction == Faction.PLAYER:
+			_lost += 1
+		else:
+			_kills += 1
+	elif event is NodeCapturedEvent and event.faction == Faction.AI:
+		_nodes_taken += 1
+	elif event is IntentionAnnouncedEvent:
+		_threats += 1
 	if event is TurnStartedEvent and (event as TurnStartedEvent).turn_faction == Faction.PLAYER:
 		journal.clear()
 		notice = ""
+		summary = enemy_phase_line(_lost, _kills, _nodes_taken, _threats) if _enemy_played else ""
+		_enemy_played = false
+		if summary != "":
+			_hud.show_toast(summary, context.t0, SUMMARY_SECONDS)
 		return PresentationHold.new(0)
 	if event is TileOwnersChangedEvent:
 		_wave_tiles += (event as TileOwnersChangedEvent).changed_tiles.size()
@@ -56,6 +84,20 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 	# the enemy's actions are told one at a time
 	var holds := event is IntentionExecutedEvent and not context.direct
 	return PresentationHold.new(_params.value("enemy_action_ms") if holds else 0)
+
+
+## "Tour ennemi : 1 drone perdu · 2 menaces annoncées", or that nothing happened.
+static func enemy_phase_line(lost: int, kills: int, nodes_taken: int, threats: int) -> String:
+	var parts: Array[String] = []
+	if lost > 0:
+		parts.append("%d drone%s perdu%s" % [lost, "s" if lost > 1 else "", "s" if lost > 1 else ""])
+	if kills > 0:
+		parts.append("%d Gardien%s détruit%s" % [kills, "s" if kills > 1 else "", "s" if kills > 1 else ""])
+	if nodes_taken > 0:
+		parts.append("%d nœud%s pris par l'ennemi" % [nodes_taken, "s" if nodes_taken > 1 else ""])
+	if threats > 0:
+		parts.append("%d menace%s annoncée%s" % [threats, "s" if threats > 1 else "", "s" if threats > 1 else ""])
+	return "Tour ennemi : " + (" · ".join(parts) if not parts.is_empty() else "rien à signaler")
 
 
 func rebuild_from_state(_state: GameState) -> void:

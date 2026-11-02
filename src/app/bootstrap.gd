@@ -6,7 +6,8 @@
 class_name Bootstrap
 extends Node
 
-const MAP_FILE := "maps/plaine.json"
+## The maps of the game: a new game takes the one its seed points at (the same seed, the same map).
+const MAP_FILES := ["maps/plaine.json", "maps/marais.json"]
 
 var data_source: DataSource
 var file_store: FileStore
@@ -88,12 +89,13 @@ func show_menu(notice: String = "") -> void:
 
 func start_new_game() -> void:
 	var errors: Array[DataError] = []
-	var map := MapDefinition.parse(data_source.read_text(MAP_FILE), MAP_FILE, app.catalog, errors)
+	var seed_value := forced_seed if forced_seed >= 0 else randi()
+	var map_file: String = MAP_FILES[seed_value % MAP_FILES.size()]
+	var map := MapDefinition.parse(data_source.read_text(map_file), map_file, app.catalog, errors)
 	if map == null:
 		_show_data_errors(errors)
 		return
 	_leave_match()
-	var seed_value := forced_seed if forced_seed >= 0 else randi()
 	var screen_node := _new_match_screen()
 	var session := SessionFactory.new_game(app, map, seed_value, screen_node.ports(EventQueue.new(app.catalog.presentation.value("queue_max"))), screen_node.runner_port(),
 			false, profile.chronicle(), profile.next_match_id(), profile.epoch)

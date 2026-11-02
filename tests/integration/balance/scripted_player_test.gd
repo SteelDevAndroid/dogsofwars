@@ -33,3 +33,13 @@ func test_the_summary_counts_the_outcomes() -> void:
 	assert_dict(summary["by_status"]).is_equal({3: 2, 2: 1})
 	assert_float(summary["mean_turn"]).is_equal(20.0)
 	assert_int(summary["refusals"]).is_equal(1)
+
+
+func test_the_second_map_plays_out_without_a_refusal() -> void:
+	var catalog := Run._catalog({})
+	for seed_value in [1, 2, 3]:
+		var result := Run.play(seed_value, catalog, "marais")
+
+		assert_int(result["refusals"]).is_equal(0)
+		assert_int(result["commands"]).is_greater(10)
+		assert_bool(result["turn"] >= 1 and result["turn"] <= 30).is_true()

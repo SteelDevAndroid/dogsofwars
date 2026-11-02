@@ -38,7 +38,7 @@ func test_the_map_is_copied_into_the_state() -> void:
 	assert_int(view.node_level(2)).is_equal(1)
 	assert_int(view.node_owner(2)).is_equal(Faction.NONE)
 	var awake := Array(view.unit_ids()).filter(func(id: int) -> bool: return not view.unit_asleep(id))
-	assert_int(awake.size()).is_equal(7)
+	assert_int(awake.size()).is_equal(9)
 	assert_int(view.unit_ids().size() - awake.size()).is_equal(6)
 	for id in view.unit_ids():
 		if view.unit_asleep(id):

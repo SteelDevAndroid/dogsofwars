@@ -8,7 +8,8 @@ func _texts(broken: bool = false) -> Dictionary:
 	var texts := {}
 	for name: String in documents:
 		texts[name] = JSON.stringify(documents[name])
-	texts["maps/plaine.json"] = FileAccess.get_file_as_string("res://assets/data/maps/plaine.json")
+	for file in Bootstrap.MAP_FILES:
+		texts[file] = FileAccess.get_file_as_string("res://assets/data/" + file)
 	return texts
 
 
@@ -438,3 +439,15 @@ func test_how_to_play_opens_from_the_menu_and_closes() -> void:
 
 	assert_object(boot._how_to_play_screen).is_null()
 	await _finish(boot)
+
+
+func test_a_new_game_takes_the_map_its_seed_points_at() -> void:
+	var sizes := []
+	for seed_value in [0, 1]:
+		var boot := _boot()
+		boot.forced_seed = seed_value
+		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		sizes.append(boot.match_screen.session.state.width())
+		await _finish(boot)
+
+	assert_array(sizes).is_equal([12, 14])
