@@ -107,6 +107,7 @@ func _volume(parent: Control, text: String, slider: HSlider, key: StringName) ->
 
 func _flag(parent: Control, check: CheckButton, text: String, key: StringName) -> void:
 	check.text = text
+	check.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	check.custom_minimum_size = Vector2(0, 50)
 	check.toggled.connect(func(on: bool) -> void: _emit(key, 1 if on else 0))
 	parent.add_child(check)

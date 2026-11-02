@@ -71,7 +71,7 @@ func _init() -> void:
 	for entry in [[turn_label, "ui_icon_tour", "Tour"], [energy_label, "ui_icon_energie", "Énergie"], [fragments_label, "ui_icon_ruine", "Ruines lues"]]:
 		var label: Label = entry[0]
 		label.clip_text = true  # a long text never pushes the buttons off the screen
-		label.add_theme_font_size_override("font_size", 17)
+		label.add_theme_font_size_override("font_size", 15)
 		label.custom_minimum_size = Vector2(0, 32)
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		var stat := _stat(entry[1], label, entry[2])
@@ -79,7 +79,7 @@ func _init() -> void:
 		bar.add_child(stat)
 	pause_button.text = "Pause"
 	UiIcons.put(pause_button, "pause")
-	pause_button.custom_minimum_size = Vector2(64, 48)
+	pause_button.custom_minimum_size = Vector2(76, 48)
 	pause_button.tooltip_text = "Pause"
 	pause_button.accessibility_name = "Pause"
 	pause_button.pressed.connect(func() -> void: pause_pressed.emit())
@@ -207,7 +207,7 @@ func apply_layout(layout: HudLayout) -> void:
 	score_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if layout.landscape else TextServer.AUTOWRAP_OFF
 	score_label.custom_minimum_size.x = HudLayout.RAIL_WIDTH - 24.0 if layout.landscape else 0.0
 	# an autowrapping label asks for a huge height until its width is known: give it one
-	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else 300.0
+	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else maxf(layout.panel_zone.size.x - 24.0, 0.0)
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
 	_place(camera_box, layout.camera_buttons)
