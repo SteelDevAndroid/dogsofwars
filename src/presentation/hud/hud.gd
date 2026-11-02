@@ -7,6 +7,7 @@ extends Control
 
 signal end_turn_pressed
 signal pause_pressed
+signal speed_pressed
 
 var turn_label := Label.new()
 var energy_label := Label.new()
@@ -18,6 +19,9 @@ var unit_lines := Label.new()
 var journal_label := Label.new()
 var end_turn_button := Button.new()
 var pause_button := Button.new()
+var speed_button := Button.new()
+var notice_label := Label.new()
+var fragment_panel := FragmentPanel.new()
 
 
 func _init() -> void:
@@ -37,6 +41,7 @@ func _init() -> void:
 	bar.add_child(pause_button)
 	top.add_child(bar)
 	top.add_child(score_label)
+	top.add_child(notice_label)
 	top.add_child(alert_row)
 	var bottom := VBoxContainer.new()
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -50,9 +55,15 @@ func _init() -> void:
 	end_turn_button.custom_minimum_size = Vector2(0, 50)
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
 	bottom.add_child(end_turn_button)
+	speed_button.text = "Vitesse : normale"
+	speed_button.custom_minimum_size = Vector2(0, 40)
+	speed_button.pressed.connect(func() -> void: speed_pressed.emit())
+	bottom.add_child(speed_button)
+	add_child(fragment_panel)
 
 
-func show_model(model: HudModel) -> void:
+func show_model(model: HudModel, notice: String = "") -> void:
+	notice_label.text = notice
 	turn_label.text = model.turn_text
 	energy_label.text = model.energy_text
 	fragments_label.text = model.fragments_text

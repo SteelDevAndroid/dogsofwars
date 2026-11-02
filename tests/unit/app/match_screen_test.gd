@@ -98,11 +98,21 @@ func test_shutdown_releases_the_players_locks() -> void:
 	await await_idle_frame()
 
 
+## Plays what the sequencer has queued, as the frames would.
+func _settle(screen: MatchScreen) -> void:
+	for step in 400:
+		screen.clock.advance(0.5)
+		screen.sequencer.advance()
+		if screen.sequencer.is_idle():
+			return
+
+
 func _started(seed_value: int = 6) -> Array:
 	var t := TestSessionFactory.new()
 	var screen := _screen()
 	var session := SessionFactory.new_game(t.app, t.map(), seed_value, screen.ports(t.sink), screen.runner_port())
 	screen.bind(session)
+	_settle(screen)
 	return [t, screen, session]
 
 
@@ -193,6 +203,7 @@ func test_no_range_is_offered_during_the_enemy_phase() -> void:
 	var screen: MatchScreen = started[1]
 	var state: GameState = started[2].state
 	screen.end_turn()
+	_settle(screen)
 
 	screen.on_tap_tile(state.tile_index(2, 1))
 
@@ -213,7 +224,7 @@ func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
 		if not screen.ai_runner.is_running():
 			break
 		screen.ai_runner.advance()
-	screen._process(0.0)
+	_settle(screen)
 
 	assert_int(state.turn()).is_equal(2)
 	assert_str(screen.hud.turn_label.text).is_equal("Tour 2 / 30")
@@ -226,13 +237,14 @@ func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
 func test_the_journal_keeps_twelve_lines_and_clears_when_the_player_plays() -> void:
 	var started := _started()
 	var screen: MatchScreen = started[1]
+	var context := SequenceContext.new(0.0, screen.sequencer.clock)
 
 	for k in 15:
-		screen._note(IntentionExecutedEvent.new(k, 1, 0, 5))
-	assert_int(screen._journal.size()).is_equal(HudModel.JOURNAL_LINES)
-	screen._note(TurnStartedEvent.new(2, Faction.PLAYER, HeaderSlice.PHASE_PLAYER))
+		screen.presenter.handle(IntentionAnnouncedEvent.new(k, 1, 0, 0, 5, 0, 0), context)
+	assert_int(screen.presenter.journal.size()).is_equal(HudModel.JOURNAL_LINES)
+	screen.presenter.handle(TurnStartedEvent.new(2, Faction.PLAYER, HeaderSlice.PHASE_PLAYER), context)
 
-	assert_int(screen._journal.size()).is_equal(0)
+	assert_int(screen.presenter.journal.size()).is_equal(0)
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
@@ -263,6 +275,123 @@ func test_tapping_a_visible_enemy_unit_selects_nothing() -> void:
 
 	assert_int(screen.selected_unit).is_equal(-1)
 	assert_bool(state.view().unit_at(state.tile_index(3, 1)) == enemy).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+## What the frames do: time passes, the sequencer plays, the AI sends a command when the gate is ready.
+func _frames(screen: MatchScreen, count: int, step: float = 0.1) -> void:
+	for k in count:
+		screen.clock.advance(step)
+		screen.sequencer.advance()
+		if screen.ai_runner.is_running() and screen.sequencer.is_idle():
+			screen.ai_runner.advance()
+
+
+func test_the_enemy_turn_takes_presentation_time_and_hands_the_turn_back() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var before := screen.clock.current()
+
+	screen.end_turn()
+	_frames(screen, 2000)
+
+	assert_int(state.turn()).is_equal(2)
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_bool(screen.ai_runner.is_running()).is_false()
+	assert_float(screen.clock.current()).is_greater(before)
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 2 / 30")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_taps_and_the_end_turn_button_wait_for_the_sequencer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[0]
+	screen.on_tap_tile(destination)  # the move is applied; its batch is queued, not yet played
+
+	assert_bool(screen.sequencer.is_idle()).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()  # buttons are dead outside idle (hud.md rule 6)
+	screen.on_tap_tile(state.tile_index(3, 2))  # another unit of the player
+	assert_int(screen.selected_unit).is_equal(-1)  # ignored while the move plays
+	_settle(screen)
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_speed_button_cycles_normal_fast_instant() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.speed_button.pressed.emit()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.FAST)
+	assert_str(screen.hud.speed_button.text).is_equal("Vitesse : rapide")
+	screen.hud.speed_button.pressed.emit()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.INSTANT)
+	screen.hud.speed_button.pressed.emit()
+
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.NORMAL)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_reading_a_ruin_opens_the_panel_after_the_wave_and_locks_the_player_until_it_is_closed() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	var ruin := state.ruins.tile_of(0)
+	var next_to := ruin + 1 if ruin % 12 < 11 else ruin - 1
+	UnitWrites.move_to(state, scout, next_to)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+	screen.refresh()
+	started[2].pipeline.submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, scout, ruin))
+
+	_frames(screen, 3)
+	assert_bool(screen.hud.fragment_panel.is_open).is_false()  # the wave and the delay come first
+	_frames(screen, 30)
+
+	assert_bool(screen.hud.fragment_panel.is_open).is_true()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	screen.hud.fragment_panel.continue_button.pressed.emit()
+	assert_bool(screen.hud.fragment_panel.is_open).is_true()  # too early
+	_frames(screen, 8)
+	screen._process(0.0)
+	screen.hud.fragment_panel.continue_button.pressed.emit()
+
+	assert_bool(screen.hud.fragment_panel.is_open).is_false()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_taps_are_ignored_under_a_player_lock() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	started[2].gate.lock(PresentationSequencer.FRAGMENT_PANEL)
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	started[2].gate.unlock(PresentationSequencer.FRAGMENT_PANEL)
+	screen.on_tap_tile(state.tile_index(2, 1))
+	assert_bool(screen.selected_unit >= 0).is_true()
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()

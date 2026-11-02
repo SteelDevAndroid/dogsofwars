@@ -73,7 +73,7 @@ func start_new_game() -> void:
 	_leave_match()
 	var seed_value := forced_seed if forced_seed >= 0 else randi()
 	var screen_node := _new_match_screen()
-	var session := SessionFactory.new_game(app, map, seed_value, screen_node.ports(EventQueue.new()), screen_node.runner_port(),
+	var session := SessionFactory.new_game(app, map, seed_value, screen_node.ports(EventQueue.new(app.catalog.presentation.value("queue_max"))), screen_node.runner_port(),
 			false, profile.chronicle(), profile.next_match_id(), profile.epoch)
 	_bind(screen_node, session)
 
@@ -82,7 +82,7 @@ func continue_match() -> void:
 	_leave_match()
 	var screen_node := _new_match_screen()
 	var reason := [LoadResult.NONE]
-	var session := SessionFactory.resume(app, screen_node.ports(EventQueue.new()), screen_node.runner_port(), reason)
+	var session := SessionFactory.resume(app, screen_node.ports(EventQueue.new(app.catalog.presentation.value("queue_max"))), screen_node.runner_port(), reason)
 	if session == null:
 		screen_node.free()
 		show_menu()  # nothing to continue: the menu offers a new game

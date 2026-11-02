@@ -9,6 +9,9 @@ var snapshot: TileSnapshot
 var layout := TileLayout.new()
 var selected_tile := -1
 var highlighted: PackedInt32Array = PackedInt32Array()
+## The presentation clock the effects are timed on; null in a still image.
+var clock: ClockSource
+var effects: Array[TileEffect] = []
 
 
 func _init() -> void:
@@ -17,6 +20,24 @@ func _init() -> void:
 
 func show_state(state: GameState, catalog: DataCatalog) -> void:
 	snapshot = TileSnapshot.take(state, catalog)
+	queue_redraw()
+
+
+func add_effect(effect: TileEffect) -> void:
+	effects.append(effect)
+	queue_redraw()
+
+
+func clear_effects() -> void:
+	effects.clear()
+	queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	if effects.is_empty() or clock == null:
+		return
+	var now := clock.current()
+	effects = effects.filter(func(effect: TileEffect) -> bool: return not effect.is_over(now))
 	queue_redraw()
 
 
@@ -46,6 +67,8 @@ func _draw() -> void:
 			_draw_unit(unit)
 	for threat: Array in snapshot.threats:
 		_draw_threat(threat)
+	for effect in effects:
+		_draw_effect(effect)
 	for tile in highlighted:
 		draw_rect(layout.rect_of(tile).grow(-2.0), Color(TilePalette.SELECTION, 0.35))
 	if selected_tile >= 0:
@@ -98,6 +121,10 @@ func _draw_ruin(ruin: Array) -> void:
 func _draw_unit(unit: Array) -> void:
 	var rect := layout.rect_of(unit[1])
 	var c := rect.get_center()
+	var moving := _moving_center(unit[0])
+	if moving.x >= 0.0:
+		rect.position += moving - c
+		c = moving
 	var r := layout.tile_size * 0.30
 	var fill := TilePalette.owner(unit[2]) if not unit[6] else TilePalette.NEUTRAL.darkened(0.3)
 	var outline := TilePalette.ENEMY_OUTLINE if unit[2] == Faction.AI else TilePalette.OUTLINE
@@ -110,6 +137,37 @@ func _draw_unit(unit: Array) -> void:
 		var bar := Rect2(rect.position + Vector2(layout.tile_size * 0.1, layout.tile_size * 0.86), Vector2(layout.tile_size * 0.8, 3.0))
 		draw_rect(bar, TilePalette.OUTLINE)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(unit[4]) / unit[5], bar.size.y)), TilePalette.PLAYER)
+
+
+## Where an animated unit is drawn: along its MOVE effect, (-1, -1) when it is not moving.
+func _moving_center(unit_id: int) -> Vector2:
+	if clock == null:
+		return Vector2(-1, -1)
+	for effect in effects:
+		if effect.kind == TileEffect.Kind.MOVE and effect.unit_id == unit_id:
+			return layout.center_of(effect.tile).lerp(layout.center_of(effect.tile2), effect.progress(clock.current()))
+	return Vector2(-1, -1)
+
+
+func _draw_effect(effect: TileEffect) -> void:
+	var now := clock.current() if clock != null else effect.start + effect.duration
+	var p := effect.progress(now)
+	match effect.kind:
+		TileEffect.Kind.LINE:
+			draw_line(layout.center_of(effect.tile), layout.center_of(effect.tile2), Color(TilePalette.SELECTION, 1.0 - 0.5 * p), 3.0)
+		TileEffect.Kind.FLOAT_TEXT:
+			var at := layout.center_of(effect.tile) + Vector2(-layout.tile_size * 0.2, -layout.tile_size * 0.3 - layout.tile_size * 0.4 * p)
+			draw_string(ThemeDB.fallback_font, at, effect.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(effect.color, 1.0 - p * p))
+		TileEffect.Kind.GHOST:
+			var c := layout.center_of(effect.tile)
+			var r := layout.tile_size * 0.30
+			var points := _shape(effect.unit_type, c + Vector2(0, r * 0.4 * p), r)
+			for k in points.size():
+				points[k].y = c.y + (points[k].y - c.y) * (1.0 - 0.5 * p)  # it sags
+			draw_colored_polygon(points, Color(TilePalette.NEUTRAL, 0.8 * (1.0 - p)))
+		TileEffect.Kind.WAVE:
+			for tile in effect.tiles:
+				draw_rect(layout.rect_of(tile), Color(effect.color, 0.30 * p))
 
 
 func _draw_threat(threat: Array) -> void:

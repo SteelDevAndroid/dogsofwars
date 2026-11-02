@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "move_step_ms": 120,
+  "attack_line_ms": 250,
+  "hit_ms": 350,
+  "destroy_ms": 400,
+  "recolor_ms": 400,
+  "panel_delay_ms": 400,
+  "close_delay_ms": 500,
+  "attack_lock_ms": 1600,
+  "damage_number_ms": 800,
+  "enemy_action_ms": 500,
+  "reduced_slot_ms": 334,
+  "queue_max": 256
+}

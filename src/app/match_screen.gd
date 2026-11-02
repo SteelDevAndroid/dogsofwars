@@ -21,36 +21,51 @@ var hud := Hud.new()
 var selected_unit := -1
 var reachable := PackedInt32Array()
 
+var clock := PresentationClock.new()
+var sequencer := PresentationSequencer.new()
+var presenter: HudPresenter
+
 var _runner_port: NodeAiRunnerPort
-var _pacing: PacingGate = ImmediatePacingGate.new()
+var _pacing: PacingGate
 var _queue: EventQueue
-var _journal: Array[String] = []
 
 
 func _ready() -> void:
+	add_child(clock)  # before everyone (priority -20)
+	add_child(sequencer)
 	world.add_child(renderer)
+	var source := ClockAdapter.new(clock)
+	renderer.clock = source
 	hud_layer.add_child(hud)
 	hud.end_turn_pressed.connect(end_turn)
 	hud.pause_pressed.connect(func() -> void: pause_requested.emit())
+	hud.speed_pressed.connect(cycle_speed)
+	hud.fragment_panel.closed.connect(_on_panel_closed)
 	input_surface.tapped.connect(on_tap)
+	_pacing = SequencerPacingGate.new(sequencer)
+	sequencer.clock = source
+	sequencer.batch_finished.connect(func() -> void: refresh(true))
+	sequencer.idle_reached.connect(func() -> void: refresh(true))
 
 
 func _process(_delta: float) -> void:
-	if session == null or session.state == null:
-		return
-	var changed := false
-	if _queue != null:
-		for batch in _queue.drain():
-			changed = true
-			for event in batch.events:
-				_note(event)
-	if changed:
-		refresh()
+	hud.fragment_panel.tick(clock.current())
+
+
+## The enemy turn's speed: normal, fast, instant (hud.md section 8).
+func cycle_speed() -> void:
+	clock.speed = (clock.speed + 1) % PresentationClock.Speed.size()
+	hud.speed_button.text = ["Vitesse : normale", "Vitesse : rapide", "Vitesse : instantanée"][clock.speed]
+
+
+func is_idle() -> bool:
+	return sequencer.is_idle()
 
 
 ## Phase 1: what the session needs from the presentation. The queue is the one given, or ours.
 func ports(event_sink: EventSink = null) -> SessionPorts:
 	_queue = event_sink as EventQueue if event_sink is EventQueue else EventQueue.new()
+	sequencer.queue = _queue
 	return SessionPorts.new(_queue, _pacing)
 
 
@@ -64,19 +79,27 @@ func runner_port() -> AiRunnerPort:
 func bind(p_session: GameSession) -> void:
 	session = p_session
 	ai_runner.process_priority = 20
+	sequencer.gate = session.gate
+	sequencer.params = session.catalog.presentation
+	sequencer.state = session.state
+	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation)
+	sequencer.handlers = [TileRendererHandler.new(renderer, session.catalog.presentation), presenter]
 	session.turns.start()
 	refresh()
 
 
-## Redraws the map and the HUD from the state.
-func refresh() -> void:
+## Redraws the map and the HUD from the state. While a batch is playing the map keeps showing
+## the state before it (the effects play over it): the new snapshot comes when the batch ends.
+func refresh(show_new_state: bool = false) -> void:
 	if session == null or session.state == null:
 		return
-	renderer.show_state(session.state, session.catalog)
-	renderer.fit(HudModel.map_area(_screen_size()))
+	if show_new_state or renderer.snapshot == null or sequencer.is_idle():
+		renderer.show_state(session.state, session.catalog)
+		renderer.fit(HudModel.map_area(_screen_size()))
 	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable)
 	hud.show_model(HudModel.build(session.state, session.catalog,
-			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER), selected_unit, _journal))
+			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal),
+			presenter.notice)
 
 
 ## A tap on the map: on a unit of the player, select it; on a tile it can reach, move it.
@@ -85,7 +108,8 @@ func on_tap(position: Vector2) -> void:
 
 
 func on_tap_tile(tile: int) -> void:
-	if session == null or session.state == null or tile < 0:
+	if session == null or session.state == null or tile < 0 or not sequencer.is_idle() \
+			or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
 		return
 	if selected_unit >= 0 and reachable.has(tile):
 		var moved := selected_unit
@@ -123,6 +147,8 @@ func shutdown() -> void:
 		_runner_port.cancel()
 	set_process(false)
 	ai_runner.set_process(false)
+	sequencer.set_process(false)
+	sequencer.handlers = []
 	session.gate.clear_player_locks()
 	session.shutdown()
 	session = null
@@ -131,15 +157,10 @@ func shutdown() -> void:
 	queue_free()
 
 
-func _note(event: PresentationEvent) -> void:
-	if event is TurnStartedEvent and (event as TurnStartedEvent).turn_faction == Faction.PLAYER:
-		_journal.clear()
-		return
-	var line := HudModel.journal_line(event)
-	if line != "":
-		_journal.append(line)
-		if _journal.size() > HudModel.JOURNAL_LINES:
-			_journal.pop_front()
+func _on_panel_closed() -> void:
+	sequencer.panel_open = false
+	session.gate.unlock(PresentationSequencer.FRAGMENT_PANEL)
+	refresh()
 
 
 func _screen_size() -> Vector2:
