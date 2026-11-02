@@ -28,6 +28,7 @@ var _ui: CanvasLayer
 var _pause: PauseMenu
 var _settings_screen: SettingsScreen
 var _chronicle_screen: ChronicleScreen
+var _how_to_play_screen: HowToPlayScreen
 var _ending := false
 
 
@@ -80,6 +81,7 @@ func show_menu(notice: String = "") -> void:
 	menu.new_game_requested.connect(start_new_game)
 	menu.settings_requested.connect(show_settings)
 	menu.chronicle_requested.connect(show_chronicle)
+	menu.how_to_play_requested.connect(show_how_to_play)
 	menu.quit_requested.connect(func() -> void: get_tree().quit())
 	_show(menu)
 
@@ -160,6 +162,17 @@ func show_chronicle() -> void:
 		_chronicle_screen.queue_free()
 		_chronicle_screen = null)
 	_ui.add_child(_chronicle_screen)
+
+
+## "Comment jouer", over the menu; "Retour" closes it.
+func show_how_to_play() -> void:
+	if _how_to_play_screen != null:
+		return
+	_how_to_play_screen = HowToPlayScreen.new()
+	_how_to_play_screen.back_requested.connect(func() -> void:
+		_how_to_play_screen.queue_free()
+		_how_to_play_screen = null)
+	_ui.add_child(_how_to_play_screen)
 
 
 ## Stores a setting and applies it at once (a refused change puts the screen back as it was).

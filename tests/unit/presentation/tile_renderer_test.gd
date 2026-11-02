@@ -102,3 +102,20 @@ func test_the_map_edge_is_not_a_fog_edge() -> void:
 	renderer.snapshot = null
 	assert_int(renderer.fog_sides(0)).is_equal(0)  # no snapshot
 	renderer.free()
+
+
+func test_the_arrow_of_the_first_turns_needs_a_tile_and_moves_unless_still() -> void:
+	var renderer := _renderer()
+	renderer.hint_tile = 26
+	var clock := FakeClock.new()
+	renderer.clock = clock
+
+	await await_idle_frame()  # draws with the arrow, no error
+	renderer.still = true
+	await await_idle_frame()
+	renderer.hint_tile = -1
+	await await_idle_frame()
+
+	assert_int(renderer.hint_tile).is_equal(-1)
+	assert_bool(renderer.still).is_true()
+	renderer.free()

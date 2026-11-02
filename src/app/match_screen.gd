@@ -117,6 +117,7 @@ func apply_settings(settings: Dictionary) -> void:
 	sequencer.reduced_motion = settings[GameSettings.REDUCED_MOTION] == 1
 	set_speed(settings[GameSettings.ENEMY_SPEED])
 	renderer.colorblind = settings[GameSettings.COLORBLIND] == 1
+	renderer.still = sequencer.reduced_motion
 	show_range = settings[GameSettings.SHOW_RANGE] == 1
 	mirrored = settings[GameSettings.LEFT_PANEL] == 1
 	hints = settings[GameSettings.HINTS] == 1
@@ -169,6 +170,9 @@ func refresh(show_new_state: bool = false) -> void:
 	if show_new_state or renderer.snapshot == null or sequencer.is_idle():
 		renderer.show_state(session.state, session.catalog)
 	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable if show_range else PackedInt32Array())
+	var advice := HudHint.text(session.state, hints, session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER \
+			and not session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) and sequencer.is_idle(), selected_unit, false)
+	renderer.hint_tile = _first_unit_tile() if advice != "" and selected_unit < 0 else -1
 	renderer.set_targets(target_tiles, session.state.view().unit_tile(target_unit) if target_unit >= 0 else -1)
 	hud.show_model(HudModel.build(session.state, session.catalog,
 			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
@@ -449,6 +453,15 @@ func _apply_camera() -> void:
 
 
 ## The first look: on the player's unit with the lowest id (ADR-0010 §8).
+## The tile of the player's unit with the lowest id, -1 when it has none.
+func _first_unit_tile() -> int:
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	for id in view.unit_ids():
+		if view.unit_faction(id) == Faction.PLAYER:
+			return view.unit_tile(id)
+	return -1
+
+
 func _center_on_first_unit(animated: bool = false) -> void:
 	var view := FactionView.new(session.state, Faction.PLAYER)
 	for id in view.unit_ids():

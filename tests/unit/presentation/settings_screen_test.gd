@@ -92,3 +92,18 @@ func test_the_main_menu_puts_the_play_buttons_first_and_the_rest_in_the_backgrou
 	assert_int(pictures.size()).is_equal(1)  # the illustration, behind the column
 	assert_object((pictures[0] as TextureRect).texture).is_not_null()
 	menu.free()
+
+
+func test_the_palette_preview_follows_the_colour_blind_switch() -> void:
+	var screen := _screen()
+
+	assert_bool(screen.palette_swatch.colorblind).is_false()
+	screen.colorblind_check.button_pressed = true
+	assert_bool(screen.palette_swatch.colorblind).is_true()
+	screen.colorblind_check.button_pressed = false
+	assert_bool(screen.palette_swatch.colorblind).is_false()
+	var settings := GameSettings.defaults()
+	settings[GameSettings.COLORBLIND] = 1
+	screen.configure(settings)
+	assert_bool(screen.palette_swatch.colorblind).is_true()  # showing a stored setting shows its palette too
+	screen.free()

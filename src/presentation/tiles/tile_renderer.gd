@@ -19,6 +19,10 @@ var targets := PackedInt32Array()
 var chosen_target := -1
 ## The colour-blind palette of hud.md 10.5 (ownership colours only).
 var colorblind := false
+## The tile of the unit to touch first (the advice of the first turns): a small arrow bobs above it.
+var hint_tile := -1
+## No movement of the arrow (reduced motion).
+var still := false
 
 const GRAIN := 0.03
 const SIDE_LEFT := 1
@@ -62,6 +66,8 @@ func clear_effects() -> void:
 
 
 func _process(_delta: float) -> void:
+	if hint_tile >= 0 and not still:
+		queue_redraw()  # the arrow bobs
 	if effects.is_empty() or clock == null:
 		return
 	var now := clock.current()
@@ -95,6 +101,7 @@ func _draw() -> void:
 			_draw_unit(unit)
 	for threat: Array in snapshot.threats:
 		_draw_threat(threat)
+	_draw_hint_arrow()
 	for effect in effects:
 		_draw_effect(effect)
 	for tile in targets:
@@ -190,6 +197,17 @@ func fog_sides(tile: int) -> int:
 	if y < snapshot.rows - 1 and snapshot.fog_at(tile + snapshot.columns) == VisionService.FOG_UNDISCOVERED:
 		sides |= SIDE_DOWN
 	return sides
+
+
+func _draw_hint_arrow() -> void:
+	if hint_tile < 0 or not _inside(hint_tile):
+		return
+	var t := layout.tile_size
+	var bob := 0.0 if still or clock == null else sin(clock.current() * 5.0) * 0.07 * t
+	var c := layout.center_of(hint_tile) + Vector2(0.0, -0.78 * t + bob)
+	var arrow := PackedVector2Array([c + Vector2(-0.2 * t, -0.13 * t), c + Vector2(0.2 * t, -0.13 * t), c + Vector2(0.0, 0.14 * t)])
+	draw_colored_polygon(arrow, TilePalette.SELECTION)
+	draw_polyline(arrow + PackedVector2Array([arrow[0]]), TilePalette.OUTLINE, 1.5)
 
 
 func _draw_node(node: Array) -> void:

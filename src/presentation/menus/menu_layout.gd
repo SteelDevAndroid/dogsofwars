@@ -6,6 +6,8 @@ extends RefCounted
 
 const WIDTH := 300.0
 const BUTTON_HEIGHT := 56.0
+## The dark navy of the art bible: the ground of every menu screen.
+const NAVY := Color("0E1422")
 
 
 ## The column of `screen`, centred, `width` wide (and below `top_share` of the height, to leave a logo room) (never wider than the screen allows: the

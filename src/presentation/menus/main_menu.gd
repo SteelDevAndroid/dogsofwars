@@ -8,12 +8,14 @@ signal continue_requested
 signal new_game_requested
 signal settings_requested
 signal chronicle_requested
+signal how_to_play_requested
 signal quit_requested
 
 var continue_button: Button
 var new_game_button: Button
 var settings_button: Button
 var chronicle_button: Button
+var how_to_play_button: Button
 var quit_button: Button
 var confirm_button: Button
 var cancel_button: Button
@@ -30,12 +32,13 @@ func _init() -> void:
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
 	cancel_button = _button(box, "Annuler", _reset_confirmation)
+	how_to_play_button = _button(box, "Comment jouer", func() -> void: how_to_play_requested.emit())
 	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit())
 	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
 	for primary in [continue_button, new_game_button, confirm_button]:
 		MenuLayout.make_primary(primary)
-	for secondary in [cancel_button, chronicle_button, settings_button]:
+	for secondary in [cancel_button, how_to_play_button, chronicle_button, settings_button]:
 		MenuLayout.make_secondary(secondary)
 	MenuLayout.make_secondary(quit_button)
 	quit_button.flat = true  # the least used action stays discreet

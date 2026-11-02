@@ -1223,3 +1223,24 @@ func test_ending_the_turn_out_of_turn_is_told_too() -> void:
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+func test_the_arrow_points_at_the_first_unit_until_something_is_selected_and_follows_the_setting() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var first := FactionView.new(state, Faction.PLAYER).unit_tile(0)
+
+	assert_int(screen.renderer.hint_tile).is_equal(first)
+	screen.on_tap_tile(state.tile_index(2, 1))
+	assert_int(screen.renderer.hint_tile).is_equal(-1)
+	screen.select_unit(-1)
+	assert_int(screen.renderer.hint_tile).is_equal(first)
+	screen.apply_settings(_settings({GameSettings.HINTS: 0}))
+	assert_int(screen.renderer.hint_tile).is_equal(-1)
+	screen.apply_settings(_settings({GameSettings.REDUCED_MOTION: 1}))
+	assert_bool(screen.renderer.still).is_true()
+	assert_int(screen.renderer.hint_tile).is_equal(first)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

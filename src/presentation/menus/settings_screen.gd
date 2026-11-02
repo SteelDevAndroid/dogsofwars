@@ -18,6 +18,7 @@ var show_range_check := CheckButton.new()
 var colorblind_check := CheckButton.new()
 var left_panel_check := CheckButton.new()
 var hints_check := CheckButton.new()
+var palette_swatch := PaletteSwatch.new()
 var back_button := Button.new()
 
 var _loading := false
@@ -26,7 +27,7 @@ var _loading := false
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var backdrop := ColorRect.new()  # opaque, and it stops the taps meant for the screen below
-	backdrop.color = Color("1E2329")
+	backdrop.color = MenuLayout.NAVY
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var scroll := ScrollContainer.new()
@@ -56,6 +57,8 @@ func _init() -> void:
 	_flag(box, reduced_motion_check, "Réduire les animations", GameSettings.REDUCED_MOTION)
 	_flag(box, show_range_check, "Afficher la portée de déplacement", GameSettings.SHOW_RANGE)
 	_flag(box, colorblind_check, "Palette daltonienne", GameSettings.COLORBLIND)
+	box.add_child(palette_swatch)  # the three colours of the palette in use, each with its own shape
+	colorblind_check.toggled.connect(func(on: bool) -> void: palette_swatch.colorblind = on)
 	_flag(box, left_panel_check, "Panneau à gauche (paysage)", GameSettings.LEFT_PANEL)
 	_flag(box, hints_check, "Conseils des premiers tours", GameSettings.HINTS)
 	back_button.text = "Retour"
