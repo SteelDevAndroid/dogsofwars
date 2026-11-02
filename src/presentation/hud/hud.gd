@@ -28,6 +28,13 @@ var score_bar := ProgressBar.new()
 var alert_row := HBoxContainer.new()
 var unit_title := Label.new()
 var unit_lines := Label.new()
+## The unit card: a gauge of hit points (a mark at half) and the four stats as pills.
+var hp_bar := ProgressBar.new()
+var hp_label := Label.new()
+var stats_row := HBoxContainer.new()
+## A refusal told for a moment under the top bar (the reason also stays greyed in the panel).
+var toast_label := Label.new()
+var toast_panel: PanelContainer
 var journal_label := Label.new()
 var end_turn_button := Button.new()
 var pause_button := Button.new()
@@ -51,6 +58,7 @@ var top_panel: PanelContainer
 var bottom_panel: PanelContainer
 ## The rows that stack when the rail is narrow (landscape).
 var bar := BoxContainer.new()
+var _toast_until := 0.0
 var second := BoxContainer.new()
 
 
@@ -105,7 +113,21 @@ func _init() -> void:
 	var bottom := VBoxContainer.new()
 	bottom_panel = backdrop(bottom)
 	add_child(bottom_panel)
+	unit_title.add_theme_font_size_override("font_size", 20)
 	bottom.add_child(unit_title)
+	hp_bar.show_percentage = false
+	hp_bar.custom_minimum_size = Vector2(0, 8)
+	var hp_fill := StyleBoxFlat.new()
+	hp_fill.bg_color = Color("EADFC8")
+	var hp_back := StyleBoxFlat.new()
+	hp_back.bg_color = Color("2B323A")
+	hp_bar.add_theme_stylebox_override("fill", hp_fill)
+	hp_bar.add_theme_stylebox_override("background", hp_back)
+	hp_label.add_theme_font_size_override("font_size", 14)
+	stats_row.add_theme_constant_override("separation", 6)
+	for node in [hp_label, hp_bar, stats_row]:
+		node.visible = false
+		bottom.add_child(node)
 	bottom.add_child(unit_lines)
 	bottom.add_child(journal_label)
 	bottom.add_child(preview_label)
@@ -124,7 +146,8 @@ func _init() -> void:
 	hint_label.modulate = Color(1, 1, 1, 0.8)
 	bottom.add_child(hint_label)
 	end_turn_button.text = "Fin du tour"
-	end_turn_button.custom_minimum_size = Vector2(0, 50)
+	end_turn_button.custom_minimum_size = Vector2(0, 56)
+	MenuLayout.make_primary(end_turn_button)  # the one main action of the panel
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
 	bottom.add_child(end_turn_button)
 	speed_button.text = "Vitesse : normale"
@@ -142,6 +165,13 @@ func _init() -> void:
 		camera_box.add_child(button)
 	camera_box.add_theme_constant_override("separation", int(HudLayout.BUTTON_GAP))
 	add_child(camera_box)
+	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_label.custom_minimum_size = Vector2(200, 0)
+	toast_panel = backdrop(toast_label)
+	toast_panel.visible = false
+	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(toast_panel)
 	add_child(fragment_panel)
 	add_child(research_panel)
 	research_panel.row_pressed.connect(func(id: StringName) -> void: research_row_pressed.emit(id))
@@ -165,6 +195,8 @@ func apply_layout(layout: HudLayout) -> void:
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
 	_place(camera_box, layout.camera_buttons)
+	toast_panel.position = layout.map_area.position + Vector2(8, 8)
+	toast_panel.size = Vector2(layout.map_area.size.x - 16.0, 0.0)
 
 
 static func _place(control: Control, rect: Rect2) -> void:
@@ -175,6 +207,35 @@ static func _place(control: Control, rect: Rect2) -> void:
 
 ## A panel with an opaque dark background around `content`: the HUD bars and panels never
 ## let the map show through their text.
+## A refusal, told for `duration` seconds from `now` of the presentation clock.
+func show_toast(text: String, now: float, duration: float = 2.0) -> void:
+	toast_label.text = text
+	toast_panel.visible = text != ""
+	_toast_until = now + duration
+
+
+func tick_toast(now: float) -> void:
+	if toast_panel.visible and now >= _toast_until:
+		toast_panel.visible = false
+
+
+static func _pill(text: String) -> PanelContainer:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 14)
+	var pill := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("2B323A")
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	pill.add_theme_stylebox_override("panel", style)
+	pill.add_child(label)
+	return pill
+
+
 ## An icon (white SVG, tinted by the label's colour) beside a value; the whole box is named for the accessibility tree.
 static func _stat(icon_name: String, label: Label, name: String) -> HBoxContainer:
 	var box := HBoxContainer.new()
@@ -238,7 +299,24 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 		more.text = "+%d" % (chips.size() - 2)
 		alert_row.add_child(more)
 	unit_title.text = "" if model.unit_panel.is_empty() else model.unit_panel["title"]
-	unit_lines.text = "" if model.unit_panel.is_empty() else "\n".join(model.unit_panel["lines"])
+	var card: bool = model.unit_panel.has("hp")
+	hp_bar.visible = card
+	hp_label.visible = card
+	stats_row.visible = card
+	for pill in stats_row.get_children():
+		stats_row.remove_child(pill)
+		pill.queue_free()
+	if card:
+		hp_bar.max_value = model.unit_panel["hp_max"]
+		hp_bar.value = model.unit_panel["hp"]
+		hp_label.text = "PV %d / %d" % [model.unit_panel["hp"], model.unit_panel["hp_max"]]
+		for stat: Array in model.unit_panel["stats"]:
+			stats_row.add_child(_pill("%s %d" % [stat[0], stat[1]]))
+	# the first two lines (hit points, stats) are the card; the others are statuses
+	var lines: Array = model.unit_panel.get("lines", [])
+	unit_lines.text = "" if model.unit_panel.is_empty() else "\n".join(lines.slice(2) if card else lines)
+	unit_lines.visible = unit_lines.text != ""
+	speed_button.visible = model.enemy_turn  # the speed only matters while the enemy plays
 	journal_label.text = "\n".join(model.journal) if model.enemy_turn else ""
 	preview_label.text = model.preview_text
 	attack_button.visible = model.can_attack

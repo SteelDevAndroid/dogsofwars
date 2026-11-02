@@ -220,8 +220,12 @@ func _show_end() -> void:
 	var state := match_screen.session.state
 	var weights := app.catalog.score
 	var end := EndScreen.new()
+	var last := state.ruin_journal.last_fragment_of(Faction.PLAYER)
+	var quote := ""
+	if last > 0 and app.catalog.fragments.has_fragment(last):
+		quote = "« %s »\n— %s" % [app.catalog.fragments.text_of(last), app.catalog.fragments.source_of(last)]
 	end.show_result(state.header.value(HeaderSlice.END_STATUS), ScoreRules.decisive(state, Faction.PLAYER, weights),
-			ScoreRules.decisive(state, Faction.AI, weights))
+			ScoreRules.decisive(state, Faction.AI, weights), state.ruin_journal.read_by(Faction.PLAYER), quote)
 	end.back_requested.connect(leave_finished_match)
 	_show(end)
 

@@ -91,6 +91,8 @@ func test_the_unit_panel_shows_effective_stats_and_hides_other_units() -> void:
 
 	assert_str(panel["title"]).is_equal("Assaut")
 	assert_array(panel["lines"]).is_equal(["PV 8 / 8", "MVT 3  ATQ 3  DÉF 1  Vue 2"])
+	assert_array([panel["hp"], panel["hp_max"]]).is_equal([8, 8])
+	assert_array(panel["stats"]).is_equal([["MVT", 3], ["ATQ", 3], ["DÉF", 1], ["VUE", 2]])
 	assert_bool(_model(state, false, 1).unit_panel.is_empty()).is_true()  # an enemy unit has no panel
 	assert_bool(_model(state, false, -1).unit_panel.is_empty()).is_true()
 	assert_bool(_model(state, false, 99).unit_panel.is_empty()).is_true()

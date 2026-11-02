@@ -64,5 +64,13 @@ func read_by(faction: int) -> int:
 	return count
 
 
+## The fragment the faction read last in this match (the highest row), 0 when none.
+func last_fragment_of(faction: int) -> int:
+	for row in range(_jrn_faction.size() - 1, -1, -1):
+		if _jrn_faction[row] == faction and _jrn_fragment[row] > 0:
+			return _jrn_fragment[row]
+	return 0
+
+
 func faction_of(row: int) -> int:
 	return _jrn_faction[row]

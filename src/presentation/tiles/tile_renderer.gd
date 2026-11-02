@@ -266,6 +266,12 @@ func _draw_effect(effect: TileEffect) -> void:
 			for k in points.size():
 				points[k].y = c.y + (points[k].y - c.y) * (1.0 - 0.5 * p)  # it sags
 			draw_colored_polygon(points, Color(TilePalette.NEUTRAL, 0.8 * (1.0 - p)))
+		TileEffect.Kind.PULSE:  # a ring leaves the selected tile and fades
+			var ring := layout.rect_of(effect.tile).grow(layout.tile_size * 0.3 * p)
+			draw_rect(ring, Color(TilePalette.SELECTION, 0.9 * (1.0 - p)), false, 2.0)
+		TileEffect.Kind.MOVE:  # the path the unit has taken, fading
+			var here := layout.center_of(effect.tile).lerp(layout.center_of(effect.tile2), p)
+			draw_line(layout.center_of(effect.tile), here, Color(TilePalette.SELECTION, 0.55 * (1.0 - p * p)), 3.0)
 		TileEffect.Kind.WAVE:
 			for tile in effect.tiles:
 				var shown := layout.rect_of(tile).intersection(clip_area)

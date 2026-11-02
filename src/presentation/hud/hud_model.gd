@@ -19,7 +19,7 @@ var enemy_turn := false
 var threat_chip := ""
 var loss_chips: Array[String] = []
 var ruin_chip := ""
-## Empty when no unit of the player is selected; else {title, lines}.
+## Empty when no unit of the player is selected; else {title, lines, hp, hp_max, stats [[label, value]]}.
 var unit_panel := {}
 ## The attack buttons of the context panel (hud.md section 4): "Attaquer" with a unit that can
 ## strike, then the targeting and its preview, with "Confirmer" and "Annuler".
@@ -107,7 +107,11 @@ static func _unit_panel(view: FactionView, catalog: DataCatalog, selected: int) 
 		lines.append("A bougé")
 	if view.unit_acted(selected):
 		lines.append("A agi")
-	return {"title": DisplayNames.unit(catalog.units.key(type)), "lines": lines}
+	return {"title": DisplayNames.unit(catalog.units.key(type)), "lines": lines, "hp": view.unit_hp(selected), "hp_max": catalog.units.hp(type),
+			"stats": [["MVT", ProtocolEffects.unit_stat(view, Faction.PLAYER, type, ProtocolEffects.MOVE, catalog)],
+			["ATQ", ProtocolEffects.unit_stat(view, Faction.PLAYER, type, ProtocolEffects.ATTACK, catalog)],
+			["DÉF", ProtocolEffects.unit_stat(view, Faction.PLAYER, type, ProtocolEffects.DEFENSE, catalog)],
+			["VUE", ProtocolEffects.unit_stat(view, Faction.PLAYER, type, ProtocolEffects.VISION, catalog)]]}
 
 
 ## One line of the enemy-turn journal for an event the player was allowed to see, or "".

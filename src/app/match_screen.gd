@@ -56,6 +56,7 @@ var presenter: HudPresenter
 var _gestures := GestureInterpreter.new()
 var _needs := Vector2.ZERO
 var _runner_port: NodeAiRunnerPort
+var _pulsed_unit := -1
 var _pacing: PacingGate
 var _queue: EventQueue
 
@@ -91,6 +92,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	hud.fragment_panel.tick(clock.current())
+	hud.tick_toast(clock.current())
 	if camera != null:
 		if hud.measure() != _needs:  # a container updates its minimum size a frame late
 			relayout()
@@ -199,7 +201,7 @@ func on_tap_tile(tile: int) -> void:
 		return
 	if selected_unit >= 0 and reachable.has(tile):
 		var moved := selected_unit
-		session.pipeline.submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, moved, tile))
+		_submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, moved, tile))
 		select_unit(-1)
 		return
 	var view := FactionView.new(session.state, Faction.PLAYER)
@@ -226,6 +228,11 @@ func select_unit(unit_id: int) -> void:
 	target_action = &"attack"
 	if unit_id >= 0 and session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER:
 		reachable = session.pipeline.check_move_range(FactionView.new(session.state, Faction.PLAYER), Faction.PLAYER, unit_id)
+		if not sequencer.reduced_motion and unit_id != _pulsed_unit:  # a ring on the tile: "this one"
+			var pulse := TileEffect.new(TileEffect.Kind.PULSE, clock.current(), 0.25)
+			pulse.tile = session.state.view().unit_tile(unit_id)
+			renderer.add_effect(pulse)
+	_pulsed_unit = unit_id
 	refresh()
 
 
@@ -240,17 +247,28 @@ func do_action(id: StringName) -> void:
 		return
 	if id == &"capture" and unit >= 0:
 		select_unit(-1)
-		session.pipeline.submit(CaptureCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
+		_submit(CaptureCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
 	elif id == &"upgrade":
 		if unit >= 0:
 			node = FactionView.new(session.state, Faction.PLAYER).node_at(session.state.view().unit_tile(unit))
 		select_unit(-1)
 		if node >= 0:
-			session.pipeline.submit(UpgradeNodeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, node))
+			_submit(UpgradeNodeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, node))
 	elif String(id).begins_with("research:"):
 		research_open = false
-		session.pipeline.submit(ResearchCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, String(id).trim_prefix("research:").to_int()))
+		_submit(ResearchCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, String(id).trim_prefix("research:").to_int()))
 		refresh()
+
+
+## A command of the player: a refusal is told for a moment under the top bar.
+func _submit(command: Command) -> ValidationResult:
+	return _told(session.pipeline.submit(command))
+
+
+func _told(result: ValidationResult) -> ValidationResult:
+	if not result.permitted:
+		hud.show_toast(RefusalText.of(result), clock.current())
+	return result
 
 
 func toggle_research() -> void:
@@ -299,9 +317,9 @@ func confirm_attack() -> void:
 	var action := target_action
 	select_unit(-1)
 	if action == &"attack":
-		session.pipeline.submit(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
+		_submit(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
 	else:
-		session.pipeline.submit(WakeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
+		_submit(WakeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
 
 
 ## Back to the selected unit, nothing struck.
@@ -316,7 +334,7 @@ func end_turn() -> ValidationResult:
 	if session == null:
 		return ValidationResult.refused(Refusal.MATCH_OVER)
 	select_unit(-1)
-	return session.turns.end_player_turn()
+	return _told(session.turns.end_player_turn())
 
 
 ## End or abandon, in this order (ADR-0008 §6): cancel the runner, stop the nodes and

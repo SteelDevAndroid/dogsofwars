@@ -1171,3 +1171,55 @@ func test_the_advice_of_the_first_turns_follows_the_selection_and_the_setting() 
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+func test_a_refused_command_is_told_under_the_top_bar() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.do_action(&"research:3")  # 15 energy needed, 9 held
+
+	assert_bool(screen.hud.toast_panel.visible).is_true()
+	assert_str(screen.hud.toast_label.text).is_equal("Énergie insuffisante (15 requis, 9 disponibles)")
+	screen.hud.tick_toast(screen.clock.current() + 3.0)
+	assert_bool(screen.hud.toast_panel.visible).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_selecting_a_unit_sends_a_ring_once_and_not_with_reduced_motion() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var tile := state.tile_index(2, 1)
+	var rings := func() -> int: return screen.renderer.effects.filter(func(e: TileEffect) -> bool: return e.kind == TileEffect.Kind.PULSE).size()
+
+	screen.on_tap_tile(tile)
+	assert_int(rings.call()).is_equal(1)
+	screen.select_unit(screen.selected_unit)  # a refresh of the same selection: no second ring
+	assert_int(rings.call()).is_equal(1)
+	screen.select_unit(-1)
+	screen.renderer.clear_effects()
+	screen.apply_settings(_settings({GameSettings.REDUCED_MOTION: 1}))
+	screen.on_tap_tile(tile)
+	assert_int(rings.call()).is_equal(0)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_ending_the_turn_out_of_turn_is_told_too() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	assert_bool(screen.end_turn().permitted).is_true()
+	screen.hud.toast_panel.visible = false
+
+	var again := screen.end_turn()
+
+	assert_bool(again.permitted).is_false()
+	assert_bool(screen.hud.toast_panel.visible).is_true()
+	assert_str(screen.hud.toast_label.text).is_not_empty()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
