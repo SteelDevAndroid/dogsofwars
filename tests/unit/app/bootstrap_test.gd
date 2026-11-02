@@ -8,7 +8,8 @@ func _texts(broken: bool = false) -> Dictionary:
 	var texts := {}
 	for name: String in documents:
 		texts[name] = JSON.stringify(documents[name])
-	texts["maps/plaine.json"] = FileAccess.get_file_as_string("res://assets/data/maps/plaine.json")
+	for file in Bootstrap.MAP_FILES:
+		texts[file] = FileAccess.get_file_as_string("res://assets/data/" + file)
 	return texts
 
 
@@ -438,3 +439,67 @@ func test_how_to_play_opens_from_the_menu_and_closes() -> void:
 
 	assert_object(boot._how_to_play_screen).is_null()
 	await _finish(boot)
+
+
+func test_a_new_game_takes_the_map_its_seed_points_at() -> void:
+	var sizes := []
+	for seed_value in [0, 1]:
+		var boot := _boot()
+		boot.forced_seed = seed_value
+		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		sizes.append(boot.match_screen.session.state.width())
+		await _finish(boot)
+
+	assert_array(sizes).is_equal([12, 14])
+
+
+func test_the_volumes_of_the_profile_reach_the_sound_bank_and_every_button_taps() -> void:
+	var files := FaultInjectingFileStore.new()
+	var first := _boot(files)
+	first.profile.set_setting(GameSettings.VOLUME_EFFECTS, 40)
+	first.profile.set_setting(GameSettings.VOLUME_UI, 0)
+	await _finish(first)
+
+	var boot := _boot(files.restarted())
+	assert_array([boot.sounds.volume_of(SoundBank.EFFECTS_BUS), boot.sounds.volume_of(SoundBank.INTERFACE_BUS)]).is_equal([40, 0])
+	boot.show_settings()
+	boot._settings_screen.effects_slider.value = 70
+	assert_int(boot.sounds.volume_of(SoundBank.EFFECTS_BUS)).is_equal(70)
+	boot.sounds.played.clear()
+	(boot.screen as MainMenu).settings_button.pressed.emit()
+	assert_array(boot.sounds.played).contains([&"ui_tap"])
+	boot.sounds.set_volumes(100, 100)
+	await _finish(boot)
+
+
+func test_a_new_game_plays_its_sounds_and_the_end_screen_wins_or_loses() -> void:
+	var boot := _boot()
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	assert_object(boot.match_screen.sounds).is_same(boot.sounds)
+	for frame in 40:  # the opening of the match plays out before a tap counts
+		if boot.match_screen.is_idle():
+			break
+		await await_idle_frame()
+
+	boot.sounds.played.clear()
+	boot.match_screen.on_tap_tile(FactionView.new(boot.match_screen.session.state, Faction.PLAYER).unit_tile(0))
+	assert_array(boot.sounds.played).contains([&"select"])
+	await _finish(boot)
+
+
+func test_the_end_screen_wins_loses_or_stays_silent_for_an_abandon() -> void:
+	var cues := {}
+	for status in [HeaderSlice.END_TURNS_WON, HeaderSlice.END_DOMINATION, HeaderSlice.END_ELIMINATED, HeaderSlice.END_TURNS_LOST, HeaderSlice.END_ABANDONED]:
+		var boot := _boot()
+		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		TurnWrites.finish(boot.match_screen.session.state, status)
+		boot.sounds.played.clear()
+		boot._show_end()
+		cues[status] = Array(boot.sounds.played).filter(func(c: StringName) -> bool: return c == &"victory" or c == &"defeat")
+		await _finish(boot)
+
+	assert_array(cues[HeaderSlice.END_TURNS_WON]).is_equal([&"victory"])
+	assert_array(cues[HeaderSlice.END_DOMINATION]).is_equal([&"victory"])
+	assert_array(cues[HeaderSlice.END_ELIMINATED]).is_equal([&"defeat"])
+	assert_array(cues[HeaderSlice.END_TURNS_LOST]).is_equal([&"defeat"])
+	assert_array(cues[HeaderSlice.END_ABANDONED]).is_empty()

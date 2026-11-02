@@ -12,6 +12,7 @@ on:
       - project.godot
       - .github/workflows/android-export.yml
       - tools/ci/check-export-pack.sh
+      - tools/android/**
   workflow_dispatch:
   push:
     tags: ["v*"]
@@ -48,7 +49,7 @@ jobs:
         run: |
           sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$sdk/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "build-tools;35.0.1" "platforms;android-35"
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "build-tools;35.0.1" "build-tools;36.1.0" "platforms;android-35" "platforms;android-36" "ndk;29.0.14206865"
           echo "ANDROID_SDK=$sdk" >> "$GITHUB_ENV"
       - name: Debug keystore and editor settings
         run: |
@@ -69,6 +70,16 @@ jobs:
           done
       - name: Import project
         run: '"$GODOT" --headless --import'
+      # The Gradle build (the manifest of the template is needed to turn Android Auto Backup on:
+      # the profile is backed up, the match is not, GDD 16 rule 18). The template is unzipped by
+      # hand, as the editor's "Install Android Build Template" does, then patched.
+      - name: Android build template with the backup rules
+        run: |
+          mkdir -p android/build
+          unzip -q "$HOME/.local/share/godot/export_templates/${GODOT_VERSION/-/.}/android_source.zip" -d android/build
+          touch android/build/.gdignore  # the build tree is not game content
+          "$GODOT" --version | cut -d. -f1-4 > android/.build_version
+          python3 -I tools/android/patch_backup.py android/build
       - name: The pack holds the data and runs
         run: bash tools/ci/check-export-pack.sh
       - name: Export the debug APK
@@ -76,7 +87,12 @@ jobs:
           mkdir -p build
           "$GODOT" --headless --export-debug "Android" build/dogs-of-gods-debug.apk
           test -s build/dogs-of-gods-debug.apk
-          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-gods-debug.apk
+          "$ANDROID_SDK"/build-tools/36.1.0/apksigner verify --verbose build/dogs-of-gods-debug.apk
+      - name: The APK carries the backup rules
+        run: |
+          manifest="$("$ANDROID_SDK"/build-tools/36.1.0/aapt2 dump xmltree --file AndroidManifest.xml build/dogs-of-gods-debug.apk)"
+          echo "$manifest" | grep -E "allowBackup|fullBackupContent|dataExtractionRules"
+          [ "$(echo "$manifest" | grep -cE 'allowBackup.*(true|0xffffffff)|fullBackupContent|dataExtractionRules')" -ge 3 ]
       - name: Export the release APK
         if: ${{ env.HAS_RELEASE_KEYSTORE == 'true' }}
         env:
@@ -87,7 +103,7 @@ jobs:
           echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
           "$GODOT" --headless --export-release "Android" build/dogs-of-gods-release.apk
-          "$ANDROID_SDK"/build-tools/35.0.1/apksigner verify --verbose build/dogs-of-gods-release.apk
+          "$ANDROID_SDK"/build-tools/36.1.0/apksigner verify --verbose build/dogs-of-gods-release.apk
       - uses: actions/upload-artifact@v4
         with:
           name: apk

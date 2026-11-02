@@ -1,0 +1,261 @@
+{
+ "schema_version": 1,
+ "id": "marais",
+ "width": 14,
+ "height": 14,
+ "terrain": [
+  "..............",
+  "..............",
+  "...f....f.^...",
+  "....f...f.....",
+  "^^~......f....",
+  "......~.......",
+  "..f..~~..^....",
+  "....^..~~..f..",
+  ".......~......",
+  "....f......~^^",
+  ".....f...f....",
+  "...^.f....f...",
+  "..............",
+  ".............."
+ ],
+ "symmetry": "rotation180",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 1,
+   "y": 2
+  },
+  {
+   "faction": "gardiens",
+   "x": 12,
+   "y": 11
+  }
+ ],
+ "nodes": [
+  {
+   "x": 6,
+   "y": 2,
+   "level": 1
+  },
+  {
+   "x": 7,
+   "y": 11,
+   "level": 1
+  },
+  {
+   "x": 1,
+   "y": 8,
+   "level": 1
+  },
+  {
+   "x": 12,
+   "y": 5,
+   "level": 1
+  },
+  {
+   "x": 10,
+   "y": 1,
+   "level": 1
+  },
+  {
+   "x": 3,
+   "y": 12,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 2,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 1,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 11,
+   "y": 10,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 10,
+   "y": 11,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 10,
+   "y": 9,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 10,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 9,
+   "y": 10,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 11,
+   "y": 8,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 8,
+   "y": 9,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 4,
+   "y": 4,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 9,
+   "y": 9,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": 0
+  },
+  {
+   "x": 3,
+   "y": 6,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 10,
+   "y": 7,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 2
+  },
+  {
+   "x": 7,
+   "y": 4,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 6,
+   "y": 9,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 4
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 4,
+     "y": 0
+    },
+    {
+     "x": 2,
+     "y": 5
+    },
+    {
+     "x": 5,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 9,
+     "y": 13
+    },
+    {
+     "x": 11,
+     "y": 8
+    },
+    {
+     "x": 8,
+     "y": 9
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 10,
+     "y": 5
+    },
+    {
+     "x": 3,
+     "y": 8
+    },
+    {
+     "x": 8,
+     "y": 2
+    }
+   ]
+  }
+ ]
+}

@@ -22,10 +22,10 @@ func _init() -> void:
 	add_child(dim)
 	var box := MenuLayout.column(self)
 	resume_button = _button(box, "Reprendre", func() -> void: resume_requested.emit())
-	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
+	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit(), "reglages")
 	menu_button = _button(box, "Menu (la partie est gardée)", func() -> void: menu_requested.emit())
 	abandon_button = _button(box, "Abandonner", func() -> void: abandon_requested.emit())
 
 
-func _button(parent: Control, text: String, action: Callable) -> Button:
-	return MenuLayout.button(parent, text, action)
+func _button(parent: Control, text: String, action: Callable, icon_name: String = "") -> Button:
+	return MenuLayout.button(parent, text, action, icon_name)

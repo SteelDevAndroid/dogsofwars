@@ -1244,3 +1244,36 @@ func test_the_arrow_points_at_the_first_unit_until_something_is_selected_and_fol
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+func test_a_refusal_is_heard_and_the_enemy_events_play_their_sounds() -> void:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var bank := SoundBank.new()
+	add_child(bank)
+	screen.sounds = bank
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	_settle(screen)
+
+	screen.do_action(&"research:3")  # not enough energy
+	assert_array(bank.played).contains([&"refusal"])
+	assert_bool(screen.sequencer.handlers.any(func(h: PresentationHandler) -> bool: return h is SoundHandler)).is_true()
+	screen.shutdown()
+	bank.free()
+	t.dispose()
+	await await_idle_frame()
+
+
+func test_without_a_sound_bank_the_screen_is_silent_and_works() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.do_action(&"research:3")
+	screen.on_tap_tile(started[2].state.tile_index(2, 1))
+
+	assert_object(screen.sounds).is_null()
+	assert_bool(screen.sequencer.handlers.any(func(h: PresentationHandler) -> bool: return h is SoundHandler)).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

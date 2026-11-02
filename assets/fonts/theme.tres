@@ -1,0 +1,10 @@
+[gd_resource type="Theme" load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Inter-Regular.ttf" id="1"]
+
+[sub_resource type="FontVariation" id="regular"]
+base_font = ExtResource("1")
+opentype_features = {"tnum": 1}
+
+[resource]
+default_font = SubResource("regular")

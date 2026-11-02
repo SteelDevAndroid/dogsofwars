@@ -6,7 +6,8 @@
 class_name Bootstrap
 extends Node
 
-const MAP_FILE := "maps/plaine.json"
+## The maps of the game: a new game takes the one its seed points at (the same seed, the same map).
+const MAP_FILES := ["maps/plaine.json", "maps/marais.json"]
 
 var data_source: DataSource
 var file_store: FileStore
@@ -25,6 +26,8 @@ var match_screen: MatchScreen
 var screen: Control
 
 var _ui: CanvasLayer
+## The sound effects of the whole app (buttons, match); its volumes are settings.
+var sounds: SoundBank
 var _pause: PauseMenu
 var _settings_screen: SettingsScreen
 var _chronicle_screen: ChronicleScreen
@@ -34,6 +37,8 @@ var _ending := false
 
 func _ready() -> void:
 	_ui = CanvasLayer.new()
+	sounds = SoundBank.new()
+	add_child(sounds)
 	_ui.layer = 10  # menus, pause and settings above the match HUD (layer 1)
 	add_child(_ui)
 	data_source = data_source if data_source != null else ResDataSource.new()
@@ -41,6 +46,8 @@ func _ready() -> void:
 	profile = ProfileStore.new(file_store, save_dir)
 	profile.load_profile()
 	_apply_text_scale()  # the settings are read before the first screen (GDD 22 rule 14)
+	_apply_volumes()
+	get_tree().node_added.connect(_on_node_added)
 	get_window().size_changed.connect(_apply_text_scale)
 	app = AppContext.create(data_source, file_store, profile, save_dir)
 	if app.is_ready():
@@ -88,12 +95,13 @@ func show_menu(notice: String = "") -> void:
 
 func start_new_game() -> void:
 	var errors: Array[DataError] = []
-	var map := MapDefinition.parse(data_source.read_text(MAP_FILE), MAP_FILE, app.catalog, errors)
+	var seed_value := forced_seed if forced_seed >= 0 else randi()
+	var map_file: String = MAP_FILES[seed_value % MAP_FILES.size()]
+	var map := MapDefinition.parse(data_source.read_text(map_file), map_file, app.catalog, errors)
 	if map == null:
 		_show_data_errors(errors)
 		return
 	_leave_match()
-	var seed_value := forced_seed if forced_seed >= 0 else randi()
 	var screen_node := _new_match_screen()
 	var session := SessionFactory.new_game(app, map, seed_value, screen_node.ports(EventQueue.new(app.catalog.presentation.value("queue_max"))), screen_node.runner_port(),
 			false, profile.chronicle(), profile.next_match_id(), profile.epoch)
@@ -207,6 +215,7 @@ func _new_match_screen() -> MatchScreen:
 	add_child(node)
 	node.pause_requested.connect(toggle_pause)
 	node.speed_changed.connect(func(speed: int) -> void: profile.set_setting(GameSettings.ENEMY_SPEED, speed))
+	node.sounds = sounds
 	node.apply_settings(profile.settings())
 	return node
 
@@ -220,12 +229,27 @@ func _bind(node: MatchScreen, session: GameSession) -> void:
 
 func _apply_settings() -> void:
 	_apply_text_scale()
+	_apply_volumes()
 	if match_screen != null:
 		match_screen.apply_settings(profile.settings())
 
 
+func _apply_volumes() -> void:
+	sounds.set_volumes(profile.setting(GameSettings.VOLUME_EFFECTS), profile.setting(GameSettings.VOLUME_UI))
+
+
 func _apply_text_scale() -> void:
 	UiScale.apply(get_window(), screen_dpi if screen_dpi >= 0 else DisplayServer.screen_get_dpi(), profile.setting(GameSettings.TEXT_SCALE) / 100.0)
+
+
+## Every button of the app taps (the match HUD, the menus, the settings).
+func _on_node_added(node: Node) -> void:
+	if node is BaseButton and not node.pressed.is_connected(_tap):
+		node.pressed.connect(_tap)
+
+
+func _tap() -> void:
+	sounds.play(&"ui_tap")
 
 
 func _show_end() -> void:
@@ -240,6 +264,9 @@ func _show_end() -> void:
 	end.show_result(state.header.value(HeaderSlice.END_STATUS), ScoreRules.decisive(state, Faction.PLAYER, weights),
 			ScoreRules.decisive(state, Faction.AI, weights), state.ruin_journal.read_by(Faction.PLAYER), quote)
 	end.back_requested.connect(leave_finished_match)
+	var status: int = state.header.value(HeaderSlice.END_STATUS)
+	if status != HeaderSlice.END_ABANDONED:
+		sounds.play(&"victory" if status == HeaderSlice.END_DOMINATION or status == HeaderSlice.END_TURNS_WON else &"defeat")
 	_show(end)
 
 

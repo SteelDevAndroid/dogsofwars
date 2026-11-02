@@ -12,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Self-tests of the CI checks
+      - name: Self-tests of the CI checks and of the Android backup patch
         run: |
           bash tests/unit/ci/test_check_layer_deps.sh
           bash tests/unit/ci/test_check_json_duplicate_keys.sh
+          bash tests/unit/ci/test_patch_backup.sh
       - name: Core never depends on presentation or app, no autoload
         run: bash tools/ci/check-layer-deps.sh src project.godot
       - name: No duplicated key in data files

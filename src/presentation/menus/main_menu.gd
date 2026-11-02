@@ -33,8 +33,8 @@ func _init() -> void:
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
 	cancel_button = _button(box, "Annuler", _reset_confirmation)
 	how_to_play_button = _button(box, "Comment jouer", func() -> void: how_to_play_requested.emit())
-	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit())
-	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
+	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit(), "chronique")
+	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit(), "reglages")
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
 	for primary in [continue_button, new_game_button, confirm_button]:
 		MenuLayout.make_primary(primary)
@@ -73,5 +73,5 @@ func _reset_confirmation() -> void:
 	cancel_button.visible = false
 
 
-func _button(parent: Control, text: String, action: Callable) -> Button:
-	return MenuLayout.button(parent, text, action)
+func _button(parent: Control, text: String, action: Callable, icon_name: String = "") -> Button:
+	return MenuLayout.button(parent, text, action, icon_name)

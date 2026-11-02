@@ -71,17 +71,23 @@ func _init() -> void:
 	for entry in [[turn_label, "ui_icon_tour", "Tour"], [energy_label, "ui_icon_energie", "Énergie"], [fragments_label, "ui_icon_ruine", "Ruines lues"]]:
 		var label: Label = entry[0]
 		label.clip_text = true  # a long text never pushes the buttons off the screen
-		label.add_theme_font_size_override("font_size", 17)
+		label.add_theme_font_size_override("font_size", 15)
 		label.custom_minimum_size = Vector2(0, 32)
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		var stat := _stat(entry[1], label, entry[2])
 		stat.size_flags_stretch_ratio = 1.8 if label == turn_label else 1.0  # "Tour 12 / 30" is the longest
 		bar.add_child(stat)
 	pause_button.text = "Pause"
-	pause_button.custom_minimum_size = Vector2(64, 48)
+	UiIcons.put(pause_button, "pause")
+	pause_button.custom_minimum_size = Vector2(76, 48)
+	pause_button.tooltip_text = "Pause"
+	pause_button.accessibility_name = "Pause"
 	pause_button.pressed.connect(func() -> void: pause_pressed.emit())
 	research_button.text = "Recherche"
+	UiIcons.put(research_button, "recherche")
 	research_button.custom_minimum_size = Vector2(88, 48)
+	research_button.tooltip_text = "Recherche"
+	research_button.accessibility_name = "Recherche"
 	research_button.pressed.connect(func() -> void: research_pressed.emit())
 	top.add_child(bar)
 	score_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,6 +120,7 @@ func _init() -> void:
 	bottom_panel = backdrop(bottom)
 	add_child(bottom_panel)
 	unit_title.add_theme_font_size_override("font_size", 20)
+	unit_title.add_theme_font_override("font", load("res://assets/fonts/Inter-Bold.ttf"))
 	bottom.add_child(unit_title)
 	hp_bar.show_percentage = false
 	hp_bar.custom_minimum_size = Vector2(0, 8)
@@ -135,6 +142,8 @@ func _init() -> void:
 	for pair in [[attack_button, "Attaquer", attack_pressed], [confirm_button, "Confirmer", confirm_pressed], [cancel_button, "Annuler", cancel_pressed]]:
 		var button: Button = pair[0]
 		button.text = pair[1]
+		if button == attack_button:
+			UiIcons.put(button, "attaque")
 		button.custom_minimum_size = Vector2(0, 48)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(func() -> void: (pair[2] as Signal).emit())
@@ -151,13 +160,17 @@ func _init() -> void:
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
 	bottom.add_child(end_turn_button)
 	speed_button.text = "Vitesse : normale"
+	UiIcons.put(speed_button, "vitesse")
 	speed_button.custom_minimum_size = Vector2(0, 40)
 	speed_button.pressed.connect(func() -> void: speed_pressed.emit())
 	bottom.add_child(speed_button)
-	for entry in [[zoom_in_button, "+", "Zoom avant", zoom_in_pressed], [zoom_out_button, "−", "Zoom arrière", zoom_out_pressed],
-			[recenter_button, "◎", "Recentrer", recenter_pressed]]:
+	for entry in [[zoom_in_button, "zoom_plus", "Zoom avant", zoom_in_pressed], [zoom_out_button, "zoom_moins", "Zoom arrière", zoom_out_pressed],
+			[recenter_button, "recentrer", "Recentrer", recenter_pressed]]:
 		var button: Button = entry[0]
-		button.text = entry[1]
+		button.icon = UiIcons.texture(entry[1])
+		button.expand_icon = true
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.add_theme_constant_override("icon_max_width", 28)
 		button.tooltip_text = entry[2]
 		button.accessibility_name = entry[2]
 		button.custom_minimum_size = Vector2(HudLayout.BUTTON, HudLayout.BUTTON)
@@ -187,11 +200,14 @@ func measure() -> Vector2:
 func apply_layout(layout: HudLayout) -> void:
 	bar.vertical = layout.landscape
 	second.vertical = layout.landscape
+	# the narrow rail has room for the icons of these two buttons, not for their words
+	pause_button.text = "" if layout.landscape else "Pause"
+	research_button.text = "" if layout.landscape else "Recherche"
 	# the narrow rail wraps the score on a width it is given; the wide bar clips it instead
 	score_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if layout.landscape else TextServer.AUTOWRAP_OFF
 	score_label.custom_minimum_size.x = HudLayout.RAIL_WIDTH - 24.0 if layout.landscape else 0.0
 	# an autowrapping label asks for a huge height until its width is known: give it one
-	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else 300.0
+	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else maxf(layout.panel_zone.size.x - 24.0, 0.0)
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
 	_place(camera_box, layout.camera_buttons)
@@ -237,6 +253,26 @@ static func _pill(text: String) -> PanelContainer:
 
 
 ## An icon (white SVG, tinted by the label's colour) beside a value; the whole box is named for the accessibility tree.
+## An alert chip: its icon, then its words (the icon says the kind, the words say what).
+static func _chip(icon_name: String, text: String) -> HBoxContainer:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	var icon := TextureRect.new()
+	icon.texture = UiIcons.texture(icon_name)
+	icon.custom_minimum_size = Vector2(UiIcons.SIZE, UiIcons.SIZE)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(icon)
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 14)  # a chip is a note: the rail holds "Ruine repérée" beside its icon
+	label.tooltip_text = text
+	box.add_child(label)
+	return box
+
+
 static func _stat(icon_name: String, label: Label, name: String) -> HBoxContainer:
 	var box := HBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -244,8 +280,8 @@ static func _stat(icon_name: String, label: Label, name: String) -> HBoxContaine
 	box.tooltip_text = name
 	box.accessibility_name = name
 	var icon := TextureRect.new()
-	icon.texture = load("res://assets/art/ui/%s.svg" % icon_name)
-	icon.custom_minimum_size = Vector2(22, 22)
+	icon.texture = UiIcons.texture(icon_name.trim_prefix("ui_icon_"))
+	icon.custom_minimum_size = Vector2(UiIcons.SIZE, UiIcons.SIZE)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -284,16 +320,15 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	for child in alert_row.get_children():
 		alert_row.remove_child(child)
 		child.queue_free()
-	var chips: Array[String] = []
+	var chips: Array = []  # [icon, text]
 	if model.threat_chip != "":
-		chips.append(model.threat_chip)
-	chips.append_array(model.loss_chips)
+		chips.append(["menace", model.threat_chip])
+	for loss in model.loss_chips:
+		chips.append(["perte", loss])
 	if model.ruin_chip != "":
-		chips.append(model.ruin_chip)
+		chips.append(["ruine", model.ruin_chip])
 	for chip in chips.slice(0, 2):  # two chips at most, the rest folded into a counter (section 3.2)
-		var label := Label.new()
-		label.text = chip
-		alert_row.add_child(label)
+		alert_row.add_child(_chip(chip[0], chip[1]))
 	if chips.size() > 2:
 		var more := Label.new()
 		more.text = "+%d" % (chips.size() - 2)
@@ -328,6 +363,9 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	for action in model.extra_actions:
 		var button := Button.new()
 		button.text = action.label
+		button.icon = UiIcons.of_action(action.id)
+		button.expand_icon = button.icon != null
+		button.add_theme_constant_override("icon_max_width", UiIcons.SIZE)
 		button.disabled = not action.enabled
 		button.custom_minimum_size = Vector2(0, 48)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL

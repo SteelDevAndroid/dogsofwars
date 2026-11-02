@@ -101,3 +101,63 @@ func test_the_panel_shows_the_text_of_the_fragment_from_the_pool() -> void:
 	assert_str(hud.fragment_panel.body_label.text).is_equal("On allume les balises.")
 	assert_str(hud.fragment_panel.source_label.text).is_equal("Journal")
 	_free(set_up)
+
+
+func _turn(faction: int, turn: int) -> TurnStartedEvent:
+	return TurnStartedEvent.new(turn, faction, HeaderSlice.PHASE_PLAYER if faction == Faction.PLAYER else HeaderSlice.PHASE_ENEMY_EXECUTION)
+
+
+func test_the_enemy_phase_is_summed_up_when_the_players_turn_begins() -> void:
+	var set_up := _setup()
+	var presenter: HudPresenter = set_up[0]
+	var hud: Hud = set_up[1]
+	var context := SequenceContext.new(2.0, set_up[4])
+
+	presenter.handle(_turn(Faction.AI, 1), context)
+	presenter.handle(UnitDestroyedEvent.new(Faction.PLAYER, 3, 5, 9), context)
+	presenter.handle(UnitDestroyedEvent.new(Faction.PLAYER, 4, 6, 9), context)
+	presenter.handle(UnitDestroyedEvent.new(Faction.AI, 9, 7, 3), context)
+	presenter.handle(NodeCapturedEvent.new(1, Faction.AI, Faction.PLAYER, 8), context)
+	presenter.handle(NodeCapturedEvent.new(2, Faction.PLAYER, Faction.AI, 9), context)  # the player's own capture is not the enemy's
+	presenter.handle(IntentionAnnouncedEvent.new(1, 9, 0, 3, 5, 0, 0), context)
+	presenter.handle(_turn(Faction.PLAYER, 2), context)
+
+	assert_str(presenter.summary).is_equal("Tour ennemi : 2 drones perdus · 1 Gardien détruit · 1 nœud pris par l'ennemi · 1 menace annoncée")
+	assert_bool(hud.toast_panel.visible).is_true()
+	assert_str(hud.toast_label.text).is_equal(presenter.summary)
+	hud.tick_toast(2.0 + HudPresenter.SUMMARY_SECONDS)
+	assert_bool(hud.toast_panel.visible).is_false()
+	_free(set_up)
+
+
+func test_a_quiet_enemy_phase_is_said_so_and_the_first_turn_says_nothing() -> void:
+	var set_up := _setup()
+	var presenter: HudPresenter = set_up[0]
+	var hud: Hud = set_up[1]
+	var context := SequenceContext.new(2.0, set_up[4])
+
+	presenter.handle(_turn(Faction.PLAYER, 1), context)  # no enemy phase before it
+	assert_str(presenter.summary).is_empty()
+	assert_bool(hud.toast_panel.visible).is_false()
+	presenter.handle(_turn(Faction.AI, 1), context)
+	presenter.handle(_turn(Faction.PLAYER, 2), context)
+
+	assert_str(presenter.summary).is_equal("Tour ennemi : rien à signaler")
+	_free(set_up)
+
+
+func test_the_counts_start_over_every_enemy_phase_and_agree_in_number() -> void:
+	var set_up := _setup()
+	var presenter: HudPresenter = set_up[0]
+	var context := SequenceContext.new(2.0, set_up[4])
+	presenter.handle(_turn(Faction.AI, 1), context)
+	presenter.handle(UnitDestroyedEvent.new(Faction.PLAYER, 3, 5, 9), context)
+	presenter.handle(_turn(Faction.PLAYER, 2), context)
+	assert_str(presenter.summary).is_equal("Tour ennemi : 1 drone perdu")
+
+	presenter.handle(_turn(Faction.AI, 2), context)
+	presenter.handle(_turn(Faction.PLAYER, 3), context)
+
+	assert_str(presenter.summary).is_equal("Tour ennemi : rien à signaler")
+	assert_str(HudPresenter.enemy_phase_line(0, 2, 2, 2)).is_equal("Tour ennemi : 2 Gardiens détruits · 2 nœuds pris par l'ennemi · 2 menaces annoncées")
+	_free(set_up)
