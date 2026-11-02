@@ -138,6 +138,21 @@ static func known_node_level(state: GameState, faction: int, node_id: int) -> in
 	return 0
 
 
+## Turn the owner acquired a node: real when the node is fully seen (own or in view),
+## -1 otherwise, like the level.
+static func known_node_since_turn(state: GameState, faction: int, node_id: int) -> int:
+	if not can_see_node(state, state.view_cache, faction, node_id):
+		return -1
+	return state.nodes.since_turn_of(state.nodes.find_row(node_id))
+
+
+## Turn of a node's last upgrade, same visibility as the level; -1 when never or unseen.
+static func known_node_upgraded_turn(state: GameState, faction: int, node_id: int) -> int:
+	if not can_see_node(state, state.view_cache, faction, node_id):
+		return -1
+	return state.nodes.upgraded_turn_of(state.nodes.find_row(node_id))
+
+
 ## Drawn ruins are marked for the player from turn 1 (GDD 5 rule 15); the AI does
 ## not know them (ADR-0005 §6).
 static func knows_ruins(faction: int) -> bool:

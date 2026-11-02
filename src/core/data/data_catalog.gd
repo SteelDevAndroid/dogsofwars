@@ -81,6 +81,10 @@ static func _cross_check(built: Dictionary, errors: Array[DataError]) -> void:
 		errors.append(DataError.new("energie.json", "income_by_level",
 			"%d levels, noeuds.json has %d" % [energy.level_count(), nodes.max_level()]))
 	var tree: ProtocolTree = built["protocoles.json"]
+	for level in range(1, nodes.max_level()):
+		if nodes.upgrade_price(level) > energy.max_stock():
+			errors.append(DataError.new("noeuds.json", "upgrade_price[%d]" % (level - 1),
+				"%d above the energy cap %d" % [nodes.upgrade_price(level), energy.max_stock()]))
 	var units: UnitTypes = built["units.json"]
 	_check_wake_prices(built["reveil.json"], units, energy, errors)
 	for effect in tree.effect_count():

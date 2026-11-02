@@ -190,6 +190,8 @@ func filtered_copy(faction: int) -> GameState:
 			kept_nodes.append(row)
 			copy.nodes._node_owner[row] = VisionService.known_node_owner(self, faction, node_id)
 			copy.nodes._node_level[row] = VisionService.known_node_level(self, faction, node_id)
+			copy.nodes._node_since_turn[row] = VisionService.known_node_since_turn(self, faction, node_id)
+			copy.nodes._node_upgraded_turn[row] = VisionService.known_node_upgraded_turn(self, faction, node_id)
 	copy.nodes.keep_rows(kept_nodes)
 
 	if not VisionService.knows_ruins(faction):
@@ -343,6 +345,10 @@ func validate() -> PackedStringArray:
 			errors.append("node row %d: tile %d off the map" % [row, nodes.tile_of(row)])
 		if nodes.owner_of(row) >= nf and nodes.owner_of(row) != Faction.NONE:
 			errors.append("node row %d: owner %d" % [row, nodes.owner_of(row)])
+		# GDD 11 rule 17: the tile of a node has the node's owner.
+		elif nodes.tile_of(row) >= 0 and nodes.tile_of(row) < tiles \
+				and map.owner_at(nodes.tile_of(row)) != nodes.owner_of(row):
+			errors.append("node row %d: owner %d but its tile belongs to %d" % [row, nodes.owner_of(row), map.owner_at(nodes.tile_of(row))])
 	for row in ruins.row_count():
 		if ruins.tile_of(row) < 0 or ruins.tile_of(row) >= tiles:
 			errors.append("ruin row %d: tile %d off the map" % [row, ruins.tile_of(row)])

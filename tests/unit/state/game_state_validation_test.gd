@@ -64,3 +64,13 @@ func test_a_neutral_dormant_is_valid_but_a_neutral_awake_unit_is_not() -> void:
 
 	assert_array(dormant.validate()).is_empty()
 	assert_array(awake.validate()).has_size(1)
+
+
+func test_the_tile_of_a_node_must_have_the_nodes_owner() -> void:
+	var state := StateFactory.minimal()
+	GameStateSetup.add_node(state, state.tile_index(4, 4), Faction.PLAYER, 1)
+	assert_array(state.validate()).has_size(1)
+
+	GameStateSetup.set_tile_owner(state, state.tile_index(4, 4), Faction.PLAYER)
+
+	assert_array(state.validate()).is_empty()

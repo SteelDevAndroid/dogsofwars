@@ -99,3 +99,57 @@ func test_filtered_copy_leaves_the_real_state_untouched() -> void:
 
 		assert_array(state.to_bytes()).is_equal(before)
 		assert_bool(is_same(state.filtered_copy(Faction.AI).terrain, state.terrain)).is_false()
+
+
+## Pillar 5: a node the player saw neutral, now out of sight, is taken by the AI. The
+## player must not learn it: owner and tile owner stay what it last saw, the level is
+## not remembered. Both the faction view and the filtered copy are checked.
+func test_a_capture_out_of_view_is_not_learned() -> void:
+	var state := MapBuilder.state(PackedStringArray(["........"]))
+	var scout := MapBuilder.unit(state, 0, Faction.PLAYER, 0, 0)
+	var node_tile := state.tile_index(4, 0)
+	var node_id := GameStateSetup.add_node(state, node_tile, Faction.NONE, 2)
+	var ctx := StateFactory.vision_context(state)
+	VisionService.setup(state, ctx)
+	assert_int(VisionService.tile_state(state, Faction.PLAYER, node_tile)).is_equal(VisionService.VISIBLE)
+	UnitWrites.destroy(state, scout)
+	VisionService.recompute(state, ctx)
+	assert_int(VisionService.tile_state(state, Faction.PLAYER, node_tile)).is_equal(VisionService.EXPLORED)
+
+	NodeWrites.capture(state, node_id, Faction.AI)
+	TerritoryRules.recompute(state, CatalogFactory.standard().nodes, MapSlice.CAUSE_CAPTURE)
+	VisionService.recompute(state, ctx)
+
+	assert_int(state.nodes.owner_of(state.nodes.find_row(node_id))).is_equal(Faction.AI)
+	for view: StateView in [FactionView.new(state, Faction.PLAYER), state.filtered_copy(Faction.PLAYER).view()]:
+		assert_int(view.node_owner(node_id)).is_equal(Faction.NONE)
+		assert_int(view.node_level(node_id)).is_equal(0)
+		assert_int(view.tile_owner(node_tile)).is_equal(Faction.NONE)
+		assert_int(view.node_since_turn(node_id)).is_equal(-1)
+		assert_int(view.node_upgraded_turn(node_id)).is_equal(-1)
+
+
+## The AI raises a node it owns while the player cannot see it: the player learns neither
+## the level nor the turns of the node (an upgrade is a hidden action, pillar 5).
+func test_an_upgrade_out_of_view_is_not_learned() -> void:
+	var state := MapBuilder.state(PackedStringArray(["........"]))
+	var scout := MapBuilder.unit(state, 0, Faction.PLAYER, 0, 0)
+	var node_tile := state.tile_index(4, 0)
+	var node_id := GameStateSetup.add_node(state, node_tile, Faction.AI, 1)
+	GameStateSetup.set_tile_owner(state, node_tile, Faction.AI)
+	GameStateSetup.set_turn(state, 5)
+	var ctx := StateFactory.vision_context(state)
+	VisionService.setup(state, ctx)
+	UnitWrites.destroy(state, scout)
+	VisionService.recompute(state, ctx)
+	assert_int(VisionService.tile_state(state, Faction.PLAYER, node_tile)).is_equal(VisionService.EXPLORED)
+
+	NodeWrites.upgrade(state, node_id)
+
+	var row := state.nodes.find_row(node_id)
+	assert_array([state.nodes.level_of(row), state.nodes.upgraded_turn_of(row)]).is_equal([2, 5])
+	for view: StateView in [FactionView.new(state, Faction.PLAYER), state.filtered_copy(Faction.PLAYER).view()]:
+		assert_int(view.node_owner(node_id)).is_equal(Faction.AI)
+		assert_int(view.node_level(node_id)).is_equal(0)
+		assert_int(view.node_upgraded_turn(node_id)).is_equal(-1)
+		assert_int(view.node_since_turn(node_id)).is_equal(-1)

@@ -32,6 +32,12 @@ const NO_ADJACENT_DRONE := &"AUCUN_DRONE_ADJACENT"
 const ALREADY_ACTED := &"DÉJÀ_AGI"
 const NOT_ON_A_NODE := &"PAS_SUR_UN_NŒUD"
 const NODE_ALREADY_OWNED := &"NŒUD_DÉJÀ_POSSÉDÉ"
+## MONTER_NŒUD (GDD 11 rule 11).
+const UNKNOWN_NODE := &"NŒUD_INCONNU"
+const NODE_NOT_OWNED := &"NŒUD_NON_POSSÉDÉ"
+const NODE_ACQUIRED_THIS_TURN := &"NŒUD_ACQUIS_CE_TOUR"
+const MAX_LEVEL := &"NIVEAU_MAX"
+const ALREADY_UPGRADED := &"DÉJÀ_MONTÉ"
 const ATTACKER_WITHOUT_ATTACK := &"ATTAQUANT_SANS_ATTAQUE"
 ## Same code, no parameter, for a hidden, unknown, destroyed or stale target (GDD 5 rule 18).
 const TARGET_NOT_VISIBLE := &"CIBLE_NON_VISIBLE"

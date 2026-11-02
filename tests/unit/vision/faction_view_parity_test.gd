@@ -45,7 +45,7 @@ func _first_divergence(view: StateView, copy_view: StateView, state: GameState) 
 				return "has_protocol(%d, %d)" % [f, protocol]
 	var families := [
 		[HeaderSlice.NEXT_UNIT_ID, [&"unit_tile", &"unit_faction", &"unit_hp", &"unit_type", &"unit_moved", &"unit_acted", &"unit_asleep"]],
-		[HeaderSlice.NEXT_NODE_ID, [&"node_tile", &"node_owner", &"node_level"]],
+		[HeaderSlice.NEXT_NODE_ID, [&"node_tile", &"node_owner", &"node_level", &"node_since_turn", &"node_upgraded_turn"]],
 		[HeaderSlice.NEXT_RUIN_ID, [&"ruin_tile"]],
 	]
 	for family: Array in families:

@@ -15,6 +15,9 @@ const CAUSE_NONE := 0
 const CAUSE_CAPTURE := 1
 const CAUSE_COMBAT := 2
 const CAUSE_RUIN := 3
+## A node upgrade widened the territory. GDD 15 lists MONTÉE as a cause of recolouring
+## while GDD 1 names only capture, combat and ruin: GDD SYNC.
+const CAUSE_UPGRADE := 4
 
 const COLUMNS := [
 	[&"_tile_owner", TYPE_PACKED_BYTE_ARRAY],

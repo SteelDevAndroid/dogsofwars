@@ -52,6 +52,14 @@ func tile_of(row: int) -> int:
 	return _node_tile[row]
 
 
+func since_turn_of(row: int) -> int:
+	return _node_since_turn[row]
+
+
+func upgraded_turn_of(row: int) -> int:
+	return _node_upgraded_turn[row]
+
+
 func owner_of(row: int) -> int:
 	return _node_owner[row]
 

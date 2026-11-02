@@ -24,6 +24,7 @@ static func standard(p_catalog: DataCatalog, p_vision: VisionContext) -> RuleTab
 	handlers[CommandType.ATTACK] = AttackHandler.new()
 	handlers[CommandType.CAPTURE] = CaptureHandler.new()
 	handlers[CommandType.WAKE] = WakeHandler.new()
+	handlers[CommandType.UPGRADE_NODE] = UpgradeNodeHandler.new()
 	handlers[CommandType.BEGIN_TURN] = BeginTurnHandler.new()
 	handlers[CommandType.END_TURN] = EndTurnHandler.new()
 	handlers[CommandType.RESEARCH] = ResearchHandler.new()

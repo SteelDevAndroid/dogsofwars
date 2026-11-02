@@ -185,3 +185,16 @@ func test_wake_prices_are_cross_checked_with_the_units_and_the_energy_cap() -> v
 		"reveil.json: prices[1].price: 6 above the energy cap 5",
 		"reveil.json: prices[4].price: 8 above the energy cap 5",
 		"reveil.json: prices: no price for pack type ouvrier"])
+
+
+func test_upgrade_prices_must_be_one_per_upgrade_and_fit_the_energy_cap() -> void:
+	var docs := CatalogFactory.documents()
+	docs["noeuds.json"]["upgrade_price"] = [12]
+
+	assert_array(_errors_of(docs)).contains(["noeuds.json: upgrade_price: 1 prices, expected one per upgrade (2)"])
+
+	var capped := CatalogFactory.documents()
+	capped["energie.json"]["max"] = 15
+	capped["energie.json"]["start"] = 5
+
+	assert_array(_errors_of(capped)).contains(["noeuds.json: upgrade_price[1]: 20 above the energy cap 15"])

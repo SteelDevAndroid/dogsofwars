@@ -17,6 +17,10 @@ const TERRAIN_CODES := 4
 ## One live unit in DESTROY_ONE_IN is destroyed, to leave dead rows.
 const DESTROY_ONE_IN := 5
 const EXTRA_DRAWS := 8
+## A unit is lost after the vision setup with a chance of one in LOST_AFTER_SETUP_ONE_IN.
+const LOST_AFTER_SETUP_ONE_IN := 3
+## A node below the top level was upgraded this turn with a chance of one in NODE_UPGRADED_ONE_IN.
+const NODE_UPGRADED_ONE_IN := 3
 ## Each protocol is acquired by a faction with a chance of one in PROTOCOL_ONE_IN.
 const PROTOCOL_ONE_IN := 3
 
@@ -76,7 +80,11 @@ static func _random_state(dice: _Dice) -> GameState:
 		GameStateSetup.set_tile_owner(state, tile, _owner_or_none(dice))
 	var free := PackedInt32Array(range(state.tile_count()))
 	for k in dice.roll(GameState.MAX_NODES + 1):
-		GameStateSetup.add_node(state, _take(free, dice), _owner_or_none(dice), 1 + dice.roll(MAX_NODE_LEVEL))
+		# GDD 11 rule 17: the tile of a node has the node's owner (the fog memory reads the tile).
+		var node_tile := _take(free, dice)
+		var node_owner := _owner_or_none(dice)
+		GameStateSetup.add_node(state, node_tile, node_owner, 1 + dice.roll(MAX_NODE_LEVEL))
+		GameStateSetup.set_tile_owner(state, node_tile, node_owner)
 	for zone in RUIN_COUNT:
 		GameStateSetup.add_ruin(state, _take(free, dice), zone, dice.roll(FACTIONS))
 	for k in dice.roll(mini(GameState.MAX_UNITS, free.size()) + 1):
@@ -100,9 +108,20 @@ static func _random_state(dice: _Dice) -> GameState:
 		if researched >= 0 and not state.protocols.has(faction, researched):
 			ResearchRules.start(state, faction, researched, catalog.protocols.duration(researched))
 	GameStateSetup.set_turn(state, dice.roll(GameState.MAX_TURN + 1))
+	# Some nodes were upgraded this turn, through the nodes system's own write function.
+	for node_id in state.view().node_ids():
+		if state.view().node_level(node_id) < MAX_NODE_LEVEL and dice.roll(NODE_UPGRADED_ONE_IN) == 0:
+			NodeWrites.upgrade(state, node_id)
 	for k in dice.roll(EXTRA_DRAWS):
 		state.draw(GameState.DRAW_MAX)
-	VisionService.setup(state, vision_context(state))
+	var ctx := vision_context(state)
+	VisionService.setup(state, ctx)
+	# A history: units lost after the setup leave explored tiles that are no longer
+	# visible, so nodes known but out of view exist (the fog masks are then compared).
+	for unit_id in state.view().unit_ids():
+		if dice.roll(LOST_AFTER_SETUP_ONE_IN) == 0:
+			UnitWrites.destroy(state, unit_id)
+	VisionService.recompute(state, ctx)
 	return state
 
 

@@ -136,6 +136,18 @@ func node_at(tile: int) -> int:
 	return -1
 
 
+## Turn the current owner acquired the node, -1 when the id is unknown.
+func node_since_turn(node_id: int) -> int:
+	var row := _state.nodes.find_row(node_id)
+	return -1 if row < 0 else _state.nodes.since_turn_of(row)
+
+
+## Turn of the node's last upgrade, -1 when it never was upgraded or the id is unknown.
+func node_upgraded_turn(node_id: int) -> int:
+	var row := _state.nodes.find_row(node_id)
+	return -1 if row < 0 else _state.nodes.upgraded_turn_of(row)
+
+
 ## Level of a node, -1 when the id is unknown.
 func node_level(node_id: int) -> int:
 	var row := _state.nodes.find_row(node_id)

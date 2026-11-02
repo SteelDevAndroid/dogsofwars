@@ -39,7 +39,7 @@ static func documents() -> Dictionary:
 			_unit(6, "bastion", "gardiens", 14, 2, 2, 1, 2),
 		]},
 		"brouillard.json": {"schema_version": 1, "node_view_min": 2, "mountain_view_bonus": 1},
-		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3]},
+		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3], "upgrade_price": [12, 20]},
 		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0], "defense_class": [0, 1, 2, 0]},
 		"reveil.json": {"schema_version": 1, "prices": [
 			{"type": "eclaireur", "price": 4}, {"type": "ouvrier", "price": 5},

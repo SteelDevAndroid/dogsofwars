@@ -23,6 +23,8 @@ static func decode(values: PackedInt64Array) -> Command:
 			return BeginTurnCommand.from_params(values[1], values[2], rest)
 		CommandType.END_TURN:
 			return EndTurnCommand.from_params(values[1], values[2], rest)
+		CommandType.UPGRADE_NODE:
+			return UpgradeNodeCommand.from_params(values[1], values[2], rest)
 		CommandType.WAKE:
 			return WakeCommand.from_params(values[1], values[2], rest)
 		CommandType.ATTACK:

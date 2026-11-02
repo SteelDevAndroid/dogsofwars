@@ -105,6 +105,14 @@ func node_level(node_id: int) -> int:
 	return VisionService.known_node_level(_state, _faction, node_id)
 
 
+func node_since_turn(node_id: int) -> int:
+	return VisionService.known_node_since_turn(_state, _faction, node_id)
+
+
+func node_upgraded_turn(node_id: int) -> int:
+	return VisionService.known_node_upgraded_turn(_state, _faction, node_id)
+
+
 func ruin_ids() -> PackedInt32Array:
 	return super() if VisionService.knows_ruins(_faction) else PackedInt32Array()
 
