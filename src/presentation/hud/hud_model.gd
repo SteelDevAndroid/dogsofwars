@@ -18,11 +18,19 @@ var loss_chips: Array[String] = []
 var ruin_chip := ""
 ## Empty when no unit of the player is selected; else {title, lines}.
 var unit_panel := {}
+## The attack buttons of the context panel (hud.md section 4): "Attaquer" with a unit that can
+## strike, then the targeting and its preview, with "Confirmer" and "Annuler".
+var can_attack := false
+var targeting := false
+var confirming := false
+var preview_text := ""
 var journal: Array[String] = []
 
 
 ## `locked`: a player lock is up (attack animation, fragment panel). `selected`: unit id or -1.
-static func build(state: GameState, catalog: DataCatalog, locked: bool, selected: int, journal_lines: Array[String]) -> HudModel:
+## `actions`: {"can_attack": bool, "targeting": bool, "preview": CombatPreview or null}.
+static func build(state: GameState, catalog: DataCatalog, locked: bool, selected: int, journal_lines: Array[String],
+		actions: Dictionary = {}) -> HudModel:
 	var model := HudModel.new()
 	var phase := state.header.value(HeaderSlice.PHASE)
 	var view := FactionView.new(state, Faction.PLAYER)
@@ -50,6 +58,11 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 			break
 	model.unit_panel = _unit_panel(view, catalog, selected)
 	model.journal = journal_lines.duplicate()
+	var preview: CombatPreview = actions.get("preview")
+	model.confirming = preview != null and not locked
+	model.targeting = actions.get("targeting", false) and not locked
+	model.preview_text = preview.text() if preview != null else ""
+	model.can_attack = actions.get("can_attack", false) and not locked and not model.targeting and not model.confirming
 	return model
 
 

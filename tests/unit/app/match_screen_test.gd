@@ -395,3 +395,218 @@ func test_taps_are_ignored_under_a_player_lock() -> void:
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+## A started match with an enemy Chasseur placed next to the player's Assaut (3, 2), seen.
+func _duel() -> Array:
+	var started := _started()
+	var state: GameState = started[2].state
+	var enemy := GameStateSetup.add_unit(state, 5, Faction.AI, state.tile_index(4, 2), 8)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+	started[1].refresh(true)
+	return started + [enemy]
+
+
+func test_attack_targeting_shows_the_preview_then_strikes_on_confirmation() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var enemy: int = started[3]
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	screen.on_tap_tile(state.tile_index(3, 2))
+	assert_bool(screen.hud.attack_button.visible).is_true()
+
+	screen.hud.attack_button.pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.TARGETING)
+	assert_array(Array(screen.target_tiles)).is_equal([state.tile_index(4, 2)])
+	assert_bool(screen.reachable.is_empty()).is_true()
+	assert_bool(screen.hud.cancel_button.visible).is_true()
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.CONFIRMING)
+	assert_str(screen.hud.preview_label.text).starts_with("Inflige −")
+	assert_bool(screen.hud.confirm_button.visible).is_true()
+	assert_int(screen.renderer.chosen_target).is_equal(state.tile_index(4, 2))
+	var expected := screen.preview.target_hp_after
+	var revision := state.revision()
+	assert_int(state.view().unit_hp(enemy)).is_equal(8)  # nothing struck yet
+
+	screen.hud.confirm_button.pressed.emit()
+
+	assert_int(state.revision()).is_equal(revision + 1)
+	assert_int(state.view().unit_hp(enemy)).is_equal(expected)  # the preview was the real blow
+	assert_bool(state.view().unit_acted(assault)).is_true()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.IDLE)
+	assert_bool(screen.hud.attack_button.visible).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_second_tap_on_the_chosen_target_strikes() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	assert_int(state.view().unit_hp(started[3])).is_less(8)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_elsewhere_or_cancelling_leaves_targeting_without_a_blow() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+
+	screen.on_tap_tile(state.tile_index(0, 11))
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	assert_bool(screen.reachable.size() > 0).is_true()  # the move range is back
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+	screen.hud.cancel_button.pressed.emit()
+
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	assert_int(screen.target_unit).is_equal(-1)
+	assert_int(state.view().unit_hp(started[3])).is_equal(8)
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_attack_button_needs_a_target_in_range_and_an_unacted_unit() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+
+	screen.on_tap_tile(state.tile_index(3, 2))
+	assert_bool(screen.hud.attack_button.visible).is_false()  # nobody to strike
+	screen.begin_targeting()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+	var duel := _duel()
+	var acted: MatchScreen = duel[1]
+	UnitWrites.set_acted(duel[2].state, duel[2].state.view().unit_at(duel[2].state.tile_index(3, 2)))
+	acted.on_tap_tile(duel[2].state.tile_index(3, 2))
+	assert_bool(acted.hud.attack_button.visible).is_false()
+	acted.shutdown()
+	duel[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_strike_locks_the_player_while_it_plays_then_frees_them() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+	screen.confirm_attack()
+
+	screen.sequencer.advance()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	_settle(screen)
+
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _finger(screen: MatchScreen, index: int, phase: int, position: Vector2) -> void:
+	screen._on_pointer(PointerEvent.new(index, phase, position))
+
+
+func test_the_camera_starts_on_the_first_unit_of_the_player_and_drives_the_renderer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var first := state.view().unit_tile(0)
+
+	assert_bool(screen.camera.is_visible(first)).is_true()
+	assert_float(screen.renderer.layout.tile_size).is_equal(screen.camera.tile_size)
+	assert_vector(screen.renderer.layout.origin).is_equal(screen.camera.layout().origin)
+	assert_vector(screen.input_surface.size).is_equal(screen.camera.area.size)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_drag_scrolls_a_pinch_zooms_and_a_touch_taps() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var centre := screen.camera.center
+	var size := screen.camera.tile_size
+
+	_finger(screen, 0, PointerEvent.Phase.DOWN, Vector2(200, 300))
+	_finger(screen, 0, PointerEvent.Phase.MOVE, Vector2(260, 300))
+	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(260, 300))
+	assert_float(screen.camera.center.x).is_less(centre.x)  # the map followed the finger to the right
+	screen._process(0.0)
+	assert_float(screen.renderer.layout.origin.x).is_equal_approx(screen.camera.layout().origin.x, 0.001)
+
+	_finger(screen, 0, PointerEvent.Phase.DOWN, Vector2(150, 300))
+	_finger(screen, 1, PointerEvent.Phase.DOWN, Vector2(250, 300))
+	_finger(screen, 1, PointerEvent.Phase.MOVE, Vector2(350, 300))
+	assert_float(screen.camera.tile_size).is_greater(size)
+	_finger(screen, 1, PointerEvent.Phase.UP, Vector2(350, 300))
+	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(150, 300))
+
+	var unit_tile := state.view().unit_tile(state.view().unit_at(state.tile_index(2, 1)))
+	screen.camera.ensure_visible(unit_tile)
+	screen._process(0.0)
+	var at := screen.camera.tile_to_screen(unit_tile)
+	_finger(screen, 0, PointerEvent.Phase.DOWN, at)
+	_finger(screen, 0, PointerEvent.Phase.UP, at)
+	assert_bool(screen.selected_unit >= 0).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_camera_of_the_player_comes_back_after_the_enemy_turn() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	screen.camera.scroll(Vector2(-90, -40))
+	var before := screen.camera.center
+	var size := screen.camera.tile_size
+
+	screen.end_turn()
+	_frames(screen, 2000)
+
+	assert_int(started[2].state.turn()).is_equal(2)
+	assert_vector(screen.camera.center).is_equal(before)
+	assert_float(screen.camera.tile_size).is_equal(size)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_confirming_without_a_chosen_target_does_nothing() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	var selected := screen.selected_unit
+
+	screen.confirm_attack()
+
+	assert_int(screen.selected_unit).is_equal(selected)
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

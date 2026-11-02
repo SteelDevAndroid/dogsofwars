@@ -8,6 +8,9 @@ extends Control
 signal end_turn_pressed
 signal pause_pressed
 signal speed_pressed
+signal attack_pressed
+signal confirm_pressed
+signal cancel_pressed
 
 var turn_label := Label.new()
 var energy_label := Label.new()
@@ -22,6 +25,10 @@ var pause_button := Button.new()
 var speed_button := Button.new()
 var notice_label := Label.new()
 var fragment_panel := FragmentPanel.new()
+var preview_label := Label.new()
+var attack_button := Button.new()
+var confirm_button := Button.new()
+var cancel_button := Button.new()
 
 
 func _init() -> void:
@@ -51,6 +58,16 @@ func _init() -> void:
 	bottom.add_child(unit_title)
 	bottom.add_child(unit_lines)
 	bottom.add_child(journal_label)
+	bottom.add_child(preview_label)
+	var actions := HBoxContainer.new()
+	for pair in [[attack_button, "Attaquer", attack_pressed], [confirm_button, "Confirmer", confirm_pressed], [cancel_button, "Annuler", cancel_pressed]]:
+		var button: Button = pair[0]
+		button.text = pair[1]
+		button.custom_minimum_size = Vector2(0, 48)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.pressed.connect(func() -> void: (pair[2] as Signal).emit())
+		actions.add_child(button)
+	bottom.add_child(actions)
 	end_turn_button.text = "Fin du tour"
 	end_turn_button.custom_minimum_size = Vector2(0, 50)
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
@@ -90,3 +107,7 @@ func show_model(model: HudModel, notice: String = "") -> void:
 	unit_title.text = "" if model.unit_panel.is_empty() else model.unit_panel["title"]
 	unit_lines.text = "" if model.unit_panel.is_empty() else "\n".join(model.unit_panel["lines"])
 	journal_label.text = "\n".join(model.journal) if model.enemy_turn else ""
+	preview_label.text = model.preview_text
+	attack_button.visible = model.can_attack
+	confirm_button.visible = model.confirming
+	cancel_button.visible = model.targeting or model.confirming

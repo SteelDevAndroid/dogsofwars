@@ -8,6 +8,7 @@
 class_name PresentationSequencer
 extends Node
 
+signal batch_started
 signal batch_finished
 signal idle_reached
 
@@ -86,6 +87,7 @@ func advance() -> void:
 		_step = 0
 		_playing = true
 		_deadline = now
+		batch_started.emit()
 		if _steps.is_empty():
 			_end_batch()
 			continue

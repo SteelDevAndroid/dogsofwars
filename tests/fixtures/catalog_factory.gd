@@ -50,7 +50,7 @@ static func documents() -> Dictionary:
 			{"id": 5, "faction": "meute", "act": 3}]},
 		"presentation.json": {"schema_version": 1, "move_step_ms": 120, "attack_line_ms": 250, "hit_ms": 350, "destroy_ms": 400,
 			"recolor_ms": 400, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
-			"enemy_action_ms": 500, "reduced_slot_ms": 334, "queue_max": 256},
+			"enemy_action_ms": 500, "recenter_ms": 300, "reduced_slot_ms": 334, "queue_max": 256},
 		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
 		"protocoles.json": {"schema_version": 1, "protocols": [

@@ -12,6 +12,9 @@ var highlighted: PackedInt32Array = PackedInt32Array()
 ## The presentation clock the effects are timed on; null in a still image.
 var clock: ClockSource
 var effects: Array[TileEffect] = []
+## Tiles of the units the selected one may strike, and the one chosen.
+var targets := PackedInt32Array()
+var chosen_target := -1
 
 
 func _init() -> void:
@@ -25,6 +28,18 @@ func show_state(state: GameState, catalog: DataCatalog) -> void:
 
 func add_effect(effect: TileEffect) -> void:
 	effects.append(effect)
+	queue_redraw()
+
+
+## The map shows inside this rectangle only: scrolled tiles never cover the HUD bars.
+func set_clip_rect(rect: Rect2) -> void:
+	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, rect)
+	RenderingServer.canvas_item_set_clip(get_canvas_item(), true)
+
+
+func set_targets(tiles: PackedInt32Array, chosen: int) -> void:
+	targets = tiles
+	chosen_target = chosen
 	queue_redraw()
 
 
@@ -69,6 +84,8 @@ func _draw() -> void:
 		_draw_threat(threat)
 	for effect in effects:
 		_draw_effect(effect)
+	for tile in targets:
+		_draw_brackets(tile, TilePalette.THREAT, 3.0 if tile == chosen_target else 2.0)
 	for tile in highlighted:
 		draw_rect(layout.rect_of(tile).grow(-2.0), Color(TilePalette.SELECTION, 0.35))
 	if selected_tile >= 0:
@@ -171,15 +188,19 @@ func _draw_effect(effect: TileEffect) -> void:
 
 
 func _draw_threat(threat: Array) -> void:
-	var rect := layout.rect_of(threat[2]).grow(-3.0)
+	_draw_brackets(threat[2], TilePalette.THREAT, 2.0)
+
+
+func _draw_brackets(tile: int, color: Color, width: float) -> void:
+	var rect := layout.rect_of(tile).grow(-3.0)
 	var corner := layout.tile_size * 0.25
 	for sx in [0, 1]:
 		for sy in [0, 1]:
 			var p := rect.position + Vector2(rect.size.x * sx, rect.size.y * sy)
 			var dx := Vector2(corner * (1 - 2 * sx), 0)
 			var dy := Vector2(0, corner * (1 - 2 * sy))
-			draw_line(p, p + dx, TilePalette.THREAT, 2.0)
-			draw_line(p, p + dy, TilePalette.THREAT, 2.0)
+			draw_line(p, p + dx, color, width)
+			draw_line(p, p + dy, color, width)
 
 
 ## A polygon per unit type (the shape tells the type apart, not the colour).

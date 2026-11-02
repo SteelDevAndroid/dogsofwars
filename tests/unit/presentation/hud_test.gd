@@ -84,24 +84,33 @@ func test_the_buttons_emit_their_signals() -> void:
 	hud.free()
 
 
-func test_the_input_surface_turns_a_tap_into_a_position() -> void:
+func test_the_input_surface_turns_fingers_into_pointer_events_and_ignores_the_mouse() -> void:
 	var surface := InputSurface.new()
-	var taps: Array[Vector2] = []
-	surface.tapped.connect(func(position: Vector2) -> void: taps.append(position))
-	var touch := InputEventScreenTouch.new()
-	touch.position = Vector2(10, 20)
-	touch.pressed = true
+	var events: Array[PointerEvent] = []
+	surface.pointer.connect(func(event: PointerEvent) -> void: events.append(event))
+	var down := InputEventScreenTouch.new()
+	down.index = 1
+	down.position = Vector2(10, 20)
+	down.pressed = true
+	var drag := InputEventScreenDrag.new()
+	drag.index = 1
+	drag.position = Vector2(15, 25)
+	var up := InputEventScreenTouch.new()
+	up.index = 1
+	up.position = Vector2(15, 25)
+	up.pressed = false
+	var lost := InputEventScreenTouch.new()
+	lost.canceled = true
 	var click := InputEventMouseButton.new()
-	click.position = Vector2(30, 40)
 	click.pressed = true
 	click.button_index = MOUSE_BUTTON_LEFT
-	var release := InputEventMouseButton.new()
-	release.pressed = false
-	release.button_index = MOUSE_BUTTON_LEFT
 
-	surface._gui_input(touch)
-	surface._gui_input(click)
-	surface._gui_input(release)
+	for event in [down, drag, up, lost, click]:
+		surface._gui_input(event)
+	surface.cancel_all()
 
-	assert_array(taps).is_equal([Vector2(10, 20), Vector2(30, 40)])
+	assert_array(events.map(func(e: PointerEvent) -> int: return e.phase)).is_equal([
+		PointerEvent.Phase.DOWN, PointerEvent.Phase.MOVE, PointerEvent.Phase.UP, PointerEvent.Phase.CANCEL, PointerEvent.Phase.CANCEL, PointerEvent.Phase.CANCEL])
+	assert_array([events[0].index, events[0].position]).is_equal([1, Vector2(10, 20)])
+	assert_vector(events[1].position).is_equal(Vector2(15, 25))
 	surface.free()

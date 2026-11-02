@@ -18,6 +18,7 @@ const SCHEMA := {
 	"attack_lock_ms": {"kind": &"int", "min": 500, "max": 3000},
 	"damage_number_ms": {"kind": &"int", "min": 0, "max": 2000},
 	"enemy_action_ms": {"kind": &"int", "min": 0, "max": 2000},
+	"recenter_ms": {"kind": &"int", "min": 0, "max": 1000},
 	"reduced_slot_ms": {"kind": &"int", "min": 100, "max": 1000},
 	"queue_max": {"kind": &"int", "min": 8, "max": 1024},
 }

@@ -125,14 +125,14 @@ func test_a_ruin_reading_waits_for_the_wave_and_the_delay_before_the_panel() -> 
 	_queue.push(EventBatch.new(1, [RuinReadEvent.new(0, 1, 2, 5), TileOwnersChangedEvent.new(PackedInt32Array([1]), Faction.NONE, Faction.PLAYER)]))
 
 	sequencer.advance()
-	assert_array(recorder.log).is_equal(["a:TileOwnersChangedEvent"])
+	assert_array(recorder.log).is_equal(["a:PresentationRecenter", "a:TileOwnersChangedEvent"])
 	_clock.advance(0.401)
 	sequencer.advance()
-	assert_int(recorder.log.size()).is_equal(1)  # the delay of the panel
+	assert_int(recorder.log.size()).is_equal(2)  # the delay of the panel
 	_clock.advance(0.401)
 	sequencer.advance()
 
-	assert_array(recorder.log.slice(0, 2)).is_equal(["a:TileOwnersChangedEvent", "a:RuinReadEvent"])
+	assert_array(recorder.log.slice(0, 3)).is_equal(["a:PresentationRecenter", "a:TileOwnersChangedEvent", "a:RuinReadEvent"])
 	sequencer.free()
 
 
