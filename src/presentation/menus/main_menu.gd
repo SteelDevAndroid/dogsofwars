@@ -7,11 +7,13 @@ extends Control
 signal continue_requested
 signal new_game_requested
 signal settings_requested
+signal chronicle_requested
 signal quit_requested
 
 var continue_button: Button
 var new_game_button: Button
 var settings_button: Button
+var chronicle_button: Button
 var quit_button: Button
 var confirm_button: Button
 var cancel_button: Button
@@ -22,24 +24,17 @@ var _save_available := false
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	add_child(box)
-	var title := Label.new()
-	title.text = "Dogs of Wars"
-	box.add_child(title)
+	var box := MenuLayout.column(self)
+	MenuLayout.label(box, "Dogs of Wars")
 	continue_button = _button(box, "Continuer", func() -> void: continue_requested.emit())
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
 	cancel_button = _button(box, "Annuler", _reset_confirmation)
+	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit())
 	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
-	best_label = Label.new()
-	box.add_child(best_label)
-	notice_label = Label.new()
-	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	notice_label.custom_minimum_size = Vector2(300, 0)
-	box.add_child(notice_label)
+	best_label = MenuLayout.label(box)
+	notice_label = MenuLayout.label(box)
 	_reset_confirmation()
 
 
@@ -70,8 +65,4 @@ func _reset_confirmation() -> void:
 
 
 func _button(parent: Control, text: String, action: Callable) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(action)
-	parent.add_child(button)
-	return button
+	return MenuLayout.button(parent, text, action)

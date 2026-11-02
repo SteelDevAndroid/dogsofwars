@@ -17,6 +17,7 @@ var reduced_motion_check := CheckButton.new()
 var show_range_check := CheckButton.new()
 var colorblind_check := CheckButton.new()
 var left_panel_check := CheckButton.new()
+var hints_check := CheckButton.new()
 var back_button := Button.new()
 
 var _loading := false
@@ -32,9 +33,15 @@ func _init() -> void:
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	scroll.add_child(margin)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(box)
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
 	var title := Label.new()
 	title.text = "Réglages"
 	box.add_child(title)
@@ -50,6 +57,7 @@ func _init() -> void:
 	_flag(box, show_range_check, "Afficher la portée de déplacement", GameSettings.SHOW_RANGE)
 	_flag(box, colorblind_check, "Palette daltonienne", GameSettings.COLORBLIND)
 	_flag(box, left_panel_check, "Panneau à gauche (paysage)", GameSettings.LEFT_PANEL)
+	_flag(box, hints_check, "Conseils des premiers tours", GameSettings.HINTS)
 	back_button.text = "Retour"
 	back_button.custom_minimum_size = Vector2(0, 50)
 	back_button.pressed.connect(func() -> void: back_requested.emit())
@@ -65,6 +73,7 @@ func configure(settings: Dictionary) -> void:
 	show_range_check.button_pressed = settings[GameSettings.SHOW_RANGE] == 1
 	colorblind_check.button_pressed = settings[GameSettings.COLORBLIND] == 1
 	left_panel_check.button_pressed = settings[GameSettings.LEFT_PANEL] == 1
+	hints_check.button_pressed = settings[GameSettings.HINTS] == 1
 	_loading = false
 
 

@@ -13,17 +13,10 @@ var back_button: Button
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	add_child(box)
-	title_label = Label.new()
-	box.add_child(title_label)
-	scores_label = Label.new()
-	box.add_child(scores_label)
-	back_button = Button.new()
-	back_button.text = "Retour au menu"
-	back_button.pressed.connect(func() -> void: back_requested.emit())
-	box.add_child(back_button)
+	var box := MenuLayout.column(self)
+	title_label = MenuLayout.label(box)
+	scores_label = MenuLayout.label(box)
+	back_button = MenuLayout.button(box, "Retour au menu", func() -> void: back_requested.emit())
 
 
 func show_result(status: int, player_score: int, ai_score: int) -> void:

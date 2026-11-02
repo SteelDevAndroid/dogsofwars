@@ -30,6 +30,7 @@ var journal_label := Label.new()
 var end_turn_button := Button.new()
 var pause_button := Button.new()
 var speed_button := Button.new()
+var hint_label := Label.new()
 var notice_label := Label.new()
 var fragment_panel := FragmentPanel.new()
 var preview_label := Label.new()
@@ -98,6 +99,9 @@ func _init() -> void:
 	bottom.add_child(actions)
 	bottom.add_child(extra_row)
 	bottom.add_child(reason_label)
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint_label.modulate = Color(1, 1, 1, 0.8)
+	bottom.add_child(hint_label)
 	end_turn_button.text = "Fin du tour"
 	end_turn_button.custom_minimum_size = Vector2(0, 50)
 	end_turn_button.pressed.connect(func() -> void: end_turn_pressed.emit())
@@ -135,6 +139,8 @@ func apply_layout(layout: HudLayout) -> void:
 	# the narrow rail wraps the score on a width it is given; the wide bar clips it instead
 	score_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if layout.landscape else TextServer.AUTOWRAP_OFF
 	score_label.custom_minimum_size.x = HudLayout.RAIL_WIDTH - 24.0 if layout.landscape else 0.0
+	# an autowrapping label asks for a huge height until its width is known: give it one
+	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else 300.0
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
 	_place(camera_box, layout.camera_buttons)
@@ -161,7 +167,9 @@ static func backdrop(content: Control) -> PanelContainer:
 	return panel
 
 
-func show_model(model: HudModel, notice: String = "") -> void:
+func show_model(model: HudModel, notice: String = "", hint: String = "") -> void:
+	hint_label.text = hint
+	hint_label.visible = hint != ""
 	notice_label.text = notice
 	turn_label.text = model.turn_text
 	energy_label.text = model.energy_text

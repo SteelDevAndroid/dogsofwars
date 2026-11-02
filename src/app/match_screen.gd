@@ -46,6 +46,8 @@ var screen_size_override := Vector2.ZERO
 var show_range := true
 ## Landscape with the rail and the context panel swapped (setting "Panneau à gauche").
 var mirrored := false
+## Whether the short advice of the first turns shows (setting "Conseils des premiers tours").
+var hints := true
 
 var clock := PresentationClock.new()
 var sequencer := PresentationSequencer.new()
@@ -115,6 +117,7 @@ func apply_settings(settings: Dictionary) -> void:
 	renderer.colorblind = settings[GameSettings.COLORBLIND] == 1
 	show_range = settings[GameSettings.SHOW_RANGE] == 1
 	mirrored = settings[GameSettings.LEFT_PANEL] == 1
+	hints = settings[GameSettings.HINTS] == 1
 	relayout()
 	refresh()
 	renderer.queue_redraw()
@@ -167,7 +170,10 @@ func refresh(show_new_state: bool = false) -> void:
 	renderer.set_targets(target_tiles, session.state.view().unit_tile(target_unit) if target_unit >= 0 else -1)
 	hud.show_model(HudModel.build(session.state, session.catalog,
 			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
-			_hud_actions()), presenter.notice)
+			_hud_actions()), presenter.notice,
+			HudHint.text(session.state, hints, session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER \
+					and not session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) and sequencer.is_idle(),
+					selected_unit, mode == Mode.TARGETING or mode == Mode.CONFIRMING))
 	relayout()  # the bars may have grown or shrunk with what they now show
 
 

@@ -10,9 +10,10 @@ const REDUCED_MOTION := &"reduced_motion"
 const SHOW_RANGE := &"show_range"
 const ENEMY_SPEED := &"enemy_speed"
 const LEFT_PANEL := &"left_panel"
+const HINTS := &"hints"
 
 ## key -> [default, min, max]. TEXT_SCALE is a percentage; ENEMY_SPEED is 0 normal, 1 fast,
-## 2 instant; the others are flags.
+## 2 instant; the others are flags (HINTS: the short advice of the first turns).
 const TABLE := {
 	TEXT_SCALE: [100, 100, 150],
 	COLORBLIND: [0, 0, 1],
@@ -20,6 +21,7 @@ const TABLE := {
 	SHOW_RANGE: [1, 0, 1],
 	ENEMY_SPEED: [0, 0, 2],
 	LEFT_PANEL: [0, 0, 1],
+	HINTS: [1, 0, 1],
 }
 
 

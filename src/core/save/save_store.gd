@@ -53,15 +53,26 @@ func has_match() -> bool:
 	return _files.exists(_path("match.sav")) or _files.exists(_path("match.bak"))
 
 
-func load_match() -> LoadResult:
+## `min_epoch`: the reset epoch of the profile. A match of a lower epoch (an old save restored
+## by Android next to a profile that was reset) is set aside with a warning; an equal epoch loads.
+func load_match(min_epoch: int = 0) -> LoadResult:
 	_files.delete(_path("match.tmp"))
 	var result := LoadResult.new()
 	var damaged := false
 	var too_old := false
+	var stale := false
 	for name in ["match.sav", "match.bak"]:
 		if not _files.exists(_path(name)):
 			continue
 		var attempt := _try(name, result)
+		if attempt == &"OK" and result.state.header.value(HeaderSlice.PROFILE_EPOCH) < min_epoch:
+			stale = true
+			result.warnings.append("%s was saved before a reset of the profile and was set aside" % name)
+			result.state = null
+			result.vision = null
+			result.migrated_from = 0
+			_set_aside(name)
+			continue
 		if attempt == &"OK":
 			result.from_backup = name == "match.bak"
 			if result.from_backup:
@@ -84,7 +95,10 @@ func load_match() -> LoadResult:
 			_set_aside("match.sav")
 	result.state = null
 	result.vision = null
-	result.code = LoadResult.OLDER if too_old and not damaged else (LoadResult.CORRUPT if damaged else LoadResult.NONE)
+	if stale and not damaged:
+		result.code = LoadResult.STALE
+	else:
+		result.code = LoadResult.OLDER if too_old and not damaged else (LoadResult.CORRUPT if damaged else LoadResult.NONE)
 	return result
 
 
