@@ -1,5 +1,7 @@
 {
   "schema_version": 1,
+  "rest_heal": 2,
+  "node_rest_bonus": 2,
   "types": [
     {"id": 0, "key": "eclaireur", "side": "meute", "hp": 6, "attack": 1, "defense": 0, "move": 4, "range": 1, "vision": 4, "captures": 0},
     {"id": 1, "key": "assaut", "side": "meute", "hp": 8, "attack": 3, "defense": 1, "move": 3, "range": 1, "vision": 2, "captures": 0},

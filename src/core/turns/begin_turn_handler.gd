@@ -35,10 +35,14 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		return result
 	var phase := HeaderSlice.PHASE_PLAYER if player else HeaderSlice.PHASE_ENEMY_EXECUTION
 	TurnWrites.begin_phase(state, command.faction, phase, player)
+	# GDD 6 rule 6: the rest check reads the flags before they are reset.
+	var healed: Array[PresentationEvent] = []
+	RestRules.heal_faction(state, command.faction, rules.catalog, healed)
 	UnitWrites.start_turn(state, command.faction)
 	if not player:
 		AiWrites.reset_cursor(state)
 	result.events.append(TurnStartedEvent.new(state.turn(), command.faction, phase))
+	result.events.append_array(healed)
 	EnergyRules.pay_income(state, command.faction, rules.catalog.energy, result.events)
 	var before_research := state.protocols.row_count()
 	ResearchRules.advance(state, command.faction, result.events)

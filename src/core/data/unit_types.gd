@@ -9,6 +9,8 @@ const MAX_TYPES := 16
 ## the MVP; attack and defense bounded by the combat tables [PROP].
 const SCHEMA := {
 	"schema_version": {"kind": &"int", "min": SCHEMA_VERSION, "max": SCHEMA_VERSION},
+	"rest_heal": {"kind": &"int", "min": 1, "max": 3},
+	"node_rest_bonus": {"kind": &"int", "min": 0, "max": 4},
 	"types": {"kind": &"array", "min": 1, "max": MAX_TYPES, "item": {"kind": &"object", "fields": {
 		"id": {"kind": &"int", "min": 0, "max": MAX_TYPES - 1},
 		"key": {"kind": &"string"},
@@ -23,6 +25,8 @@ const SCHEMA := {
 	}}},
 }
 
+var _rest_heal := 0
+var _node_rest_bonus := 0
 var _keys := PackedStringArray()
 var _side := PackedInt32Array()
 var _hp := PackedInt32Array()
@@ -37,6 +41,8 @@ var _captures := PackedByteArray()
 ## Builds from checked data; ids must be 0..n-1 in order and keys unique.
 static func build(data: Dictionary, file: String, errors: Array[DataError]) -> UnitTypes:
 	var types := UnitTypes.new()
+	types._rest_heal = data["rest_heal"]
+	types._node_rest_bonus = data["node_rest_bonus"]
 	var rows: Array = data["types"]
 	for k in rows.size():
 		var row: Dictionary = rows[k]
@@ -54,6 +60,15 @@ static func build(data: Dictionary, file: String, errors: Array[DataError]) -> U
 		types._vision.append(row["vision"])
 		types._captures.append(row["captures"])
 	return types
+
+
+## GDD 6 formula 3: base rest heal, and the bonus on a node the faction owns.
+func rest_heal() -> int:
+	return _rest_heal
+
+
+func node_rest_bonus() -> int:
+	return _node_rest_bonus
 
 
 func count() -> int:
