@@ -15,6 +15,7 @@ func _texts(broken: bool = false) -> Dictionary:
 func _boot(files: FaultInjectingFileStore = null, broken: bool = false, dpi: int = -1) -> Bootstrap:
 	var boot := Bootstrap.new()
 	boot.screen_dpi = dpi
+	boot.show_title = false
 	boot.data_source = MemoryDataSource.new(_texts(broken))
 	boot.file_store = files if files != null else FaultInjectingFileStore.new()
 	boot.forced_seed = 11
@@ -355,4 +356,73 @@ func test_the_chronicle_opens_from_the_menu_with_the_fragments_of_the_profile_an
 	boot._chronicle_screen.back_button.pressed.emit()
 	await await_idle_frame()
 	assert_object(boot._chronicle_screen).is_null()
+	await _finish(boot)
+
+
+func _plain_boot() -> Bootstrap:
+	var boot := Bootstrap.new()
+	boot.data_source = MemoryDataSource.new(_texts())
+	boot.file_store = FaultInjectingFileStore.new()
+	add_child(boot)
+	return boot
+
+
+func test_the_title_screen_comes_first_and_a_touch_opens_the_menu_once() -> void:
+	var boot := _plain_boot()
+	assert_object(boot.screen).is_instanceof(TitleScreen)
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+
+	boot.screen._gui_input(touch)
+	assert_object(boot.screen).is_instanceof(MainMenu)
+	await _finish(boot)
+
+
+func test_a_click_also_opens_the_menu_and_a_release_does_not() -> void:
+	var boot := _plain_boot()
+	var release := InputEventScreenTouch.new()
+	release.pressed = false
+	boot.screen._gui_input(release)
+	assert_object(boot.screen).is_instanceof(TitleScreen)
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+	click.button_index = MOUSE_BUTTON_LEFT
+
+	boot.screen._gui_input(click)
+
+	assert_object(boot.screen).is_instanceof(MainMenu)
+	await _finish(boot)
+
+
+func test_the_title_announces_the_start_only_once() -> void:
+	var title := TitleScreen.new()
+	add_child(title)
+	var starts := [0]
+	title.started.connect(func() -> void: starts[0] += 1)
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+
+	title._gui_input(touch)
+	title._gui_input(click)
+
+	assert_int(starts[0]).is_equal(1)
+	assert_object(title.get_child(1)).is_instanceof(TextureRect)
+	assert_object((title.get_child(1) as TextureRect).texture).is_not_null()
+	title.free()
+
+
+func test_a_data_error_skips_the_title_screen() -> void:
+	var documents := CatalogFactory.documents()
+	documents["units.json"]["types"][0]["hp"] = 99
+	var texts := {}
+	for name: String in documents:
+		texts[name] = JSON.stringify(documents[name])
+	var boot := Bootstrap.new()
+	boot.data_source = MemoryDataSource.new(texts)
+	boot.file_store = FaultInjectingFileStore.new()
+	add_child(boot)
+
+	assert_object(boot.screen).is_instanceof(DataErrorScreen)
 	await _finish(boot)
