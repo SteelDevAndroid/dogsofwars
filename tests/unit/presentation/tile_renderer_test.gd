@@ -160,3 +160,16 @@ func test_a_tile_beside_fog_on_a_side_has_no_outer_corner_for_that_side() -> voi
 	assert_int(renderer.fog_sides(4)).is_equal(TileRenderer.SIDE_LEFT)
 	assert_int(renderer.fog_corners(4)).is_equal(0)
 	renderer.free()
+
+
+func test_a_diagonal_beyond_the_map_edge_is_not_the_next_row() -> void:
+	var renderer := TileRenderer.new()
+	var undiscovered := VisionService.FOG_UNDISCOVERED
+	var visible := VisionService.FOG_VISIBLE
+	# tile 6 (row 2, column 0) is unknown: for tile 2 (row 0, column 2) the index of "one right, one down" is 6 too
+	renderer.snapshot = _snapshot([visible, visible, visible, visible, visible, visible, undiscovered, visible, visible], 3, 3)
+
+	assert_int(renderer.fog_corners(2)).is_equal(0)
+	assert_int(renderer.fog_corners(3)).is_equal(0)  # tile 3 meets tile 6 by a side, and its other diagonals are off the map or seen
+	assert_int(renderer.fog_sides(3)).is_equal(TileRenderer.SIDE_DOWN)
+	renderer.free()
