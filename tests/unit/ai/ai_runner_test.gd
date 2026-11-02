@@ -58,6 +58,27 @@ func test_a_whole_phase_runs_through_the_pipeline_without_a_refusal() -> void:
 	runner.free()
 
 
+## ADR-0005 §4 (review 2026-11-01, B3): the phase makes no more planner calls than the
+## structural bound the maps are checked against (3 AI units, 3 nodes here).
+func test_a_phase_stays_within_the_planner_call_bound() -> void:
+	var fx := _fixture()
+	var runner := AiRunner.new()
+	runner.start_turn(fx.state, fx.pipeline, AlwaysReadyPacingGate.new(), CatalogFactory.standard())
+	var calls := 0
+
+	for k in 500:
+		if not runner.is_running():
+			break
+		if runner.step == AiRunner.Step.MOVING:
+			calls += 1
+		runner.advance()
+
+	assert_bool(runner.is_running()).is_false()
+	assert_int(calls).is_greater(0)
+	assert_int(calls).is_less_equal(AiPlanner.max_calls_per_turn(3, 3))
+	runner.free()
+
+
 func test_the_runner_waits_for_the_pacing_gate_and_submits_one_command_per_call() -> void:
 	var fx := _fixture()
 	var gate := AlwaysReadyPacingGate.new()

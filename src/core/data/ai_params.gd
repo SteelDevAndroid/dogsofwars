@@ -23,6 +23,8 @@ const SCHEMA := {
 		"state_margin": {"kind": &"int", "min": 0, "max": 50},
 		"return_after": {"kind": &"int", "min": 1, "max": 6},
 		"evals_per_call": {"kind": &"int", "min": 100, "max": 20000},
+		# EVALS_MAX (GDD 9 rule 19): the turn bound that every map is checked against (ADR-0005 §4).
+		"evals_max": {"kind": &"int", "min": 10000, "max": 40000},
 		"refusals_max": {"kind": &"int", "min": 1, "max": 64},
 	}},
 	"protocol_calendar": {"kind": &"array", "min": 0, "max": ProtocolTree.MAX_PROTOCOLS,

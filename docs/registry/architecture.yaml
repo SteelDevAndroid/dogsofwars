@@ -418,11 +418,11 @@ performance_budgets:
     status: active
     budget_ms: 2.0
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état) ; produit N_IA × appels × plafond d'appel vérifié au chargement des données ≤ 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état ; 1 par construction au MVP) ; APPELS_MAX = N_IA + N_NŒUDS + 2 (AiPlanner.max_calls_per_turn) et APPELS_MAX × evals_per_call ≤ evals_max (20 000), APPELS_MAX + 1 ≤ 2 500 copies, vérifiés au chargement de chaque carte (MapDefinition) ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
-    revised: 2026-11-01   # ancien : budget par appel seul, plafond du tour non borné (revue du 2026-11-01, B3)
+    revised: 2026-11-02   # ancien : produit N_IA × APPELS_PAR_UNITÉ_MAX × plafond d'appel, non implémenté ; avant le 2026-11-01 : budget par appel seul, plafond du tour non borné (revue du 2026-11-01, B3)
 
   - system: command-validate-apply
     status: active

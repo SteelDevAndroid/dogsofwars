@@ -143,3 +143,17 @@ func test_a_dormant_on_the_ai_side_must_be_covered() -> void:
 	document["units"] = document["units"].filter(func(unit: Dictionary) -> bool: return unit["type"] != "chasseur")
 
 	assert_bool(_with_message(document, "not covered by an armed Guardian")).is_true()
+
+
+## ADR-0005 §4: plaine has 4 Guardians and 6 nodes (4 neutral, 2 starts), so 12 planner calls;
+## 12 x 1 000 evaluations fit EVALS_MAX, 12 x 2 000 do not.
+func test_the_ai_turn_budget_of_the_map_is_checked() -> void:
+	var docs := CatalogFactory.documents()
+	docs["ai.json"]["planner"]["evals_per_call"] = 2000
+	var catalog := CatalogFactory.load_documents(docs).catalog
+	var errors: Array[DataError] = []
+
+	MapDefinition.parse(FileAccess.get_file_as_string(MAP_PATH), "plaine.json", catalog, errors)
+
+	assert_int(AiPlanner.max_calls_per_turn(4, 6)).is_equal(12)
+	assert_bool(errors.any(func(error: DataError) -> bool: return error.message.contains("AI turn budget"))).is_true()
