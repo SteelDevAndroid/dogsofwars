@@ -33,10 +33,11 @@ func test_the_top_bar_and_the_score_row_read_the_state() -> void:
 	var model := _model(state)
 
 	assert_str(model.turn_text).is_equal("Tour 4 / 30")
-	assert_str(model.energy_text).is_equal("Énergie 17")
-	assert_str(model.fragments_text).is_equal("Ruines 0")
+	assert_str(model.energy_text).is_equal("17")
+	assert_str(model.fragments_text).is_equal("0 / %d" % FactionView.new(state, Faction.PLAYER).ruin_ids().size())
 	var weights := _catalog().score
-	assert_str(model.score_text).is_equal("Victoire : %d contre %d" % [ScoreRules.decisive(state, 0, weights), ScoreRules.decisive(state, 1, weights)])
+	assert_str(model.score_text).is_equal("%d contre %d" % [ScoreRules.decisive(state, 0, weights), ScoreRules.decisive(state, 1, weights)])
+	assert_array([model.score_player, model.score_ai]).is_equal([ScoreRules.decisive(state, 0, weights), ScoreRules.decisive(state, 1, weights)])
 
 
 func test_the_end_turn_button_needs_the_players_phase_and_no_lock() -> void:
@@ -90,6 +91,8 @@ func test_the_unit_panel_shows_effective_stats_and_hides_other_units() -> void:
 
 	assert_str(panel["title"]).is_equal("Assaut")
 	assert_array(panel["lines"]).is_equal(["PV 8 / 8", "MVT 3  ATQ 3  DÉF 1  Vue 2"])
+	assert_array([panel["hp"], panel["hp_max"]]).is_equal([8, 8])
+	assert_array(panel["stats"]).is_equal([["MVT", 3], ["ATQ", 3], ["DÉF", 1], ["VUE", 2]])
 	assert_bool(_model(state, false, 1).unit_panel.is_empty()).is_true()  # an enemy unit has no panel
 	assert_bool(_model(state, false, -1).unit_panel.is_empty()).is_true()
 	assert_bool(_model(state, false, 99).unit_panel.is_empty()).is_true()

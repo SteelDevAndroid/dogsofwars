@@ -42,3 +42,15 @@ func test_the_text_scrolls_inside_the_panel_and_starts_at_the_top() -> void:
 
 	assert_int(panel.scroll.scroll_vertical).is_equal(0)
 	panel.free()
+
+
+func test_the_panel_is_a_sheet_of_paper_with_dark_ink() -> void:
+	var panel := FragmentPanel.new()
+	add_child(panel)
+
+	var style := panel.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_object(style.bg_color).is_equal(Color("EADFC8"))
+	assert_object(panel.body_label.get_theme_color("font_color")).is_equal(Color("1E2329"))
+	assert_int(panel.title_label.get_theme_font_size("font_size")).is_equal(22)
+	assert_object(panel.continue_button.get_theme_stylebox("normal")).is_instanceof(StyleBoxFlat)
+	panel.free()

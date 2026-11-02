@@ -3,7 +3,7 @@
 class_name TileEffect
 extends RefCounted
 
-enum Kind { MOVE, LINE, FLOAT_TEXT, GHOST, WAVE }
+enum Kind { MOVE, LINE, FLOAT_TEXT, GHOST, WAVE, PULSE }
 
 var kind: int
 var start: float

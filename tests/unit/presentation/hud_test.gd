@@ -10,9 +10,11 @@ func _hud() -> Hud:
 func _model() -> HudModel:
 	var model := HudModel.new()
 	model.turn_text = "Tour 3 / 30"
-	model.energy_text = "Énergie 9"
-	model.fragments_text = "Ruines 1"
-	model.score_text = "Victoire : 40 contre 38"
+	model.energy_text = "9"
+	model.fragments_text = "1 / 3"
+	model.score_text = "40 contre 38"
+	model.score_player = 40
+	model.score_ai = 38
 	model.can_end_turn = true
 	return model
 
@@ -25,7 +27,7 @@ func test_the_hud_copies_the_model_to_its_widgets() -> void:
 	hud.show_model(model)
 
 	assert_array([hud.turn_label.text, hud.energy_label.text, hud.fragments_label.text, hud.score_label.text]) \
-			.is_equal(["Tour 3 / 30", "Énergie 9", "Ruines 1", "Victoire : 40 contre 38"])
+			.is_equal(["Tour 3 / 30", "9", "1 / 3", "40 contre 38"])
 	assert_str(hud.unit_title.text).is_equal("Assaut")
 	assert_str(hud.unit_lines.text).is_equal("PV 8 / 8\nA bougé")
 	assert_bool(hud.end_turn_button.disabled).is_false()
@@ -150,4 +152,113 @@ func test_the_camera_buttons_emit_their_signals() -> void:
 	assert_array(pressed).is_equal([1, 1, 2])
 	assert_int(hud.zoom_in_button.accessibility_name.length()).is_greater(0)
 	assert_float(hud.zoom_in_button.custom_minimum_size.x).is_equal(48.0)
+	hud.free()
+
+
+func test_the_score_gauge_shows_the_players_share() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+	model.score_text = "30 contre 10"
+	model.score_player = 30
+	model.score_ai = 10
+
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(75.0)
+	model.score_player = 0
+	model.score_ai = 0
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(50.0)  # nothing yet: the middle
+	model.score_player = 0
+	model.score_ai = 8
+	hud.show_model(model)
+	assert_float(hud.score_bar.value).is_equal(0.0)
+	hud.free()
+
+
+func test_each_figure_of_the_top_bar_has_an_icon_and_a_name() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	for label in [hud.turn_label, hud.energy_label, hud.fragments_label]:
+		var box := (label as Label).get_parent() as HBoxContainer
+		assert_str(box.tooltip_text).is_not_empty()
+		var icon := box.get_child(0) as TextureRect
+		assert_object(icon.texture).is_not_null()
+	assert_array([hud.energy_label.get_parent().tooltip_text, hud.fragments_label.get_parent().tooltip_text]).is_equal(["Énergie", "Ruines lues"])
+	hud.free()
+
+
+func _unit_model() -> HudModel:
+	var model := HudModel.new()
+	model.unit_panel = {"title": "Assaut", "lines": ["PV 5 / 8", "MVT 3", "A bougé"], "hp": 5, "hp_max": 8,
+			"stats": [["MVT", 3], ["ATQ", 3], ["DÉF", 1], ["VUE", 2]]}
+	return model
+
+
+func test_a_unit_is_a_card_with_a_gauge_and_four_pills_and_only_its_statuses_as_lines() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	hud.show_model(_unit_model())
+
+	assert_bool(hud.hp_bar.visible).is_true()
+	assert_array([hud.hp_bar.value, hud.hp_bar.max_value]).is_equal([5.0, 8.0])
+	assert_str(hud.hp_label.text).is_equal("PV 5 / 8")
+	var pills := hud.stats_row.get_children().map(func(pill: Node) -> String: return (pill.get_child(0) as Label).text)
+	assert_array(pills).is_equal(["MVT 3", "ATQ 3", "DÉF 1", "VUE 2"])
+	assert_str(hud.unit_lines.text).is_equal("A bougé")  # the first two lines are the card's; "MVT 3" above is one of them
+	hud.free()
+
+
+func test_a_node_panel_keeps_its_plain_lines_and_no_card() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+	model.unit_panel = {"title": "Nœud · niveau 1", "lines": ["Revenu 3", "Niveau maximal"]}
+
+	hud.show_model(model)
+
+	assert_bool(hud.hp_bar.visible).is_false()
+	assert_bool(hud.stats_row.visible).is_false()
+	assert_str(hud.unit_lines.text).is_equal("Revenu 3\nNiveau maximal")
+	hud.free()
+
+
+func test_the_speed_button_shows_only_in_the_enemy_turn() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+
+	hud.show_model(model)
+	assert_bool(hud.speed_button.visible).is_false()
+	model.enemy_turn = true
+	hud.show_model(model)
+	assert_bool(hud.speed_button.visible).is_true()
+	hud.free()
+
+
+func test_a_toast_shows_for_its_duration_then_goes() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	hud.show_toast("Énergie insuffisante", 10.0, 2.0)
+	assert_bool(hud.toast_panel.visible).is_true()
+	assert_str(hud.toast_label.text).is_equal("Énergie insuffisante")
+	hud.tick_toast(11.9)
+	assert_bool(hud.toast_panel.visible).is_true()
+	hud.tick_toast(12.0)
+	assert_bool(hud.toast_panel.visible).is_false()
+	hud.show_toast("", 20.0)
+	assert_bool(hud.toast_panel.visible).is_false()  # nothing to tell
+	hud.free()
+
+
+func test_the_end_turn_button_is_the_filled_main_action() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	assert_object(hud.end_turn_button.get_theme_stylebox("normal")).is_instanceof(StyleBoxFlat)
+	assert_object((hud.end_turn_button.get_theme_stylebox("normal") as StyleBoxFlat).bg_color).is_equal(Color("1FA38F"))
+	assert_float(hud.end_turn_button.custom_minimum_size.y).is_greater_equal(56.0)
 	hud.free()

@@ -87,7 +87,7 @@ L'écart de **valeur** (et non de teinte) doit distinguer les quatre terrains : 
 
 ## 6. Interface
 
-- **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale 20 pt. Liste : énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour.
+- **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale 20 pt. Liste : tour, énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour. Trois sont déjà en place en version provisoire dans `assets/art/ui/` (`ui_icon_tour.svg`, `ui_icon_energie.svg`, `ui_icon_ruine.svg`, dessinées par l'équipe technique) : à remplacer à nom égal.
 - **Polices** : fournies en `.ttf` ou `.otf` avec licence, au plus 3 graisses (régulière, moyenne, 700), accents français complets, chiffres tabulaires pour le score et les compteurs.
 - **Boutons et panneaux** : le jeu les dessine ; livrer seulement un **9-patch** (`ui_panneau.png`, 96 × 96 px, marges de 24 px) si un style papier ou métal est voulu pour le panneau de fragment.
 

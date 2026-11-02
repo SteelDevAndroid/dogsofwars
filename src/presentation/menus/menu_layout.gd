@@ -6,13 +6,17 @@ extends RefCounted
 
 const WIDTH := 300.0
 const BUTTON_HEIGHT := 56.0
+## The dark navy of the art bible: the ground of every menu screen.
+const NAVY := Color("0E1422")
 
 
-## The column of `screen`, centred, `width` wide (never wider than the screen allows: the
+## The column of `screen`, centred, `width` wide (and below `top_share` of the height, to leave a logo room) (never wider than the screen allows: the
 ## labels inside wrap).
-static func column(screen: Control, width: float = WIDTH) -> VBoxContainer:
+static func column(screen: Control, width: float = WIDTH, top_share: float = 0.0) -> VBoxContainer:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.anchor_top = top_share  # the column is centred in the part of the screen below this share
+	center.offset_top = 0.0
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen.add_child(center)
 	var box := VBoxContainer.new()
@@ -29,6 +33,56 @@ static func button(parent: Control, text: String, action: Callable) -> Button:
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+
+## The artwork of the title screen behind a menu, dimmed so the buttons read.
+static func illustrated_backdrop(screen: Control, dim: float = 0.62) -> void:
+	var base := ColorRect.new()
+	base.color = Color(0.0863, 0.0863, 0.1098)
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen.add_child(base)
+	var picture := TextureRect.new()
+	picture.texture = _artwork_without_caption()
+	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen.add_child(picture)
+	var veil := ColorRect.new()
+	veil.color = Color(0.055, 0.078, 0.133, dim)
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen.add_child(veil)
+
+
+## The splash without its bottom caption ("Touchez pour jouer" belongs to the title screen).
+static func _artwork_without_caption() -> Texture2D:
+	var full: Texture2D = load("res://assets/ui/splash.png")
+	var atlas := AtlasTexture.new()
+	atlas.atlas = full
+	atlas.region = Rect2(0, 0, full.get_width(), full.get_height() * 0.9)
+	return atlas
+
+
+## The main action of a screen: filled with the pack's teal.
+static func make_primary(button: Button) -> void:
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = {"normal": Color("1FA38F"), "hover": Color("2BB8A2"), "pressed": Color("178272"), "disabled": Color(0.25, 0.28, 0.32, 0.8)}[state]
+		style.set_corner_radius_all(4)
+		style.set_content_margin_all(10)
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_color_override("font_color", Color("0E1422"))
+	button.add_theme_color_override("font_hover_color", Color("0E1422"))
+	button.add_theme_color_override("font_pressed_color", Color("0E1422"))
+	button.add_theme_color_override("font_disabled_color", Color(0.7, 0.72, 0.75))
+	button.add_theme_font_size_override("font_size", 20)
+
+
+## A secondary action: smaller, the theme's own look.
+static func make_secondary(button: Button) -> void:
+	button.custom_minimum_size = Vector2(0, 48)
 
 
 ## A label that wraps inside the column.

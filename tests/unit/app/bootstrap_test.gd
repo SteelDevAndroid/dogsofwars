@@ -426,3 +426,15 @@ func test_a_data_error_skips_the_title_screen() -> void:
 
 	assert_object(boot.screen).is_instanceof(DataErrorScreen)
 	await _finish(boot)
+
+
+func test_how_to_play_opens_from_the_menu_and_closes() -> void:
+	var boot := _boot()
+
+	(boot.screen as MainMenu).how_to_play_button.pressed.emit()
+	assert_object(boot._how_to_play_screen).is_not_null()
+	boot._how_to_play_screen.back_button.pressed.emit()
+	await await_idle_frame()
+
+	assert_object(boot._how_to_play_screen).is_null()
+	await _finish(boot)

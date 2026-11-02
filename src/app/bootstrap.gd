@@ -28,6 +28,7 @@ var _ui: CanvasLayer
 var _pause: PauseMenu
 var _settings_screen: SettingsScreen
 var _chronicle_screen: ChronicleScreen
+var _how_to_play_screen: HowToPlayScreen
 var _ending := false
 
 
@@ -80,6 +81,7 @@ func show_menu(notice: String = "") -> void:
 	menu.new_game_requested.connect(start_new_game)
 	menu.settings_requested.connect(show_settings)
 	menu.chronicle_requested.connect(show_chronicle)
+	menu.how_to_play_requested.connect(show_how_to_play)
 	menu.quit_requested.connect(func() -> void: get_tree().quit())
 	_show(menu)
 
@@ -162,6 +164,17 @@ func show_chronicle() -> void:
 	_ui.add_child(_chronicle_screen)
 
 
+## "Comment jouer", over the menu; "Retour" closes it.
+func show_how_to_play() -> void:
+	if _how_to_play_screen != null:
+		return
+	_how_to_play_screen = HowToPlayScreen.new()
+	_how_to_play_screen.back_requested.connect(func() -> void:
+		_how_to_play_screen.queue_free()
+		_how_to_play_screen = null)
+	_ui.add_child(_how_to_play_screen)
+
+
 ## Stores a setting and applies it at once (a refused change puts the screen back as it was).
 func change_setting(key: StringName, value: int) -> void:
 	if profile.set_setting(key, value):
@@ -220,8 +233,12 @@ func _show_end() -> void:
 	var state := match_screen.session.state
 	var weights := app.catalog.score
 	var end := EndScreen.new()
+	var last := state.ruin_journal.last_fragment_of(Faction.PLAYER)
+	var quote := ""
+	if last > 0 and app.catalog.fragments.has_fragment(last):
+		quote = "« %s »\n— %s" % [app.catalog.fragments.text_of(last), app.catalog.fragments.source_of(last)]
 	end.show_result(state.header.value(HeaderSlice.END_STATUS), ScoreRules.decisive(state, Faction.PLAYER, weights),
-			ScoreRules.decisive(state, Faction.AI, weights))
+			ScoreRules.decisive(state, Faction.AI, weights), state.ruin_journal.read_by(Faction.PLAYER), quote)
 	end.back_requested.connect(leave_finished_match)
 	_show(end)
 

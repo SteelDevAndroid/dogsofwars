@@ -182,3 +182,16 @@ func test_a_zone_that_changes_no_tile_still_reads_but_publishes_no_colour_event(
 	assert_bool(fx.state.ruins.is_read(1)).is_true()
 	var batch: EventBatch = fx.sink.batches.filter(func(b: EventBatch) -> bool: return b.events.any(func(e: PresentationEvent) -> bool: return e is RuinReadEvent and (e as RuinReadEvent).ruin_id == 1))[0]
 	assert_bool(batch.events.any(func(e: PresentationEvent) -> bool: return e is TileOwnersChangedEvent)).is_false()
+
+
+func test_the_last_fragment_read_by_a_faction_is_the_highest_row() -> void:
+	var fx := PipelineFixture.new(StateFactory.minimal())
+	assert_int(fx.state.ruin_journal.last_fragment_of(Faction.PLAYER)).is_equal(0)
+
+	RuinWrites.journal_add(fx.state, 1, Faction.PLAYER, 2)
+	RuinWrites.journal_add(fx.state, 2, Faction.AI, 9)
+	RuinWrites.journal_add(fx.state, 3, Faction.PLAYER, 4)
+
+	assert_int(fx.state.ruin_journal.last_fragment_of(Faction.PLAYER)).is_equal(4)
+	assert_int(fx.state.ruin_journal.last_fragment_of(Faction.AI)).is_equal(9)
+	assert_int(fx.state.ruin_journal.last_fragment_of(Faction.NONE)).is_equal(0)

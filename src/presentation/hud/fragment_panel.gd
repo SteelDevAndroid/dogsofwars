@@ -24,17 +24,26 @@ func _init() -> void:
 	set_anchors_preset(Control.PRESET_CENTER)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	grow_vertical = Control.GROW_DIRECTION_BOTH
-	custom_minimum_size = Vector2(330, 0)
+	custom_minimum_size = Vector2(340, 0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("1E2329")
+	# the register of memory: a sheet of paper (the only textured-looking thing of the interface), dark ink
+	style.bg_color = Color("EADFC8")
 	style.border_color = Color("C8955A")
-	style.set_border_width_all(2)
-	style.set_content_margin_all(12)
+	style.set_border_width_all(3)
+	style.set_content_margin_all(18)
+	style.shadow_color = Color(0, 0, 0, 0.5)
+	style.shadow_size = 12
 	add_theme_stylebox_override("panel", style)
 	var box := VBoxContainer.new()
 	add_child(box)
+	var ink := Color("1E2329")
+	title_label.add_theme_color_override("font_color", ink)
+	title_label.add_theme_font_size_override("font_size", 22)
+	source_label.add_theme_color_override("font_color", Color("6B5A3E"))
+	source_label.add_theme_font_size_override("font_size", 14)
+	body_label.add_theme_color_override("font_color", ink)
+	body_label.add_theme_font_size_override("font_size", 17)
 	box.add_child(title_label)
-	source_label.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(source_label)
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -43,7 +52,8 @@ func _init() -> void:
 	scroll.add_child(body_label)
 	box.add_child(scroll)
 	continue_button.text = "Continuer"
-	continue_button.custom_minimum_size = Vector2(0, 50)
+	continue_button.custom_minimum_size = Vector2(0, 52)
+	MenuLayout.make_primary(continue_button)
 	continue_button.pressed.connect(close)
 	box.add_child(continue_button)
 

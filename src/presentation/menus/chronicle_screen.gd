@@ -15,7 +15,7 @@ var back_button: Button
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var backdrop := ColorRect.new()
-	backdrop.color = Color("1E2329")
+	backdrop.color = MenuLayout.NAVY
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var margin := MarginContainer.new()
