@@ -96,3 +96,173 @@ func test_shutdown_releases_the_players_locks() -> void:
 	assert_bool(gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
 	t.dispose()
 	await await_idle_frame()
+
+
+func _started(seed_value: int = 6) -> Array:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), seed_value, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	return [t, screen, session]
+
+
+func test_binding_draws_the_map_and_fills_the_hud() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	assert_object(screen.renderer.snapshot).is_not_null()
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 1 / 30")
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	assert_float(screen.renderer.layout.tile_size).is_greater(0.0)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_unit_of_the_player_selects_it_and_shows_where_it_can_go() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(scout)
+	assert_bool(screen.reachable.size() > 0).is_true()
+	assert_bool(screen.reachable.has(state.tile_index(2, 1))).is_false()
+	assert_str(screen.hud.unit_title.text).is_equal("Eclaireur")
+	assert_int(screen.renderer.selected_tile).is_equal(state.tile_index(2, 1))
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_reachable_tile_moves_the_selected_unit() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[screen.reachable.size() - 1]
+
+	screen.on_tap_tile(destination)
+
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	assert_bool(state.view().unit_moved(scout)).is_true()
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_bool(screen.reachable.is_empty()).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_elsewhere_or_on_an_unreachable_tile_deselects() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	screen.on_tap_tile(state.tile_index(11, 11))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	screen.on_tap_tile(-1)  # outside the map: ignored
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_unit_that_has_moved_shows_no_move_range() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	UnitWrites.set_moved(state, scout)
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(scout)
+	assert_bool(screen.reachable.is_empty()).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_no_range_is_offered_during_the_enemy_phase() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.end_turn()
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_bool(screen.reachable.is_empty()).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+
+	screen.hud.end_turn_button.pressed.emit()
+	for step in 600:
+		if not screen.ai_runner.is_running():
+			break
+		screen.ai_runner.advance()
+	screen._process(0.0)
+
+	assert_int(state.turn()).is_equal(2)
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 2 / 30")
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_journal_keeps_twelve_lines_and_clears_when_the_player_plays() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	for k in 15:
+		screen._note(IntentionExecutedEvent.new(k, 1, 0, 5))
+	assert_int(screen._journal.size()).is_equal(HudModel.JOURNAL_LINES)
+	screen._note(TurnStartedEvent.new(2, Faction.PLAYER, HeaderSlice.PHASE_PLAYER))
+
+	assert_int(screen._journal.size()).is_equal(0)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_pause_button_asks_the_app_for_the_pause() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var asked := [0]
+	screen.pause_requested.connect(func() -> void: asked[0] += 1)
+
+	screen.hud.pause_button.pressed.emit()
+
+	assert_int(asked[0]).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_visible_enemy_unit_selects_nothing() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var enemy := GameStateSetup.add_unit(state, 5, Faction.AI, state.tile_index(3, 1), 8)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+
+	screen.on_tap_tile(state.tile_index(3, 1))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_bool(state.view().unit_at(state.tile_index(3, 1)) == enemy).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

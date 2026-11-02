@@ -124,6 +124,7 @@ func _to_menu_keeping_match() -> void:
 func _new_match_screen() -> MatchScreen:
 	var node: MatchScreen = load("res://src/app/match_screen.tscn").instantiate()
 	add_child(node)
+	node.pause_requested.connect(toggle_pause)
 	return node
 
 

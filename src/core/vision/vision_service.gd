@@ -168,6 +168,18 @@ static func tile_state(state: GameState, faction: int, tile: int) -> int:
 	return UNKNOWN
 
 
+## What a faction knows of a tile (GDD 5): never seen, seen before, seeing it now.
+const FOG_UNDISCOVERED := 0
+const FOG_EXPLORED := 1
+const FOG_VISIBLE := 2
+
+
+static func fog_level(state: GameState, faction: int, tile: int) -> int:
+	if can_see(state.view_cache, faction, tile):
+		return FOG_VISIBLE
+	return FOG_EXPLORED if _discovered(state, faction, tile) else FOG_UNDISCOVERED
+
+
 static func _discovered(state: GameState, faction: int, tile: int) -> bool:
 	return state.visibility._vis_discovered[faction * state.tile_count() + tile] == 1
 
