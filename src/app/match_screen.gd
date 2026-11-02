@@ -1,0 +1,445 @@
+# The presentation tree of one match (ADR-0008 §4), built in two phases: instantiated
+# without bindings (it lends its adapters: the event queue, the pacing gate, the runner
+# port), then bound to the session once SessionFactory has built it. It carries the AI
+# runner (process priority 20, the only Node of the Core), the world with the tile renderer
+# (priority 10), the input surface and the HUD layer. The sequencer and its animations are a
+# later story: until then the screen drains the event queue each frame and redraws at once.
+class_name MatchScreen
+extends Node
+
+signal pause_requested
+## The player cycled the enemy-turn speed with the HUD button (0 normal, 1 fast, 2 instant).
+signal speed_changed(speed: int)
+
+@onready var ai_runner: AiRunner = $AiRunner
+@onready var world: Node2D = $World
+@onready var hud_layer: CanvasLayer = $HudLayer
+@onready var input_surface: InputSurface = $InputSurface
+
+var session: GameSession
+var renderer := TileRenderer.new()
+var hud := Hud.new()
+## The unit of the player being looked at, -1 for none.
+var selected_unit := -1
+var reachable := PackedInt32Array()
+## What the next tap means (ADR-0010 §5): nothing selected, a unit selected, choosing a target,
+## a target chosen and its preview shown.
+enum Mode { IDLE, SELECTED, TARGETING, CONFIRMING }
+var mode := Mode.IDLE
+var target_tiles := PackedInt32Array()
+var target_unit := -1
+var preview: CombatPreview
+## What a chosen target will do, in words: the attack preview or the wake price.
+var preview_text := ""
+## What the targeting is for: "attack" or "wake".
+var target_action := &"attack"
+## The node selected by a tap on an owned node of the player's (-1 for none).
+var selected_node := -1
+var research_open := false
+var camera: MapCamera
+var layout: HudLayout
+## The usable part of the screen: empty (the default) means ask the display, tests set it.
+var safe_area_override := Rect2()
+## The size of the screen when it is not the window's (tests): empty means the window's.
+var screen_size_override := Vector2.ZERO
+## Whether the move range of the selected unit is drawn (setting "Portée de déplacement").
+var show_range := true
+## Landscape with the rail and the context panel swapped (setting "Panneau à gauche").
+var mirrored := false
+
+var clock := PresentationClock.new()
+var sequencer := PresentationSequencer.new()
+var presenter: HudPresenter
+
+var _gestures := GestureInterpreter.new()
+var _needs := Vector2.ZERO
+var _runner_port: NodeAiRunnerPort
+var _pacing: PacingGate
+var _queue: EventQueue
+
+
+func _ready() -> void:
+	add_child(clock)  # before everyone (priority -20)
+	add_child(sequencer)
+	world.add_child(renderer)
+	var source := ClockAdapter.new(clock)
+	renderer.clock = source
+	hud_layer.add_child(hud)
+	hud.end_turn_pressed.connect(end_turn)
+	hud.pause_pressed.connect(func() -> void: pause_requested.emit())
+	hud.speed_pressed.connect(cycle_speed)
+	hud.zoom_in_pressed.connect(func() -> void: zoom_by(1.25))
+	hud.zoom_out_pressed.connect(func() -> void: zoom_by(0.8))
+	hud.recenter_pressed.connect(recenter)
+	hud.fragment_panel.closed.connect(_on_panel_closed)
+	hud.attack_pressed.connect(begin_targeting)
+	hud.confirm_pressed.connect(confirm_attack)
+	hud.cancel_pressed.connect(cancel_targeting)
+	hud.action_pressed.connect(do_action)
+	hud.research_pressed.connect(toggle_research)
+	hud.research_closed.connect(toggle_research)
+	hud.research_row_pressed.connect(do_action)
+	input_surface.pointer.connect(_on_pointer)
+	_pacing = SequencerPacingGate.new(sequencer)
+	sequencer.clock = source
+	sequencer.batch_started.connect(func() -> void: refresh())  # buttons go dead at once
+	sequencer.batch_finished.connect(func() -> void: refresh(true))
+	sequencer.idle_reached.connect(func() -> void: refresh(true))
+
+
+func _process(_delta: float) -> void:
+	hud.fragment_panel.tick(clock.current())
+	if camera != null:
+		if hud.measure() != _needs:  # a container updates its minimum size a frame late
+			relayout()
+		camera.tick(clock.current())
+		if camera.dirty:
+			_apply_camera()
+
+
+## The enemy turn's speed: normal, fast, instant (hud.md section 8).
+func cycle_speed() -> void:
+	set_speed((clock.speed + 1) % PresentationClock.Speed.size())
+	speed_changed.emit(clock.speed)
+
+
+func set_speed(speed: int) -> void:
+	clock.speed = speed
+	hud.speed_button.text = ["Vitesse : normale", "Vitesse : rapide", "Vitesse : instantanée"][clock.speed]
+
+
+## The settings that live in the match (GameSettings keys); the text scale is the window's.
+func apply_settings(settings: Dictionary) -> void:
+	sequencer.reduced_motion = settings[GameSettings.REDUCED_MOTION] == 1
+	set_speed(settings[GameSettings.ENEMY_SPEED])
+	renderer.colorblind = settings[GameSettings.COLORBLIND] == 1
+	show_range = settings[GameSettings.SHOW_RANGE] == 1
+	mirrored = settings[GameSettings.LEFT_PANEL] == 1
+	relayout()
+	refresh()
+	renderer.queue_redraw()
+
+
+func is_idle() -> bool:
+	return sequencer.is_idle()
+
+
+## Phase 1: what the session needs from the presentation. The queue is the one given, or ours.
+func ports(event_sink: EventSink = null) -> SessionPorts:
+	_queue = event_sink as EventQueue if event_sink is EventQueue else EventQueue.new()
+	sequencer.queue = _queue
+	return SessionPorts.new(_queue, _pacing)
+
+
+func runner_port() -> AiRunnerPort:
+	if _runner_port == null:
+		_runner_port = NodeAiRunnerPort.new(ai_runner)
+	return _runner_port
+
+
+## Phase 3: the session is built; start the match (new game) or its stored phase (load).
+func bind(p_session: GameSession) -> void:
+	session = p_session
+	ai_runner.process_priority = 20
+	sequencer.gate = session.gate
+	sequencer.params = session.catalog.presentation
+	sequencer.state = session.state
+	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation, session.catalog.fragments)
+	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
+	relayout()
+	get_viewport().size_changed.connect(relayout)
+	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
+			TileRendererHandler.new(renderer, session.catalog.presentation), presenter]
+	session.turns.start()
+	refresh()  # the HUD has its content, so its real heights are known
+	_center_on_first_unit()
+	_apply_camera()
+
+
+## Redraws the map and the HUD from the state. While a batch is playing the map keeps showing
+## the state before it (the effects play over it): the new snapshot comes when the batch ends.
+func refresh(show_new_state: bool = false) -> void:
+	if session == null or session.state == null:
+		return
+	if show_new_state or renderer.snapshot == null or sequencer.is_idle():
+		renderer.show_state(session.state, session.catalog)
+	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable if show_range else PackedInt32Array())
+	renderer.set_targets(target_tiles, session.state.view().unit_tile(target_unit) if target_unit >= 0 else -1)
+	hud.show_model(HudModel.build(session.state, session.catalog,
+			session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) or not sequencer.is_idle(), selected_unit, presenter.journal,
+			_hud_actions()), presenter.notice)
+	relayout()  # the bars may have grown or shrunk with what they now show
+
+
+## A tap on the map: on a unit of the player, select it; on a tile it can reach, move it;
+## while choosing a target, on a unit it can strike, show the preview, then strike.
+func on_tap(position: Vector2) -> void:
+	on_tap_tile(camera.screen_to_tile(position) if camera != null else renderer.layout.tile_at(position))
+
+
+func on_tap_tile(tile: int) -> void:
+	if session == null or session.state == null or tile < 0 or not sequencer.is_idle() \
+			or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
+		return
+	if mode == Mode.TARGETING or mode == Mode.CONFIRMING:
+		var target := FactionView.new(session.state, Faction.PLAYER).unit_at(tile)
+		if target >= 0 and target_tiles.has(tile):
+			if mode == Mode.CONFIRMING and target == target_unit:
+				confirm_attack()
+			else:
+				choose_target(target)
+		else:
+			cancel_targeting()
+		return
+	if selected_unit >= 0 and reachable.has(tile):
+		var moved := selected_unit
+		session.pipeline.submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, moved, tile))
+		select_unit(-1)
+		return
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	var unit := view.unit_at(tile)
+	if unit >= 0 and view.unit_faction(unit) == Faction.PLAYER:
+		select_unit(unit)
+		return
+	select_unit(-1)
+	var node := view.node_at(tile)
+	if node >= 0 and view.node_owner(node) == Faction.PLAYER:
+		selected_node = node
+		refresh()
+
+
+func select_unit(unit_id: int) -> void:
+	selected_unit = unit_id
+	selected_node = -1
+	reachable = PackedInt32Array()
+	mode = Mode.SELECTED if unit_id >= 0 else Mode.IDLE
+	target_tiles = PackedInt32Array()
+	target_unit = -1
+	preview = null
+	preview_text = ""
+	target_action = &"attack"
+	if unit_id >= 0 and session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER:
+		reachable = session.pipeline.check_move_range(FactionView.new(session.state, Faction.PLAYER), Faction.PLAYER, unit_id)
+	refresh()
+
+
+## A button of the context panel or a row of the research panel (the id says which).
+func do_action(id: StringName) -> void:
+	if session == null or not sequencer.is_idle() or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
+		return
+	var unit := selected_unit
+	var node := selected_node
+	if id == &"wake":
+		begin_targeting(&"wake")
+		return
+	if id == &"capture" and unit >= 0:
+		select_unit(-1)
+		session.pipeline.submit(CaptureCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
+	elif id == &"upgrade":
+		if unit >= 0:
+			node = FactionView.new(session.state, Faction.PLAYER).node_at(session.state.view().unit_tile(unit))
+		select_unit(-1)
+		if node >= 0:
+			session.pipeline.submit(UpgradeNodeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, node))
+	elif String(id).begins_with("research:"):
+		research_open = false
+		session.pipeline.submit(ResearchCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, String(id).trim_prefix("research:").to_int()))
+		refresh()
+
+
+func toggle_research() -> void:
+	if session == null:
+		return
+	research_open = not research_open
+	refresh()
+
+
+## "Attaquer" or "Réveiller": the units the selected one may act on are marked, the map waits
+## for a choice.
+func begin_targeting(action: StringName = &"attack") -> void:
+	if session == null or mode != Mode.SELECTED:
+		return
+	var targets := _attack_targets(selected_unit) if action == &"attack" else ContextActions.wake_targets(session.state, session.pipeline, selected_unit, false)
+	if targets.is_empty():
+		return
+	target_action = action
+	target_tiles = PackedInt32Array()
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	for id in targets:
+		target_tiles.append(view.unit_tile(id))
+	reachable = PackedInt32Array()
+	mode = Mode.TARGETING
+	refresh()
+
+
+## A target is chosen: the preview of the blow comes from the pipeline, as the real one will.
+func choose_target(unit_id: int) -> void:
+	target_unit = unit_id
+	if target_action == &"attack":
+		preview = CombatPreview.of(session.pipeline.preview(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, selected_unit, unit_id)),
+				selected_unit, unit_id)
+		preview_text = preview.text()
+	else:
+		preview_text = ContextActions.wake_text(session.state, session.catalog, unit_id)
+	mode = Mode.CONFIRMING
+	refresh()
+
+
+func confirm_attack() -> void:
+	if session == null or mode != Mode.CONFIRMING:
+		return
+	var actor := selected_unit
+	var target := target_unit
+	var action := target_action
+	select_unit(-1)
+	if action == &"attack":
+		session.pipeline.submit(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
+	else:
+		session.pipeline.submit(WakeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, actor, target))
+
+
+## Back to the selected unit, nothing struck.
+func cancel_targeting() -> void:
+	if session == null or (mode != Mode.TARGETING and mode != Mode.CONFIRMING):
+		return
+	select_unit(selected_unit)
+
+
+## The player ends their turn (the end-turn button of the HUD).
+func end_turn() -> ValidationResult:
+	if session == null:
+		return ValidationResult.refused(Refusal.MATCH_OVER)
+	select_unit(-1)
+	return session.turns.end_player_turn()
+
+
+## End or abandon, in this order (ADR-0008 §6): cancel the runner, stop the nodes and
+## release the gate, break the session's cycles, then free. The session is only dropped by
+## the caller once `tree_exited` fires.
+func shutdown() -> void:
+	if session == null:
+		return
+	if _runner_port != null:
+		_runner_port.cancel()
+	set_process(false)
+	ai_runner.set_process(false)
+	sequencer.set_process(false)
+	sequencer.handlers = []
+	session.gate.clear_player_locks()
+	session.shutdown()
+	session = null
+	_runner_port = null
+	_queue = null
+	queue_free()
+
+
+## The hostile units the player's unit may strike now, the ones the pipeline would accept.
+func _attack_targets(unit_id: int) -> Array[int]:
+	var targets: Array[int] = []
+	if unit_id < 0 or session == null:
+		return targets
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	for id in view.unit_ids():
+		if view.unit_faction(id) == Faction.AI \
+				and session.pipeline.check(AttackCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit_id, id)).permitted:
+			targets.append(id)
+	return targets
+
+
+func _hud_actions() -> Dictionary:
+	var extras: Array[ContextAction] = []
+	var panel := {}
+	if mode == Mode.SELECTED or (mode == Mode.IDLE and selected_node >= 0):
+		extras = ContextActions.for_selection(session.state, session.catalog, session.pipeline, selected_unit, selected_node)
+		panel = ContextActions.node_panel(session.state, session.catalog, selected_node)
+	return {
+		"can_attack": mode == Mode.SELECTED and not _attack_targets(selected_unit).is_empty(),
+		"targeting": mode == Mode.TARGETING, "preview": preview if mode == Mode.CONFIRMING else null,
+		"preview_text": preview_text if mode == Mode.CONFIRMING else "", "extras": extras, "panel": panel,
+		"research_open": research_open,
+		"research": ContextActions.research_rows(session.state, session.catalog, session.pipeline) if research_open else [],
+	}
+
+
+func _on_pointer(event: PointerEvent) -> void:
+	_gestures.tile_size = camera.tile_size if camera != null else 48.0
+	for gesture in _gestures.feed(event):
+		match gesture.kind:
+			Gesture.Kind.TAP:
+				on_tap(gesture.position)
+			Gesture.Kind.SCROLL:
+				camera.scroll(gesture.delta)
+			Gesture.Kind.PINCH_UPDATE:
+				camera.zoom(gesture.factor, gesture.position)
+
+
+## Places the HUD zones and the map for the screen, its safe area and what the bars need.
+## Fingers down are cancelled: a rotation or a resize must not turn into a tap (ADR-0010 §1).
+func relayout() -> void:
+	if camera == null:
+		return
+	var safe := safe_area_override
+	if safe.size.x <= 0.0:
+		safe = Rect2(Vector2.ZERO, screen_size_override) if screen_size_override.x > 0.0 else SafeArea.of_window(get_window())
+	var needs := hud.measure()
+	_needs = needs
+	var next := HudLayout.compute(_screen_size(), safe, needs.x, needs.y, mirrored)
+	var changed := layout == null or next.map_area != layout.map_area or next.landscape != layout.landscape
+	layout = next
+	hud.apply_layout(layout)
+	if changed:
+		camera.set_area(layout.map_area)
+		_apply_camera()
+		if hud.is_inside_tree():
+			input_surface.cancel_all()
+
+
+func zoom_by(factor: float) -> void:
+	camera.zoom(factor, camera.area.get_center())
+	_apply_camera()
+
+
+## The recentre button: on the selected unit, else on the first unit of the player.
+func recenter() -> void:
+	if selected_unit >= 0:
+		camera.start_recenter(session.state.view().unit_tile(selected_unit), clock.current(), session.catalog.presentation.value("recenter_ms") / 1000.0)
+	else:
+		_center_on_first_unit(true)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		if input_surface != null:
+			input_surface.cancel_all()
+
+
+func _apply_camera() -> void:
+	camera.dirty = false
+	hud.zoom_in_button.disabled = not camera.can_zoom_in()
+	hud.zoom_out_button.disabled = not camera.can_zoom_out()
+	renderer.layout = camera.layout()
+	renderer.set_clip_rect(camera.area)
+	renderer.queue_redraw()
+	input_surface.position = camera.area.position
+	input_surface.size = camera.area.size
+
+
+## The first look: on the player's unit with the lowest id (ADR-0010 §8).
+func _center_on_first_unit(animated: bool = false) -> void:
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	for id in view.unit_ids():
+		if view.unit_faction(id) == Faction.PLAYER:
+			camera.start_recenter(view.unit_tile(id), clock.current(), session.catalog.presentation.value("recenter_ms") / 1000.0 if animated else 0.0)
+			return
+
+
+func _on_panel_closed() -> void:
+	sequencer.panel_open = false
+	session.gate.unlock(PresentationSequencer.FRAGMENT_PANEL)
+	refresh()
+
+
+func _screen_size() -> Vector2:
+	if screen_size_override.x > 0.0:
+		return screen_size_override
+	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(390, 844)

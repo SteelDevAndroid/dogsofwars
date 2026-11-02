@@ -147,12 +147,12 @@ state_ownership:
     status: active
     owner_system: ai-agents-slice
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
+    interface: "Tranche privée à la faction de l'IA : états de rôle, compteur « tours sans cible », poste, motif courant ; valeur scalaire curseur_ia (point de reprise des coups ordinaires, ADR-0005 §5) ; rôles et compteurs écrits par l'application d'ANNONCER_LES_INTENTIONS ; curseur_ia écrit après chaque commande ordinaire de l'IA par la couche des commandes, via la fonction d'écriture du système 9, jamais par le handler ; filtered_copy(IA) la garde, filtered_copy(JOUEUR) la retire ; pistes et siège restent dans la tranche Intentions, IA passive dans l'en-tête"
     write_access: ai-system-only
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-01   # ancien : « écrite par l'application d'ANNONCER_LES_INTENTIONS et de chaque commande de l'IA » (revue du 2026-11-01, M6)
 
   - state: game_state_intentions
     status: active
@@ -388,11 +388,11 @@ performance_budgets:
     status: active
     budget_ms: 8.0
     adr: docs/architecture/adr-0006-sauvegarde.md
-    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) ; sinon fil d'écriture par amendement"
+    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) AVANT les stories du runner de l'IA (chaque commande de l'IA écrit) ; sinon fil d'écriture par amendement d'ADR-0004 §4 et ADR-0006 §7"
     referenced_by:
       - docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-01   # ancien : mesure de t_write sans ordre imposé par rapport aux stories du runner
 
   - system: vision-recompute
     status: active
@@ -418,11 +418,11 @@ performance_budgets:
     status: active
     budget_ms: 2.0
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next ; comptages 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état) ; produit N_IA × appels × plafond d'appel vérifié au chargement des données ≤ 2 500 copies et 20 000 évaluations par tour ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-01   # ancien : budget par appel seul, plafond du tour non borné (revue du 2026-11-01, B3)
 
   - system: command-validate-apply
     status: active
@@ -535,25 +535,25 @@ api_decisions:
 
   - purpose: vision_and_visibility
     status: active
-    api: "VisionService (fonctions sans état) seul écrivain de la tranche Visibilité et du ViewCache ; ViewCache transitoire copié EN PROFONDEUR par duplicate_state (Array.duplicate superficiel interdit), jamais sérialisé ni comparé ; FieldTable et rayons tenus par VisionContext injecté ; can_see / can_see_unit / can_see_node prédicat unique pour FactionView et filtered_copy (terrain masqué, ligne de l'autre faction vide) ; recompute et reveal_step dans apply rendent VisionDelta ; simulations de l'IA sans recalcul ; event_visible(avant, après)"
+    api: "VisionService (fonctions sans état) seul écrivain de la tranche Visibilité et du ViewCache ; ViewCache transitoire copié EN PROFONDEUR par duplicate_state (Array.duplicate superficiel interdit), jamais sérialisé ni comparé ; FieldTable et rayons tenus par VisionContext injecté ; can_see / can_see_unit / can_see_node prédicat unique pour FactionView et filtered_copy (terrain masqué, ligne de l'autre faction vide) ; recompute et reveal_step dans apply rendent VisionDelta ; aucune copie recalculée (preview, apply_on, IA : variante de simulation) ; rebuild appelé seulement par la mise en place et le chargement (SaveStore, étape 5), restore_from recopie le cache de l'instantané ; event_visible(avant, après)"
     not: "vision stockée dans l'état, décision de visibilité hors VisionService, cache global singleton, FactionView et filtered_copy sur des prédicats différents"
     adr: docs/architecture/adr-0007-vision-et-visibilite.md
     reason: "Frontière anti-fuite ; micro-banc : recalcul 43 µs par faction, copie du cache 0,26 µs"
     referenced_by:
       - docs/architecture/adr-0007-vision-et-visibilite.md
     added: 2026-10-31
-    revised: ""
+    revised: 2026-11-01   # ancien : rebuild après from_bytes et restore_from ; aperçu sans variante précisée (revue du 2026-11-01, B1 et B4)
 
   - purpose: composition_root
     status: active
-    api: "un Bootstrap unique dans src/app/ ; AppContext (processus) et GameSession (partie) ; SessionFactory.build(app, state, ports{event_sink, pacing_gate}) pour partie neuve et chargée, MatchScreen construit sans liaisons puis bind(session) ; TestSessionFactory dans tests/fixtures ; aucun autoload"
+    api: "un Bootstrap unique dans src/app/ ; AppContext (processus) et GameSession (partie) ; SessionFactory.build(app, state, vision, ports{event_sink, pacing_gate}) (VisionContext rendu par new_game ou load_match, la fabrique n'appelle jamais rebuild) pour partie neuve et chargée, MatchScreen construit sans liaisons puis bind(session) ; TestSessionFactory dans tests/fixtures ; aucun autoload"
     not: "autoload, service locator, get_node pour trouver un service, Core qui référence Presentation, construction d'une dépendance par le système qui l'utilise"
     adr: docs/architecture/adr-0008-racine-de-composition.md
     reason: "ADR-0002 interdit les singletons ; ports injectés dans un seul endroit"
     referenced_by:
       - docs/architecture/adr-0008-racine-de-composition.md
     added: 2026-10-31
-    revised: ""
+    revised: 2026-11-01   # ancien : SessionFactory.build(app, state, ports) (revue du 2026-11-01, B4)
 
   - purpose: game_data_files
     status: active

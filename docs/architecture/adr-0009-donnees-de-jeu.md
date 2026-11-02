@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur les Tuning Knobs de tous les GDD MVP et les renvois des ADR-0001 à 0008 ; **tests headless** Godot 4.7.2 Windows : `JSON.parse_string` rend **tous les nombres en `float`** (`typeof` = `TYPE_FLOAT`, un entier au-delà de 2⁵³ perd sa précision : 9007199254740993 devient …992.0), **une clé dupliquée est silencieusement écrasée** (`{"a":1,"a":2}` donne `a = 2`), une erreur de syntaxe est rapportée par `JSON.new().parse` avec code et message. Inclusion des `.json` dans l'export Android : **non vérifiée**.
+2026-10-31 — conception sur les Tuning Knobs de tous les GDD MVP et les renvois des ADR-0001 à 0008 ; **tests headless** Godot 4.7.2 Windows : `JSON.parse_string` rend **tous les nombres en `float`** (`typeof` = `TYPE_FLOAT`, un entier au-delà de 2⁵³ perd sa précision : 9007199254740993 devient …992.0), **une clé dupliquée est silencieusement écrasée** (`{"a":1,"a":2}` donne `a = 2`), une erreur de syntaxe est rapportée par `JSON.new().parse` avec code et message. Inclusion des `.json` dans l'export Android : **non vérifiée**. Amendé le 2026-11-01 (revue d'architecture : B3, M7 à M10).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -44,7 +44,7 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 ### Constraints
 - GDScript, Godot 4.7.2, Android d'abord ; déterminisme exigé (rejeu, reprise de la phase ennemie).
 - JSON.parse rend des `float` : un champ entier doit être vérifié, pas supposé.
-- Les valeurs de réglage changent entre deux versions (équilibrage) sans changer le schéma de sauvegarde (GDD 16, règle 17bis) : une partie reprend avec les nouvelles valeurs.
+- Les valeurs de réglage changent entre deux versions (équilibrage) sans changer le schéma de sauvegarde (GDD 16, règle 17bis) : une partie reprend avec les nouvelles valeurs. Exceptions : retirer un identifiant ou baisser un maximum (§10).
 - Pas de singleton (ADR-0002) : le catalogue est injecté.
 
 ### Requirements
@@ -58,7 +58,7 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 **2. Entiers seulement.** Toute valeur est un entier ou une chaîne ; **aucun nombre fractionnaire** dans les données, y compris les réglages de contrôles et de caméra. Les rapports sont exprimés en centièmes, millièmes ou millionièmes avec un suffixe de nom (`_pct`, `_milli`, `_micro`) : le GDD 4 passe à `TAP_SLOP_MILLI` = 500, `ZOOM_STEP_MILLI` = 1260 (2^(1/3)), `ZOOM_MAX_MILLI`, `FOCUS_CLEARANCE_MILLI` = 500, `ZOOM_EPS_MICRO` = 1000 (**GDD SYNC** : renommer ces réglages dans le GDD 4) ; les durées en millisecondes (`_ms`), les couleurs en chaînes `"#RRGGBB"` converties en entier au chargement. Le validateur lit le `float` rendu par le moteur et exige `value == floor(value)` et `|value| ≤ 2³¹ − 1` ; sinon erreur (« 2,5 » refusé, jamais arrondi). Cas vérifiés : `2.0` est accepté comme l'entier 2 ; `-0` donne 0 ; `1e999` donne `inf` avec un avertissement du moteur, attrapé par la borne. Les règles de jeu n'effectuent donc aucun calcul flottant sur une donnée.
 
-**3. Schéma déclaré en code, strict.** Chaque domaine a un `DataSchema` (constante GDScript : champ → type, minimum, maximum, énumération de noms, éléments de tableau). Le validateur **refuse** : une clé inconnue, une clé manquante (pas de défaut caché), un type faux, une valeur hors bornes, une référence croisée orpheline (prérequis de protocole inexistant, type d'unité inconnu, identifiant de fragment dupliqué ou non croissant). Il rend **toutes** les erreurs, pas la première, avec le nom du fichier et le chemin du champ.
+**3. Schéma déclaré en code, strict.** Chaque domaine a un `DataSchema` (constante GDScript : champ → type, minimum, maximum, énumération de noms, éléments de tableau). Le validateur **refuse** : une clé inconnue, une clé manquante (pas de défaut caché), un type faux, une valeur hors bornes, une référence croisée orpheline (prérequis de protocole inexistant, type d'unité inconnu, identifiant de fragment dupliqué ou non croissant, budget de l'IA dont le produit `N_IA × APPELS_PAR_UNITÉ_MAX × plafond d'appel` dépasse le plafond du tour pour une carte livrée, ADR-0005 §4). Il rend **toutes** les erreurs, pas la première, avec le nom du fichier et le chemin du champ.
 
 **4. `DataCatalog`, immuable, typé.** `DataCatalog.load_all(source: DataSource) -> DataCatalogResult` lit tous les fichiers par un port étroit `DataSource` (réel : `FileAccess` sur `res://assets/data/` ; test : dictionnaire en mémoire), valide, puis construit des objets `RefCounted` typés en lecture seule (le chemin de production utilise `JSON.new().parse`, qui rend un code et un message, et **jamais** `JSON.parse_string`, qui imprime une erreur et rend `null` ; la ligne d'erreur peut valoir 0, ne pas l'afficher telle quelle) (`UnitTypes`, `AiParams`, `PresentationParams`, `TeintesTable`, `FragmentPools`…). Aucun `Dictionary` brut ne sort du catalogue : les règles lisent des champs typés. Le catalogue est construit **une fois au démarrage**, avant toute partie, par la racine de composition (ADR-0008), puis **injecté** ; il n'y a ni autoload ni accès statique global.
 
@@ -72,13 +72,13 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 **9. Export.** On suppose que le filtre d'inclusion de l'export Android **doit** contenir `*.json` (hypothèse : un `.json` n'a pas d'importeur, vérifié en éditeur headless, et ne serait donc exporté que par le filtre) ; la vérification (1) la confirme sur l'appareil.
 
-**10. Cohérence entre une partie et les données.** Retirer ou renuméroter un identifiant du catalogue (type d'unité, protocole, fragment) est un **changement de schéma** (GDD 16, règle 17bis). La validation de l'état au chargement contrôle ses références au catalogue (type d'unité connu, PV ≤ maximum courant, identifiants de protocole et de fragment connus) : un identifiant inconnu fait **refuser le fichier** avec repli sur `.bak` (ADR-0006) ; une valeur dépassant le nouveau maximum est ramenée au maximum **par une migration documentée**, jamais en silence.
+**10. Cohérence entre une partie et les données.** Retirer ou renuméroter un identifiant du catalogue (type d'unité, protocole, fragment) est un **changement de schéma** (GDD 16, règle 17bis). La validation de l'état au chargement contrôle ses références au catalogue (type d'unité connu, PV ≤ maximum courant, identifiants de protocole et de fragment connus) : un identifiant inconnu ou une valeur au-dessus du maximum courant fait **refuser le fichier** avec repli sur `.bak` (ADR-0006). **Baisser un maximum** (PV, stock, taille de pool) est donc, comme retirer un identifiant, un **changement de schéma** : la migration N → N + 1 (ADR-0006 §3) ramène les valeurs au nouveau maximum ; aucune valeur n'est jamais ramenée au chargement sans migration (revue du 2026-11-01, M9).
 
 ### Architecture Diagram
 
 ```
  assets/data/*.json ──► DataSource (port : FileAccess réel | dictionnaire de test)
-        │ parse (JSON.parse_string / JSON.new().parse pour les erreurs)
+        │ parse (JSON.new().parse : code et message d'erreur ; jamais JSON.parse_string)
         ▼
  DataSchema (par domaine) ── valide : types, entiers, bornes, clés, références ──► toutes les erreurs ou ──┐
                                                                                                          ▼
@@ -92,7 +92,9 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 ```gdscript
 class_name DataSource extends RefCounted
-func read_text(path: String) -> String            # "" + erreur si absent ; réel : FileAccess ; test : mémoire
+var last_error: Error                              # OK, ou ERR_FILE_NOT_FOUND après la lecture d'un chemin absent
+func read_bytes(path: String) -> PackedByteArray  # vide + erreur si absent ; réel : FileAccess.get_file_as_bytes ; test : mémoire ; source de content_hash
+func read_text(path: String) -> String            # read_bytes(path).get_string_from_utf8() : une seule lecture par fichier
 func list(dir: String) -> PackedStringArray
 
 class_name DataCatalog extends RefCounted
@@ -112,7 +114,7 @@ var errors: Array[DataError]                       # fichier, chemin du champ, m
 
 ### Implementation Guidelines
 - Une valeur de jeu **ne doit jamais** être codée en dur : elle vient du catalogue.
-- Les données **ne doivent contenir** aucun nombre fractionnaire ; un rapport **doit** porter le suffixe `_pct` ou `_milli`.
+- Les données **ne doivent contenir** aucun nombre fractionnaire ; un rapport **doit** porter le suffixe `_pct`, `_milli` ou `_micro`.
 - Le catalogue **ne doit jamais** être lu par une API statique ni un autoload ; il est injecté.
 - Le catalogue **ne doit jamais** être modifié ni rechargé pendant une partie.
 - Un champ manquant ou inconnu **doit** être une erreur, jamais un défaut.
@@ -181,9 +183,11 @@ var errors: Array[DataError]                       # fichier, chemin du champ, m
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun code existant. À créer (et amender ADR-0004 : `CommandLog.content_hash`, fait ; ADR-0002 : chemin `assets/data/presentation.json`, fait) : `DataCatalog`, `DataSchema` par domaine, `tools/ci/check-json-duplicate-keys`, le test CI qui charge `assets/data/` réel, l'entrée `*.json` du filtre d'export.
+Aucun code existant. À créer (et amender ADR-0004 : `CommandLog.content_hash`, fait ; ADR-0002 : chemin `assets/data/presentation.json`, fait) : `DataCatalog`, `DataSchema` par domaine, le test CI qui charge `assets/data/` réel, l'entrée `*.json` du filtre d'export.
 
-Le projet n'a pas encore d'`export_presets.cfg` : le preset Android **doit** porter `include_filter="assets/data/*.json"` (vérifié : aucun importeur pour `.json`, le fichier n'est exporté que par ce filtre). Ajouter `.gitattributes` (`assets/data/*.json text eol=lf`).
+**Implémenté le 2026-11-01** dans `src/core/data/` : `DataCatalog.load_all` (fichiers attendus, fichier inconnu ou manquant refusé, `JSON.new().parse` seul, toutes les erreurs avec fichier et chemin), `DataSchema` (spécification en `Dictionary` constant : entier borné, chaîne, énumération convertie en entier, tableau borné, objet strict ; un nombre fractionnaire, infini ou au-delà de 2³¹ − 1 est refusé, jamais arrondi ; `2.0` vaut 2), `content_hash_of` (SHA-256 de « nom `\n` longueur `\n` octets » par fichier, ordre alphabétique explicite), `DataError`, `DataCatalogResult`, `ResDataSource` (`res://assets/data/`). Trois premiers domaines, aux valeurs des GDD : `units.json` (`UnitTypes`, GDD 6 et 5), `brouillard.json` (`FogParams` : vue minimale d'un nœud, bonus de montagne) et `noeuds.json` (`NodeParams` : rayon de territoire et prix de montée par niveau, ce dernier contrôlé contre le plafond d'énergie). Ajoutés ensuite : `terrain.json` (`TerrainParams`, coûts d'entrée et classes de défense), `combat.json` (`CombatParams`), `reveil.json` (`WakeParams`, avec contrôles croisés des prix), `energie.json` (`EnergyParams`), `protocoles.json` (`ProtocolTree`) et `ai.json` (`AiParams`, calendrier des protocoles de l'IA), avec des contrôles croisés entre domaines (`DataCatalog._cross_check`). Les autres domaines de §1 s'ajoutent avec leurs systèmes, chacun avec son `SCHEMA` et sa fonction `build`. Bornes à confirmer : ATQ et DÉF 0..5, portée 1..1 au MVP, rayon de territoire 1..4 (provisoires, [PROP]). `CatalogFactory` (`tests/fixtures/`) charge les mêmes valeurs en mémoire ; un test d'intégration charge les fichiers livrés et les compare.
+
+Le projet n'a pas encore d'`export_presets.cfg` : le preset Android **doit** porter `include_filter="assets/data/*.json"` (vérifié : aucun importeur pour `.json`, le fichier n'est exporté que par ce filtre). **Fait** (2026-11-01) : `.gitattributes` (`assets/data/*.json text eol=lf`) et `tools/ci/check-json-duplicate-keys.py`, avec son auto-test, exécuté par le workflow `tests`.
 
 **Rollback plan**: repli sur des `.tres` typés par domaine (Alternative 1) si l'export JSON pose problème sur Android.
 

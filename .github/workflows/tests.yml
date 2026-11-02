@@ -1,0 +1,51 @@
+name: tests
+
+# Self-tests of the CI checks, then the checks on the repository
+# (ADR-0011 §8 and §9; layers: ADR-0008 §7; data files: ADR-0009 §8).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Self-tests of the CI checks
+        run: |
+          bash tests/unit/ci/test_check_layer_deps.sh
+          bash tests/unit/ci/test_check_json_duplicate_keys.sh
+      - name: Core never depends on presentation or app, no autoload
+        run: bash tools/ci/check-layer-deps.sh src project.godot
+      - name: No duplicated key in data files
+        run: python3 tools/ci/check-json-duplicate-keys.py assets/data
+
+  gdunit4:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2-stable
+      # SHA-512 of Godot_v4.7.2-stable_linux.x86_64.zip (official SHA512-SUMS.txt)
+      GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot
+        run: |
+          curl -sSfL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  godot.zip" | sha512sum -c -
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}_linux.x86_64" >> "$GITHUB_ENV"
+      # Builds the global class cache: class_name test doubles do not resolve without it (ADR-0011 §9).
+      - name: Import project
+        run: '"$GODOT" --headless --import'
+      # Exit 0 = green; 100 = failures or errors; 101 = orphans. Any non-zero fails the job.
+      - name: gdUnit4 suite
+        run: '"$GODOT" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
+      - name: The Android pack holds the data and the game runs from it
+        run: bash tools/ci/check-export-pack.sh
+      - name: Archive JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit4-report
+          path: reports/

@@ -7,7 +7,7 @@ Accepted
 2026-10-31
 
 ## Last Verified
-2026-10-31 — conception sur le GDD 4 et les ADR-0002, 0004, 0007, 0008 ; **vérifié en headless** Godot 4.7.2 Windows : existence de `Input.set_use_accumulated_input`, `DisplayServer.get_display_safe_area`, du réglage `input_devices/pointing/emulate_touch_from_mouse`, des réglages `display/window/stretch/*`, de la propriété `Window.content_scale_mode` et de `InputEventScreenTouch.canceled`. **Non vérifié** : tout le comportement tactile réel (annulation de contact, accumulation, densité d'écran) : Android seulement.
+2026-10-31 — conception sur le GDD 4 et les ADR-0002, 0004, 0007, 0008 ; **vérifié en headless** Godot 4.7.2 Windows : existence de `Input.set_use_accumulated_input`, `DisplayServer.get_display_safe_area`, du réglage `input_devices/pointing/emulate_touch_from_mouse`, des réglages `display/window/stretch/*`, de la propriété `Window.content_scale_mode` et de `InputEventScreenTouch.canceled`. **Non vérifié** : tout le comportement tactile réel (annulation de contact, accumulation, densité d'écran) : Android seulement. Amendé le 2026-11-01 (revue d'architecture : M2, M3).
 
 ## Decision Makers
 Utilisateur (direction de projet, choix « recommandé » délégué), Claude (rédaction), godot-specialist et technical-director (validation, TD-ADR : CONCERNS traités le 2026-10-31). **L'acceptation (`Accepted`) exige une confirmation explicite de l'utilisateur, ADR par ADR : le choix « recommandé » délégué ne vaut pas acceptation.**
@@ -109,8 +109,8 @@ func recenter_to(tile: Vector2i, animated: bool) -> void
 class_name TapResolver extends RefCounted
 static func resolve(mode: int, selection: int, target: TapTarget, checks: CheckPort) -> TapAction
 
-# ajout à ADR-0004 (RuleTable)
-static func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array
+# ajout à ADR-0004 (RuleTable) : méthode d'instance, la RuleTable détient catalogue et VisionContext ; le pipeline délègue
+func check_move_range(view: StateView, unit_id: int) -> PackedInt32Array
 ```
 
 ### Implementation Guidelines
@@ -190,9 +190,47 @@ Aucun code existant. À créer : `InputSurface`, `GestureInterpreter`, `MapCamer
 
 ## Validation Criteria
 - Suite de tests purs : une séquence qui dépasse la demi-tuile puis revient ne donne jamais un appui ; pose, seconde pose, relevé ne produit aucune commande.
-- Parité `check(Move)` / `check_move_range` sur 1 000 états aléatoires.
+- Parité `RuleTable.validate(view, Move)` / `check_move_range` sur 1 000 états aléatoires (jamais `pipeline.check`, §7).
 - Sur appareil : tuile minimale de 31 dp, zone sûre respectée, perte de focus sans commande.
 
 ## Related
 - ADR-0002, ADR-0004 (amendé), ADR-0007, ADR-0008, ADR-0009.
 - `design/gdd/controles-tactiles-camera.md`, `design/ux/hud.md`, `design/accessibility-requirements.md`.
+
+## Caméra, gestes et attaque (2026-11-02)
+
+Écrits : `PointerEvent` et `InputSurface` (`src/presentation/input/` et `hud/` : doigts normalisés, **souris ignorée**, `cancel_all`), `GestureInterpreter` et `Gesture` (pur : appui sous le seuil de `TAP_SLOP_MILLI` millièmes de tuile, seuil proportionnel au zoom, une distance égale au seuil reste un appui, défilement, pincement, doigt orphelin, annulation, second contact sur le même doigt = annulation puis contact), `MapCamera` (`src/presentation/camera/`, pure, sans `Camera2D` : centre en tuiles, zoom 24 à 64 pixels par tuile, 8 colonnes par défaut, marge de bord de 1 tuile, carte plus petite que la zone centrée, ancrage du zoom sous les doigts, décalage minimal `ensure_visible`, recentrage animé sur l'horloge de présentation, mémorisation et restitution), `CameraHandler` (`src/presentation/sequencer/` : recentrage sur la ruine lue, première étape de la séquence — `PresentationRecenter`, `recenter_ms` en données, instantané en animations réduites —, la caméra suit les déplacements du joueur mais pas ceux de l'ennemi, mémorisée à la fin du tour du joueur et rendue au début du suivant), `TileRenderer.set_clip_rect` (la carte défilée ne passe jamais sous les barres du HUD).
+
+Écran de partie (`MatchScreen`) : un glissement fait défiler, un pincement zoome, un appui est converti en tuile par la caméra (zone de carte du HUD, centre initial sur l'unité du joueur d'identifiant le plus bas), la surface d'entrée suit la zone de carte, défilement et zoom restent actifs pendant les animations.
+
+**Attaque** (hud.md section 4) : une unité sélectionnée qui peut frapper (au moins une cible hostile visible que `pipeline.check` accepterait) montre « Attaquer » ; le mode ciblage marque les cibles (crochets d'angle) et retire la portée de déplacement ; appuyer sur une cible affiche l'**aperçu** (`CombatPreview` lu dans `pipeline.preview` : « Inflige −4 · létal · Riposte −2 »), remplaçant les actions par « Confirmer » et « Annuler » ; un second appui sur la même cible ou « Confirmer » frappe ; un appui ailleurs ou « Annuler » revient à l'unité sélectionnée. Les étapes de l'attaque (trait, coup, riposte, destruction), le verrou de 1,6 s et les chiffres passent par le séquenceur ; les boutons deviennent inactifs dès que le lot commence (`batch_started`).
+
+**Écarts à confirmer** : (1) pas de bouton de recentrage ni de +/− (la caméra répond aux gestes, pas aux boutons ; les zones sûres et le rail paysage ne sont pas faits) ; (2) la mémorisation de la caméra n'est pas sauvegardée (au chargement : zoom par défaut, centre sur la première unité) ; (3) `GestureInterpreter` ne reçoit pas la rotation de l'écran ni l'annulation sur perte de focus (`cancel_all` existe, personne ne l'appelle encore) ; (4) l'aperçu n'affiche pas la valeur « létale » des intentions ennemies (marqueur de GDD 9) ; (5) capturer, réveiller, monter un nœud et rechercher n'ont pas encore de bouton ; (6) le ciblage ne propose que des unités ennemies visibles, jamais une unité dormante.
+
+**Preuve visuelle** : `production/qa/evidence/camera-combat-preview-2026-11-02.png` (Xvfb, 390 × 844, zoom × 1,3) : l'Assaut sélectionné (cadre clair), le Chasseur ennemi marqué par les crochets orange du ciblage, l'aperçu « Inflige −6 · Riposte −1 » et les boutons « Confirmer » / « Annuler ». **Défaut de mise en page constaté** : le panneau du bas (unité, aperçu, boutons, vitesse) monte au-dessus des 24 % réservés et recouvre le bas de la carte, et la puce d'alerte du haut recouvre le haut de la zone de carte ; la zone de carte de `HudModel.map_area` est à recalculer d'après la hauteur réelle des barres (zones sûres du GDD 4 comprises).
+
+## Capturer, réveiller, monter, rechercher (2026-11-02)
+
+Écrits (`src/presentation/hud/`) : `ContextActions` (ce que la sélection permet, demandé au pipeline par `check` : les boutons grisés et les refus réels sont une seule règle), `ContextAction` (identifiant, libellé, actif ou non, raison), `RefusalText` (un code de refus en français, avec les montants de l'énergie), `DisplayNames` (noms des types d'unités et des protocoles, accents compris), `ResearchPanel` ; `HudModel` et `Hud` gagnent une rangée d'actions de contexte, la raison du premier bouton grisé, le panneau de recherche et un bouton « Recherche » dans la barre du haut (grisé pendant le tour ennemi) ; `MatchScreen` gagne `do_action(id)`, `toggle_research`, la sélection d'un nœud du joueur (un appui sur un nœud à soi sans unité dessus) et un ciblage générique (`target_action` : attaque ou réveil).
+
+- **Capturer** : une unité qui sait capturer, posée sur un nœud qui n'est pas au joueur ; le bouton se grise avec la raison du pipeline (« A déjà agi »…).
+- **Réveiller** : une unité de la meute avec un dormant visible à côté ; le bouton ouvre le ciblage des dormants que le pipeline accepterait, l'appui sur l'un affiche « Réveiller Ouvrier : 5 énergie » (prix de `WakeRules.price`, protocoles compris), puis confirmation ou annulation comme pour l'attaque. Sans énergie suffisante, le bouton est grisé avec « Énergie insuffisante (5 requis, 1 disponibles) ».
+- **Monter** : sur un nœud du joueur sélectionné par un appui, ou sous l'unité sélectionnée ; libellé « Monter (prix) » ; le panneau du nœud donne le niveau, le revenu et le coût du niveau suivant.
+- **Rechercher** : un panneau liste les six protocoles (prix, durée) ; un protocole acquis ou en cours est marqué, un protocole sans prérequis ou trop cher est grisé avec sa raison ; une ligne lance RECHERCHER.
+
+Les actions attendent le séquenceur inactif et l'absence de verrou du joueur ; sous un verrou ou en ciblage, la rangée disparaît et les lignes de recherche se grisent (« Patientez »). `GameStateSetup.set_energy` (mise en place et tests) est ajoutée.
+
+**Écarts à confirmer** : (1) pas d'aperçu avant capture ou montée (le coût est dans le libellé, le gain de revenu dans le panneau du nœud) ; (2) le panneau de recherche ne dit pas combien de tours restent à la recherche en cours (la vue du joueur n'expose que l'identifiant) ; (3) les noms des types et des protocoles sont provisoires et en dur dans `DisplayNames` (pas de fichier de localisation) ; (4) pas de confirmation avant de lancer une recherche coûteuse ; (5) les nœuds ennemis ou neutres ne se sélectionnent pas (la capture passe par l'unité).
+
+**Preuves visuelles** : `production/qa/evidence/hud-node-upgrade-2026-11-02.png` (nœud de départ sélectionné : panneau du nœud et « Monter (12) ») et `production/qa/evidence/hud-research-panel-2026-11-02.png` (panneau de recherche : six protocoles, lignes actives ou grisées, raison « Prérequis manquant »). Les captures ont corrigé la mise en page du HUD : la barre du haut coupait ses textes et poussait « Pause » hors de l'écran (elle passe sur deux rangées : tour, énergie, ruines, puis score avec « Recherche » et « Pause »), les barres et panneaux ont maintenant un fond opaque, les panneaux de recherche et de fragment sont centrés et bornés, et la zone de carte laisse 18 % en haut et 34 % en bas (`HudModel.map_area`) au lieu de 14 % et 24 %. Le libellé « Ruines lues » devient « Ruines » (place). La zone de carte reste une proportion fixe de l'écran : à recalculer d'après les hauteurs réelles avec les zones sûres.
+
+## Zones sûres, rail paysage et boutons de la caméra (2026-11-02)
+
+Écrits (`src/presentation/layout/`) : `UiScale` (`content_scale_factor` = dpi / 160, borné à 1..4, modulé par l'échelle du texte ; posé par `Bootstrap` au démarrage et à chaque `size_changed`), `SafeArea` (le rectangle sûr de l'écran, en pixels, ramené en unités de viewport ; vide ou de taille nulle = écran entier, comme en headless), `HudLayout` (pur : en portrait, une barre en haut et un panneau en bas **de la hauteur qu'ils demandent réellement**, la carte entre les deux avec un plancher de 30 % de l'écran ; en paysage, un rail de 140 pt à gauche, le panneau de 224 pt à droite, la carte au milieu ; tout dans la zone sûre ; la grappe +, −, recentrer en bas à droite de la carte, boutons de 48 dp espacés de 8). `Hud` : `measure()` (ce que les barres demandent), `apply_layout()` (place barre, rail, panneau et boutons ; en paysage les rangées de chiffres s'empilent et le score passe à la ligne), les boutons +, −, ◎ avec libellés accessibles. `MatchScreen.relayout()` (à la liaison, à chaque redimensionnement ou rotation, après chaque rafraîchissement du HUD, et quand les hauteurs mesurées changent : un conteneur ne met sa taille minimale à jour qu'à l'image suivante) règle la zone de la caméra et de la surface d'entrée, et **annule les doigts posés** ; la perte de focus et la mise en pause de l'application les annulent aussi (`NOTIFICATION_APPLICATION_FOCUS_OUT` et `PAUSED`). Les boutons + et − zooment de 25 % au centre de la carte et se grisent aux bornes, ◎ recentre sur l'unité sélectionnée, sinon sur la première unité du joueur.
+
+Le rendu coupe maintenant la carte lui-même (`TileRenderer.clip_area`, `visible_tiles()` : les tuiles hors zone ne sont pas dessinées, les autres sont rognées ; unités, nœuds, ruines, surbrillances, crochets et vagues hors zone sont omis) : le clip de canvas du moteur laissait des tuiles perdues hors de la zone sur les captures.
+
+**Preuves visuelles** : `production/qa/evidence/layout-portrait-safe-area-2026-11-02.png` (portrait 390 × 844 avec 36 pt d'encoche : barre, carte, grappe de boutons, panneau d'unité tous dans la zone sûre) et `production/qa/evidence/layout-landscape-rail-2026-11-02.png` (paysage 844 × 390 avec encoche à gauche : rail, carte, boutons, panneau de droite). Deux défauts attrapés par les captures : une carte qui débordait hors de sa zone (clip moteur), et un libellé à retour à la ligne automatique qui donnait à la barre du haut une hauteur de 615 pt (le retour à la ligne n'est actif qu'en paysage, avec une largeur donnée).
+
+**Écarts à confirmer** : (1) les insets de l'affichage (`get_display_safe_area`) ne sont pas vérifiés sur appareil, l'affichage bord à bord d'Android 15 reste à tester ; (2) le calcul de la zone de carte suit les hauteurs mesurées, ce qui la fait varier quand un panneau apparaît (la caméra garde son centre) ; (3) le glyphe ◎ du bouton de recentrage vient de la police par défaut, sans icône dessinée ; (4) la rotation en cours de pincement annule le geste sans le reprendre ; (5) pas de mise à l'échelle du texte par réglage (le facteur est prévu dans `UiScale.factor`, aucun réglage ne le fournit).
+

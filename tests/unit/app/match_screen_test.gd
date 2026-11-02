@@ -1,0 +1,1098 @@
+extends GdUnitTestSuite
+
+const SCENE := "res://src/app/match_screen.tscn"
+
+
+func _screen() -> MatchScreen:
+	var screen: MatchScreen = load(SCENE).instantiate()
+	screen.screen_size_override = Vector2(390, 844)  # the test window is tiny: a phone in portrait
+	add_child(screen)
+	return screen
+
+
+func test_the_scene_carries_the_runner_at_priority_20_and_the_other_nodes() -> void:
+	var screen := _screen()
+
+	assert_int(screen.ai_runner.process_priority).is_equal(20)
+	assert_object(screen.world).is_instanceof(Node2D)
+	assert_object(screen.hud_layer).is_instanceof(CanvasLayer)
+	assert_object(screen.input_surface).is_instanceof(Control)
+	screen.free()
+
+
+func test_binding_starts_the_match_and_the_runner_plays_the_enemy_phase() -> void:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+
+	screen.bind(session)
+	assert_array([session.state.turn(), session.state.header.value(HeaderSlice.PHASE)]).is_equal([1, HeaderSlice.PHASE_PLAYER])
+	assert_bool(screen.end_turn().permitted).is_true()
+	assert_bool(screen.ai_runner.is_running()).is_true()
+	for step in 600:
+		if not screen.ai_runner.is_running():
+			break
+		screen.ai_runner.advance()
+
+	assert_array([session.state.turn(), session.state.header.value(HeaderSlice.PHASE)]).is_equal([2, HeaderSlice.PHASE_PLAYER])
+	screen.shutdown()
+	t.dispose()
+	await await_idle_frame()
+
+
+func test_shutdown_follows_the_adr_sequence_and_frees_the_screen() -> void:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	screen.end_turn()
+
+	screen.shutdown()
+
+	assert_bool(screen.ai_runner.is_running()).is_false()
+	assert_object(screen.session).is_null()
+	assert_object(session.state).is_null()
+	assert_bool(screen.is_queued_for_deletion()).is_true()
+	assert_bool(screen.end_turn().permitted).is_false()
+	screen.shutdown()  # idempotent
+	t.dispose()
+	await await_idle_frame()
+
+
+func test_a_loaded_match_in_the_enemy_phase_is_resumed_by_the_screen() -> void:
+	var t := TestSessionFactory.new()
+	var first := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), 6, first.ports(t.sink), first.runner_port())
+	first.bind(session)
+	first.end_turn()
+	first.ai_runner.advance()
+	first.ai_runner.advance()
+	first.shutdown()
+	t.dispose()
+
+	var again := TestSessionFactory.new(t.files.restarted())
+	var screen := _screen()
+	var reason := [LoadResult.NONE]
+	var loaded := SessionFactory.resume(again.app, screen.ports(again.sink), screen.runner_port(), reason)
+	screen.bind(loaded)
+
+	assert_str(reason[0]).is_equal(LoadResult.OK)
+	assert_bool(screen.ai_runner.is_running()).is_true()
+	screen.shutdown()
+	again.dispose()
+	await await_idle_frame()
+
+
+func test_shutdown_releases_the_players_locks() -> void:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	var gate := session.gate
+	gate.lock(&"attack_animation")
+	assert_bool(gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+
+	screen.shutdown()
+
+	assert_bool(gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	t.dispose()
+	await await_idle_frame()
+
+
+## Plays what the sequencer has queued, as the frames would.
+func _settle(screen: MatchScreen) -> void:
+	for step in 400:
+		screen.clock.advance(0.5)
+		screen.sequencer.advance()
+		if screen.sequencer.is_idle():
+			return
+
+
+func _started(seed_value: int = 6) -> Array:
+	var t := TestSessionFactory.new()
+	var screen := _screen()
+	var session := SessionFactory.new_game(t.app, t.map(), seed_value, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	_settle(screen)
+	return [t, screen, session]
+
+
+func test_binding_draws_the_map_and_fills_the_hud() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	assert_object(screen.renderer.snapshot).is_not_null()
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 1 / 30")
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	assert_float(screen.renderer.layout.tile_size).is_greater(0.0)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_unit_of_the_player_selects_it_and_shows_where_it_can_go() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(scout)
+	assert_bool(screen.reachable.size() > 0).is_true()
+	assert_bool(screen.reachable.has(state.tile_index(2, 1))).is_false()
+	assert_str(screen.hud.unit_title.text).is_equal("Éclaireur")
+	assert_int(screen.renderer.selected_tile).is_equal(state.tile_index(2, 1))
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_reachable_tile_moves_the_selected_unit() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[screen.reachable.size() - 1]
+
+	screen.on_tap_tile(destination)
+
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	assert_bool(state.view().unit_moved(scout)).is_true()
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_bool(screen.reachable.is_empty()).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_elsewhere_or_on_an_unreachable_tile_deselects() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	screen.on_tap_tile(state.tile_index(11, 11))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	screen.on_tap_tile(-1)  # outside the map: ignored
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_unit_that_has_moved_shows_no_move_range() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	UnitWrites.set_moved(state, scout)
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(scout)
+	assert_bool(screen.reachable.is_empty()).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_no_range_is_offered_during_the_enemy_phase() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.end_turn()
+	_settle(screen)
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_bool(screen.reachable.is_empty()).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+
+	screen.hud.end_turn_button.pressed.emit()
+	for step in 600:
+		if not screen.ai_runner.is_running():
+			break
+		screen.ai_runner.advance()
+	_settle(screen)
+
+	assert_int(state.turn()).is_equal(2)
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 2 / 30")
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_journal_keeps_twelve_lines_and_clears_when_the_player_plays() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var context := SequenceContext.new(0.0, screen.sequencer.clock)
+
+	for k in 15:
+		screen.presenter.handle(IntentionAnnouncedEvent.new(k, 1, 0, 0, 5, 0, 0), context)
+	assert_int(screen.presenter.journal.size()).is_equal(HudModel.JOURNAL_LINES)
+	screen.presenter.handle(TurnStartedEvent.new(2, Faction.PLAYER, HeaderSlice.PHASE_PLAYER), context)
+
+	assert_int(screen.presenter.journal.size()).is_equal(0)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_pause_button_asks_the_app_for_the_pause() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var asked := [0]
+	screen.pause_requested.connect(func() -> void: asked[0] += 1)
+
+	screen.hud.pause_button.pressed.emit()
+
+	assert_int(asked[0]).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_a_visible_enemy_unit_selects_nothing() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var enemy := GameStateSetup.add_unit(state, 5, Faction.AI, state.tile_index(3, 1), 8)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+
+	screen.on_tap_tile(state.tile_index(3, 1))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_bool(state.view().unit_at(state.tile_index(3, 1)) == enemy).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+## What the frames do: time passes, the sequencer plays, the AI sends a command when the gate is ready.
+func _frames(screen: MatchScreen, count: int, step: float = 0.1) -> void:
+	for k in count:
+		screen.clock.advance(step)
+		screen.sequencer.advance()
+		if screen.ai_runner.is_running() and screen.sequencer.is_idle():
+			screen.ai_runner.advance()
+
+
+func test_the_enemy_turn_takes_presentation_time_and_hands_the_turn_back() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var before := screen.clock.current()
+
+	screen.end_turn()
+	_frames(screen, 2000)
+
+	assert_int(state.turn()).is_equal(2)
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_bool(screen.ai_runner.is_running()).is_false()
+	assert_float(screen.clock.current()).is_greater(before)
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	assert_str(screen.hud.turn_label.text).is_equal("Tour 2 / 30")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_taps_and_the_end_turn_button_wait_for_the_sequencer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[0]
+	screen.on_tap_tile(destination)  # the move is applied; its batch is queued, not yet played
+
+	assert_bool(screen.sequencer.is_idle()).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()  # buttons are dead outside idle (hud.md rule 6)
+	screen.on_tap_tile(state.tile_index(3, 2))  # another unit of the player
+	assert_int(screen.selected_unit).is_equal(-1)  # ignored while the move plays
+	_settle(screen)
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_speed_button_cycles_normal_fast_instant() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.speed_button.pressed.emit()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.FAST)
+	assert_str(screen.hud.speed_button.text).is_equal("Vitesse : rapide")
+	screen.hud.speed_button.pressed.emit()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.INSTANT)
+	screen.hud.speed_button.pressed.emit()
+
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.NORMAL)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_reading_a_ruin_opens_the_panel_after_the_wave_and_locks_the_player_until_it_is_closed() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	var ruin := state.ruins.tile_of(0)
+	var next_to := ruin + 1 if ruin % 12 < 11 else ruin - 1
+	UnitWrites.move_to(state, scout, next_to)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+	screen.refresh()
+	started[2].pipeline.submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, scout, ruin))
+
+	_frames(screen, 3)
+	assert_bool(screen.hud.fragment_panel.is_open).is_false()  # the wave and the delay come first
+	_frames(screen, 30)
+
+	assert_bool(screen.hud.fragment_panel.is_open).is_true()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	screen.hud.fragment_panel.continue_button.pressed.emit()
+	assert_bool(screen.hud.fragment_panel.is_open).is_true()  # too early
+	_frames(screen, 8)
+	screen._process(0.0)
+	screen.hud.fragment_panel.continue_button.pressed.emit()
+
+	assert_bool(screen.hud.fragment_panel.is_open).is_false()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_taps_are_ignored_under_a_player_lock() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	started[2].gate.lock(PresentationSequencer.FRAGMENT_PANEL)
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_int(screen.selected_unit).is_equal(-1)
+	started[2].gate.unlock(PresentationSequencer.FRAGMENT_PANEL)
+	screen.on_tap_tile(state.tile_index(2, 1))
+	assert_bool(screen.selected_unit >= 0).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+## A started match with an enemy Chasseur placed next to the player's Assaut (3, 2), seen.
+func _duel() -> Array:
+	var started := _started()
+	var state: GameState = started[2].state
+	var enemy := GameStateSetup.add_unit(state, 5, Faction.AI, state.tile_index(4, 2), 8)
+	VisionService.recompute(state, VisionContext.for_map(started[0].app.catalog, state))
+	started[1].refresh(true)
+	return started + [enemy]
+
+
+func test_attack_targeting_shows_the_preview_then_strikes_on_confirmation() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var enemy: int = started[3]
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	screen.on_tap_tile(state.tile_index(3, 2))
+	assert_bool(screen.hud.attack_button.visible).is_true()
+
+	screen.hud.attack_button.pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.TARGETING)
+	assert_array(Array(screen.target_tiles)).is_equal([state.tile_index(4, 2)])
+	assert_bool(screen.reachable.is_empty()).is_true()
+	assert_bool(screen.hud.cancel_button.visible).is_true()
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.CONFIRMING)
+	assert_str(screen.hud.preview_label.text).starts_with("Inflige −")
+	assert_bool(screen.hud.confirm_button.visible).is_true()
+	assert_int(screen.renderer.chosen_target).is_equal(state.tile_index(4, 2))
+	var expected := screen.preview.target_hp_after
+	var revision := state.revision()
+	assert_int(state.view().unit_hp(enemy)).is_equal(8)  # nothing struck yet
+
+	screen.hud.confirm_button.pressed.emit()
+
+	assert_int(state.revision()).is_equal(revision + 1)
+	assert_int(state.view().unit_hp(enemy)).is_equal(expected)  # the preview was the real blow
+	assert_bool(state.view().unit_acted(assault)).is_true()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.IDLE)
+	assert_bool(screen.hud.attack_button.visible).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_second_tap_on_the_chosen_target_strikes() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	screen.on_tap_tile(state.tile_index(4, 2))
+
+	assert_int(state.view().unit_hp(started[3])).is_less(8)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_elsewhere_or_cancelling_leaves_targeting_without_a_blow() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+
+	screen.on_tap_tile(state.tile_index(0, 11))
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	assert_bool(screen.reachable.size() > 0).is_true()  # the move range is back
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+	screen.hud.cancel_button.pressed.emit()
+
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	assert_int(screen.target_unit).is_equal(-1)
+	assert_int(state.view().unit_hp(started[3])).is_equal(8)
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_attack_button_needs_a_target_in_range_and_an_unacted_unit() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+
+	screen.on_tap_tile(state.tile_index(3, 2))
+	assert_bool(screen.hud.attack_button.visible).is_false()  # nobody to strike
+	screen.begin_targeting()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+	var duel := _duel()
+	var acted: MatchScreen = duel[1]
+	UnitWrites.set_acted(duel[2].state, duel[2].state.view().unit_at(duel[2].state.tile_index(3, 2)))
+	acted.on_tap_tile(duel[2].state.tile_index(3, 2))
+	assert_bool(acted.hud.attack_button.visible).is_false()
+	acted.shutdown()
+	duel[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_strike_locks_the_player_while_it_plays_then_frees_them() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.begin_targeting()
+	screen.on_tap_tile(state.tile_index(4, 2))
+	screen.confirm_attack()
+
+	screen.sequencer.advance()
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+	assert_bool(screen.hud.end_turn_button.disabled).is_true()
+	_settle(screen)
+
+	assert_bool(started[2].gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _finger(screen: MatchScreen, index: int, phase: int, position: Vector2) -> void:
+	screen._on_pointer(PointerEvent.new(index, phase, position))
+
+
+func test_the_camera_starts_on_the_first_unit_of_the_player_and_drives_the_renderer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var first := state.view().unit_tile(0)
+
+	assert_bool(screen.camera.is_visible(first)).is_true()
+	assert_float(screen.renderer.layout.tile_size).is_equal(screen.camera.tile_size)
+	assert_vector(screen.renderer.layout.origin).is_equal(screen.camera.layout().origin)
+	assert_vector(screen.input_surface.size).is_equal_approx(screen.camera.area.size, Vector2(0.01, 0.01))
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_drag_scrolls_a_pinch_zooms_and_a_touch_taps() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var centre := screen.camera.center
+	var size := screen.camera.tile_size
+
+	_finger(screen, 0, PointerEvent.Phase.DOWN, Vector2(200, 300))
+	_finger(screen, 0, PointerEvent.Phase.MOVE, Vector2(140, 300))
+	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(140, 300))
+	assert_float(screen.camera.center.x).is_greater(centre.x)  # the map followed the finger to the left
+	screen._process(0.0)
+	assert_float(screen.renderer.layout.origin.x).is_equal_approx(screen.camera.layout().origin.x, 0.001)
+
+	_finger(screen, 0, PointerEvent.Phase.DOWN, Vector2(150, 300))
+	_finger(screen, 1, PointerEvent.Phase.DOWN, Vector2(250, 300))
+	_finger(screen, 1, PointerEvent.Phase.MOVE, Vector2(350, 300))
+	assert_float(screen.camera.tile_size).is_greater(size)
+	_finger(screen, 1, PointerEvent.Phase.UP, Vector2(350, 300))
+	_finger(screen, 0, PointerEvent.Phase.UP, Vector2(150, 300))
+
+	var unit_tile := state.view().unit_tile(state.view().unit_at(state.tile_index(2, 1)))
+	screen.camera.ensure_visible(unit_tile)
+	screen._process(0.0)
+	var at := screen.camera.tile_to_screen(unit_tile)
+	_finger(screen, 0, PointerEvent.Phase.DOWN, at)
+	_finger(screen, 0, PointerEvent.Phase.UP, at)
+	assert_bool(screen.selected_unit >= 0).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_camera_of_the_player_comes_back_after_the_enemy_turn() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	screen.camera.scroll(Vector2(-90, -40))
+	var before := screen.camera.center
+	var size := screen.camera.tile_size
+
+	screen.end_turn()
+	_frames(screen, 2000)
+
+	assert_int(started[2].state.turn()).is_equal(2)
+	assert_vector(screen.camera.center).is_equal(before)
+	assert_float(screen.camera.tile_size).is_equal(size)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_confirming_without_a_chosen_target_does_nothing() -> void:
+	var started := _duel()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(3, 2))
+	var selected := screen.selected_unit
+
+	screen.confirm_attack()
+
+	assert_int(screen.selected_unit).is_equal(selected)
+	assert_int(state.revision()).is_equal(1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _extra_labels(screen: MatchScreen) -> Array:
+	return screen.hud.extra_row.get_children().map(func(button: Button) -> String: return button.text)
+
+
+func _put(screen: MatchScreen, state: GameState, unit_id: int, x: int, y: int) -> void:
+	UnitWrites.move_to(state, unit_id, state.tile_index(x, y))
+	VisionService.recompute(state, VisionContext.for_map(screen.session.catalog, state))
+	TerritoryRules.recompute(state, screen.session.catalog.nodes, MapSlice.CAUSE_NONE)
+	screen.refresh(true)
+
+
+func _worker(state: GameState) -> int:
+	return state.view().unit_at(state.tile_index(2, 3))
+
+
+func test_a_worker_on_a_node_that_is_not_the_players_may_capture_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)  # a neutral node
+	screen.on_tap_tile(state.tile_index(5, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_false()
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	var node := state.view().node_at(state.tile_index(5, 2))
+	assert_int(state.view().node_owner(node)).is_equal(Faction.PLAYER)
+	assert_bool(state.view().unit_acted(worker)).is_true()
+	assert_int(screen.selected_unit).is_equal(-1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_capture_is_offered_only_to_a_unit_that_can_capture_and_greys_out_with_its_reason() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	assert_array(_extra_labels(screen)).is_empty()  # an Assaut cannot capture
+
+	var worker := _worker(state)
+	_put(screen, state, worker, 2, 6)
+	UnitWrites.set_acted(state, worker)
+	screen.on_tap_tile(state.tile_index(2, 6))
+
+	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.reason_label.text).is_equal("A déjà agi")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_waking_a_dormant_next_to_a_unit_shows_the_price_then_pays_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 4, 3)  # the dormant Ouvrier is at (4, 4)
+	screen.on_tap_tile(state.tile_index(4, 3))
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+
+	screen.hud.extra_row.get_child(0).pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.TARGETING)
+	assert_array(Array(screen.target_tiles)).is_equal([state.tile_index(4, 4)])
+	screen.on_tap_tile(state.tile_index(4, 4))
+	assert_str(screen.hud.preview_label.text).is_equal("Réveiller Ouvrier : 5 énergie")
+	var energy := EnergyRules.stock(state, Faction.PLAYER)
+	screen.hud.confirm_button.pressed.emit()
+
+	var woken := state.view().unit_at(state.tile_index(4, 4))
+	assert_int(state.view().unit_faction(woken)).is_equal(Faction.PLAYER)
+	assert_bool(state.view().unit_asleep(woken)).is_false()
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(energy - 5)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_wake_without_enough_energy_is_greyed_out_with_the_amounts() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 4, 3)
+	GameStateSetup.set_energy(state, Faction.PLAYER, 1)
+	screen.on_tap_tile(state.tile_index(4, 3))
+
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.reason_label.text).is_equal("Énergie insuffisante (5 requis, 1 disponibles)")
+	screen.hud.extra_row.get_child(0).pressed.emit()
+	assert_int(screen.mode).is_equal(MatchScreen.Mode.SELECTED)  # nothing to choose
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_tapping_an_own_node_shows_it_and_raises_it_for_its_price() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.on_tap_tile(state.tile_index(1, 2))  # the starting node, no unit on it
+
+	assert_str(screen.hud.unit_title.text).is_equal("Nœud · niveau 1")
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()  # 9 energy
+	assert_str(screen.hud.reason_label.text).is_equal("Énergie insuffisante (12 requis, 9 disponibles)")
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	screen.refresh()
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	assert_int(state.view().node_level(0)).is_equal(2)
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(18)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_unit_standing_on_an_own_node_offers_the_upgrade_too() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	var assault := state.view().unit_at(state.tile_index(3, 2))
+	_put(screen, state, assault, 1, 2)
+	screen.on_tap_tile(state.tile_index(1, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	screen.hud.extra_row.get_child(0).pressed.emit()
+
+	assert_int(state.view().node_level(0)).is_equal(2)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_research_panel_lists_the_protocols_and_starts_one() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 40)
+
+	screen.hud.research_button.pressed.emit()
+	assert_bool(screen.hud.research_panel.visible).is_true()
+	var rows := screen.hud.research_panel.rows_box.get_children()
+	assert_int(rows.size()).is_equal(6)
+	assert_str((rows[0] as Button).text).is_equal("Veille élargie · 15 énergie · 2 tours")
+	assert_bool((rows[0] as Button).disabled).is_false()
+	assert_bool((rows[1] as Button).disabled).is_true()  # a level 2 needs the level 1 of its branch
+	assert_str(screen.hud.research_panel.reason_label.text).is_equal("Prérequis manquant")
+	(rows[0] as Button).pressed.emit()
+
+	assert_int(state.view().research(Faction.PLAYER)).is_equal(0)
+	assert_int(EnergyRules.stock(state, Faction.PLAYER)).is_equal(25)
+	assert_bool(screen.hud.research_panel.visible).is_false()
+	screen.hud.research_button.pressed.emit()
+	assert_str((screen.hud.research_panel.rows_box.get_child(0) as Button).text).is_equal("Veille élargie · en cours")
+	assert_bool((screen.hud.research_panel.rows_box.get_child(3) as Button).disabled).is_true()  # one at a time
+	screen.hud.research_closed.emit()
+	assert_bool(screen.hud.research_panel.visible).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_research_is_greyed_without_energy_and_shut_during_the_enemy_turn() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.research_button.pressed.emit()
+	assert_bool((screen.hud.research_panel.rows_box.get_child(0) as Button).disabled).is_true()
+	assert_str(screen.hud.research_panel.reason_label.text).is_equal("Énergie insuffisante (15 requis, 9 disponibles)")
+	screen.hud.research_closed.emit()
+	screen.end_turn()
+	_settle(screen)
+
+	assert_bool(screen.hud.research_button.disabled).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_actions_wait_for_the_sequencer() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	started[2].gate.lock(PresentationSequencer.FRAGMENT_PANEL)
+
+	screen.do_action(&"capture")
+
+	assert_int(state.view().node_owner(state.view().node_at(state.tile_index(5, 2)))).is_equal(Faction.NONE)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_worker_on_a_node_the_player_already_holds_gets_no_capture_button() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	GameStateSetup.set_energy(state, Faction.PLAYER, 30)
+	var worker := _worker(state)
+	_put(screen, state, worker, 1, 2)  # the player's own starting node
+	screen.on_tap_tile(state.tile_index(1, 2))
+
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_protocol_already_acquired_is_listed_as_such_and_cannot_be_started() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	GameStateSetup.set_energy(started[2].state, Faction.PLAYER, 40)
+	ResearchRules.acquire(started[2].state, Faction.PLAYER, 0)
+
+	screen.hud.research_button.pressed.emit()
+
+	var first := screen.hud.research_panel.rows_box.get_child(0) as Button
+	assert_str(first.text).is_equal("Veille élargie · acquis")
+	assert_bool(first.disabled).is_true()
+	assert_bool((screen.hud.research_panel.rows_box.get_child(1) as Button).disabled).is_false()  # its prerequisite is met
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_an_action_is_ignored_while_the_sequencer_is_playing() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var worker := _worker(state)
+	_put(screen, state, worker, 5, 2)
+	screen.on_tap_tile(state.tile_index(5, 2))
+	screen.sequencer.queue.push(EventBatch.new(99, [UnitMovedEvent.new(0, 1, 2, 3, 3)]))
+
+	screen.do_action(&"capture")
+
+	assert_int(state.view().node_owner(state.view().node_at(state.tile_index(5, 2)))).is_equal(Faction.NONE)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _screen_of(size: Vector2, safe: Rect2 = Rect2()) -> Array:
+	var t := TestSessionFactory.new()
+	var screen: MatchScreen = load(SCENE).instantiate()
+	screen.screen_size_override = size
+	screen.safe_area_override = safe
+	add_child(screen)
+	var session := SessionFactory.new_game(t.app, t.map(), 6, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	_settle(screen)
+	for frame in 3:
+		screen._process(0.0)  # frames: the bars' minimum sizes catch up and the layout follows
+	return [t, screen, session]
+
+
+func test_in_portrait_the_bars_take_what_they_need_and_the_map_the_rest() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var layout := screen.layout
+
+	assert_bool(layout.landscape).is_false()
+	assert_float(layout.top_zone.size.y).is_equal_approx(screen.hud.measure().x, 0.5)
+	assert_vector(screen.hud.top_panel.position).is_equal(layout.top_zone.position)
+	assert_float(screen.hud.bottom_panel.position.y).is_equal_approx(layout.panel_zone.position.y, 0.5)
+	assert_object(screen.camera.area).is_equal(layout.map_area)
+	assert_vector(screen.input_surface.position).is_equal(layout.map_area.position)
+	assert_vector(screen.hud.camera_box.position).is_equal(layout.camera_buttons.position)
+	assert_bool(screen.hud.bar.vertical).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_in_landscape_a_rail_and_a_panel_frame_the_map() -> void:
+	var started := _screen_of(Vector2(844, 390))
+	var screen: MatchScreen = started[1]
+	var layout := screen.layout
+
+	assert_bool(layout.landscape).is_true()
+	assert_float(screen.hud.top_panel.size.x).is_equal(HudLayout.RAIL_WIDTH)
+	assert_float(screen.hud.bottom_panel.size.x).is_equal(HudLayout.PANEL_WIDTH)
+	assert_float(screen.hud.bottom_panel.position.x).is_equal(844.0 - HudLayout.PANEL_WIDTH)
+	assert_object(screen.camera.area).is_equal(Rect2(140, 0, 844 - 140 - 224, 390))
+	assert_bool(screen.hud.bar.vertical).is_true()  # the rail stacks its figures
+	assert_bool(screen.hud.second.vertical).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_hud_stays_inside_the_safe_area() -> void:
+	var safe := Rect2(0, 44, 390, 760)
+	var started := _screen_of(Vector2(390, 844), safe)
+	var screen: MatchScreen = started[1]
+
+	assert_float(screen.hud.top_panel.position.y).is_equal(44.0)
+	assert_float(screen.hud.bottom_panel.position.y + screen.hud.bottom_panel.size.y).is_equal_approx(804.0, 0.5)
+	assert_bool(safe.encloses(screen.camera.area)).is_true()
+	assert_bool(safe.encloses(screen.layout.camera_buttons)).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_turning_the_phone_relays_out_and_cancels_the_fingers_down() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var seen: Array[PointerEvent] = []
+	screen.input_surface.pointer.connect(func(event: PointerEvent) -> void: seen.append(event))
+
+	screen.screen_size_override = Vector2(844, 390)
+	screen.relayout()
+
+	assert_bool(screen.layout.landscape).is_true()
+	assert_bool(seen.any(func(e: PointerEvent) -> bool: return e.phase == PointerEvent.Phase.CANCEL)).is_true()
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_losing_focus_or_pausing_cancels_the_gestures() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var seen: Array[PointerEvent] = []
+	screen.input_surface.pointer.connect(func(event: PointerEvent) -> void: seen.append(event))
+
+	screen.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var after_focus := seen.size()
+	screen.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
+
+	assert_int(after_focus).is_greater(0)
+	assert_int(seen.size()).is_greater(after_focus)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_zoom_buttons_zoom_and_grey_out_at_the_limits() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var size := screen.camera.tile_size
+
+	screen.hud.zoom_in_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal_approx(size * 1.25, 0.001)
+	for k in 10:
+		screen.hud.zoom_in_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal(MapCamera.MAX_TILE)
+	assert_bool(screen.hud.zoom_in_button.disabled).is_true()
+	assert_bool(screen.hud.zoom_out_button.disabled).is_false()
+	for k in 20:
+		screen.hud.zoom_out_button.pressed.emit()
+	assert_float(screen.camera.tile_size).is_equal(MapCamera.MIN_TILE)
+	assert_bool(screen.hud.zoom_out_button.disabled).is_true()
+	assert_bool(screen.hud.zoom_in_button.disabled).is_false()
+	assert_float(screen.renderer.layout.tile_size).is_equal(MapCamera.MIN_TILE)  # the renderer follows at once
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_recentre_button_goes_to_the_selected_unit_or_the_first_one() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.camera.scroll(Vector2(-300, -300))
+	var far := screen.camera.center
+
+	screen.hud.recenter_button.pressed.emit()
+	screen.camera.tick(screen.clock.current() + 1.0)
+	assert_vector(screen.camera.center).is_not_equal(far)
+	var first := state.view().unit_tile(0)
+	assert_bool(screen.camera.is_visible(first)).is_true()
+
+	screen.on_tap_tile(state.tile_index(3, 2))
+	screen.camera.scroll(Vector2(300, 300))
+	screen.hud.recenter_button.pressed.emit()
+	screen.camera.tick(screen.clock.current() + 1.0)
+	assert_bool(screen.camera.is_visible(state.tile_index(3, 2))).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_bars_that_grow_with_their_content_move_the_map_area_a_frame_later() -> void:
+	var started := _screen_of(Vector2(390, 844))
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var before := screen.layout.map_area
+
+	screen.on_tap_tile(state.tile_index(3, 2))  # a unit: its panel and buttons appear
+	for frame in 3:
+		screen._process(0.0)
+
+	assert_float(screen.layout.panel_zone.size.y).is_equal_approx(screen.hud.measure().y, 0.5)
+	assert_object(screen.layout.map_area).is_not_equal(before)
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func _settings(changes: Dictionary) -> Dictionary:
+	var settings := GameSettings.defaults()
+	settings.merge(changes, true)
+	return settings
+
+
+func test_the_settings_reach_the_sequencer_the_clock_the_renderer_and_the_layout() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	screen.screen_size_override = Vector2(844, 390)
+	screen.relayout()
+	var rail_map_x := screen.layout.map_area.position.x
+
+	screen.apply_settings(_settings({GameSettings.REDUCED_MOTION: 1, GameSettings.ENEMY_SPEED: 2,
+			GameSettings.COLORBLIND: 1, GameSettings.SHOW_RANGE: 0, GameSettings.LEFT_PANEL: 1}))
+
+	assert_bool(screen.sequencer.reduced_motion).is_true()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.INSTANT)
+	assert_str(screen.hud.speed_button.text).is_equal("Vitesse : instantanée")
+	assert_bool(screen.renderer.colorblind).is_true()
+	assert_bool(screen.show_range).is_false()
+	assert_float(rail_map_x).is_equal(HudLayout.RAIL_WIDTH)
+	assert_float(screen.layout.map_area.position.x).is_equal(HudLayout.PANEL_WIDTH)
+	assert_object(screen.camera.area).is_equal(screen.layout.map_area)
+
+	screen.apply_settings(GameSettings.defaults())
+	assert_bool(screen.sequencer.reduced_motion).is_false()
+	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.NORMAL)
+	assert_bool(screen.renderer.colorblind).is_false()
+	assert_bool(screen.show_range).is_true()
+	assert_float(screen.layout.map_area.position.x).is_equal(HudLayout.RAIL_WIDTH)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_range_stays_usable_but_is_not_drawn_when_hidden() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.apply_settings(_settings({GameSettings.SHOW_RANGE: 0}))
+
+	screen.on_tap_tile(state.tile_index(2, 1))
+
+	assert_bool(screen.reachable.size() > 0).is_true()
+	assert_bool(screen.renderer.highlighted.is_empty()).is_true()
+	assert_int(screen.renderer.selected_tile).is_equal(state.tile_index(2, 1))
+	screen.apply_settings(_settings({GameSettings.SHOW_RANGE: 1}))
+	assert_int(screen.renderer.highlighted.size()).is_equal(screen.reachable.size())
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_cycling_the_speed_tells_the_app_so_it_can_remember_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var told := []
+	screen.speed_changed.connect(func(speed: int) -> void: told.append(speed))
+
+	screen.hud.speed_button.pressed.emit()
+	screen.hud.speed_button.pressed.emit()
+	screen.apply_settings(_settings({GameSettings.ENEMY_SPEED: 1}))  # applying a setting does not echo
+
+	assert_array(told).is_equal([1, 2])
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()

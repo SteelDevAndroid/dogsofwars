@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "entry_cost": [1, 2, 3, 0],
+  "defense_class": [0, 1, 2, 0]
+}

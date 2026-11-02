@@ -1,0 +1,87 @@
+# Data catalogs for tests (ADR-0011 §4): the standard documents below hold the GDD
+# values (GDD 2, 3, 5, 6, 7, 8, 9, 10, 11 and 12), loaded through MemoryDataSource; tests derive broken
+# variants from documents().
+class_name CatalogFactory
+extends RefCounted
+
+## Pack types with view 2 (GDD 12: Veille élargie, Cadence de marche).
+const LOURDS := ["assaut", "rempart", "ouvrier"]
+
+static var _standard: DataCatalog
+
+
+## The standard catalog, loaded once (it is immutable).
+static func standard() -> DataCatalog:
+	if _standard == null:
+		var result := load_documents(documents())
+		assert(result.ok, "the standard test catalog must load")
+		_standard = result.catalog
+	return _standard
+
+
+static func load_documents(docs: Dictionary) -> DataCatalogResult:
+	var files := {}
+	for name: String in docs:
+		files[name] = docs[name] if docs[name] is String else JSON.stringify(docs[name])
+	return DataCatalog.load_all(MemoryDataSource.new(files))
+
+
+## File name -> document; a fresh copy on every call.
+static func documents() -> Dictionary:
+	return {
+		"units.json": {"schema_version": 1, "rest_heal": 2, "node_rest_bonus": 2, "types": [
+			_unit(0, "eclaireur", "meute", 6, 1, 0, 4, 4),
+			_unit(1, "assaut", "meute", 8, 3, 1, 3, 2),
+			_unit(2, "rempart", "meute", 14, 1, 2, 2, 2),
+			_unit(3, "ouvrier", "meute", 7, 1, 0, 3, 2),
+			_unit(4, "sentinelle", "gardiens", 10, 0, 2, 0, 3),
+			_unit(5, "chasseur", "gardiens", 8, 3, 0, 3, 3),
+			_unit(6, "bastion", "gardiens", 14, 2, 2, 1, 2),
+		]},
+		"brouillard.json": {"schema_version": 1, "node_view_min": 2, "mountain_view_bonus": 1},
+		"noeuds.json": {"schema_version": 1, "territory_radius": [1, 2, 3], "upgrade_price": [12, 20]},
+		"terrain.json": {"schema_version": 1, "entry_cost": [1, 2, 3, 0], "defense_class": [0, 1, 2, 0]},
+		"reveil.json": {"schema_version": 1, "prices": [
+			{"type": "eclaireur", "price": 4}, {"type": "ouvrier", "price": 5},
+			{"type": "assaut", "price": 6}, {"type": "rempart", "price": 8}]},
+		"fragments.json": {"schema_version": 1, "zone_radius": 2, "act3_link_percent": 50, "act1_verb_min": 1, "fragments": [
+			_fragment(1, 1, "aucun", "Un ordre."), _fragment(2, 1, "verbe", "On allume les balises."),
+			_fragment(3, 2, "verbe", "On a allumé le relais."), _fragment(4, 3, "verbe", "Les lampes s'allument."),
+			_fragment(5, 3, "question", "Pour qui allume-t-on ?")]},
+		"presentation.json": {"schema_version": 1, "move_step_ms": 120, "attack_line_ms": 250, "hit_ms": 350, "destroy_ms": 400,
+			"recolor_ms": 400, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
+			"enemy_action_ms": 500, "recenter_ms": 300, "reduced_slot_ms": 334, "queue_max": 256},
+		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
+		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
+		"protocoles.json": {"schema_version": 1, "protocols": [
+			_protocol(0, "veille_elargie", "reseau", 1, 15, 2, "vision", 1, LOURDS),
+			_protocol(1, "reveil_sobre", "reseau", 2, 20, 2, "wake_price", -1, []),
+			_protocol(2, "cadence_de_marche", "reseau", 3, 30, 3, "move", 1, LOURDS),
+			_protocol(3, "repos_reglementaire", "meute", 1, 15, 2, "rest_heal", 1, []),
+			_protocol(4, "blindage_appoint", "meute", 2, 25, 2, "defense", 1, []),
+			_protocol(5, "rempart_arme", "meute", 3, 35, 3, "attack", 1, ["rempart"]),
+		]},
+		"score.json": {"schema_version": 1, "w_tiles": 1, "w_nodes": 8, "w_levels": 4, "w_protocols": 0,
+			"w_units": 2, "unit_cap": 20, "w_fragments": 60, "w_domination": 8},
+		"ai.json": {"schema_version": 1, "track_ttl": 4, "planner": {
+			"w_damage": 10, "w_lethal": 30, "w_loss": 8, "w_danger": 6, "w_node": 12, "w_leash": 3, "w_progress": 2,
+			"leash": 4, "k_dest": 6, "state_margin": 2, "return_after": 2, "evals_per_call": 2000, "refusals_max": 32}, "protocol_calendar": [
+			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
+	}
+
+
+static func _protocol(id: int, key: String, branch: String, level: int, price: int, duration: int,
+		stat: String, delta: int, types: Array) -> Dictionary:
+	return {"id": id, "key": key, "branch": branch, "level": level, "price": price, "duration": duration,
+		"effects": [{"stat": stat, "delta": delta, "types": types}]}
+
+
+static func _unit(id: int, key: String, side: String, hp: int, attack: int, defense: int,
+		move: int, vision: int) -> Dictionary:
+	return {"id": id, "key": key, "side": side, "hp": hp, "attack": attack, "defense": defense,
+		"move": move, "range": 1, "vision": vision, "captures": 1 if key in ["ouvrier", "bastion"] else 0}
+
+
+static func _fragment(id: int, act: int, link: String, text: String) -> Dictionary:
+	return {"id": id, "faction": "meute", "act": act, "title": "Fragment", "text": text, "source": "Journal",
+			"tones": ["doute"], "link": link}

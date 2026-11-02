@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "territory_radius": [1, 2, 3],
+  "upgrade_price": [12, 20]
+}
