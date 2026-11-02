@@ -54,6 +54,10 @@ func load_profile() -> void:
 		warnings.append("profile%s holds unreadable data" % name)
 
 
+func current_epoch() -> int:
+	return epoch
+
+
 func chronicle() -> Array:
 	return _fragments.duplicate(true)
 

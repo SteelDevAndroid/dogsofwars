@@ -37,7 +37,7 @@ static func new_game(app: AppContext, map: MapDefinition, seed_value: int, ports
 
 ## Continue the saved match, or null with the reason in `reason[0]` (a LoadResult code).
 static func resume(app: AppContext, ports: SessionPorts, ai: AiRunnerPort, reason: Array) -> GameSession:
-	var loaded := app.save_store.load_match()
+	var loaded := app.save_store.load_match(app.profile_port.current_epoch())
 	reason[0] = loaded.code
 	if loaded.code != LoadResult.OK:
 		return null

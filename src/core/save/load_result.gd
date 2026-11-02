@@ -12,6 +12,8 @@ const CORRUPT := &"CORRUPT"
 const NEWER := &"NEWER"
 ## An older content schema that could not be migrated: the file was set aside (GDD 16 rule 17bis).
 const OLDER := &"OLDER"
+## A match saved before the last reset of the profile: set aside (GDD 16 AC-18).
+const STALE := &"STALE"
 
 var code: StringName = NONE
 var state: GameState

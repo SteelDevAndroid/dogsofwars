@@ -339,3 +339,20 @@ func test_the_menus_are_drawn_above_the_hud_of_the_match() -> void:
 
 	assert_int(boot._ui.layer).is_greater(boot.match_screen.hud_layer.layer)
 	await _finish(boot)
+
+
+func test_the_chronicle_opens_from_the_menu_with_the_fragments_of_the_profile_and_closes() -> void:
+	var files := FaultInjectingFileStore.new()
+	var first := _boot(files)
+	first.profile.apply(RecordFragmentEffect.new(Faction.PLAYER, 2))
+	await _finish(first)
+	var boot := _boot(files.restarted())
+
+	(boot.screen as MainMenu).chronicle_button.pressed.emit()
+
+	assert_object(boot._chronicle_screen).is_not_null()
+	assert_str(boot._chronicle_screen.bar_label.text).is_equal("○●○○○   1 / 5")
+	boot._chronicle_screen.back_button.pressed.emit()
+	await await_idle_frame()
+	assert_object(boot._chronicle_screen).is_null()
+	await _finish(boot)

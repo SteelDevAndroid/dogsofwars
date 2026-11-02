@@ -25,6 +25,7 @@ var screen: Control
 var _ui: CanvasLayer
 var _pause: PauseMenu
 var _settings_screen: SettingsScreen
+var _chronicle_screen: ChronicleScreen
 var _ending := false
 
 
@@ -67,6 +68,7 @@ func show_menu(notice: String = "") -> void:
 	menu.continue_requested.connect(continue_match)
 	menu.new_game_requested.connect(start_new_game)
 	menu.settings_requested.connect(show_settings)
+	menu.chronicle_requested.connect(show_chronicle)
 	menu.quit_requested.connect(func() -> void: get_tree().quit())
 	_show(menu)
 
@@ -104,6 +106,8 @@ static func _load_notice(code: StringName) -> String:
 			return "Une mise à jour a changé le format de la partie, elle ne peut pas être reprise."
 		LoadResult.NEWER:
 			return "Cette partie vient d'une version plus récente du jeu."
+		LoadResult.STALE:
+			return "Cette partie datait d'avant la remise à zéro de la progression : elle a été écartée."
 		LoadResult.CORRUPT:
 			return "La partie est abîmée et ne peut pas être reprise."
 	return ""
@@ -133,6 +137,18 @@ func show_settings() -> void:
 		_settings_screen.queue_free()
 		_settings_screen = null)
 	_ui.add_child(_settings_screen)
+
+
+## The chronicle of the profile, over the menu; "Retour" closes it.
+func show_chronicle() -> void:
+	if _chronicle_screen != null:
+		return
+	_chronicle_screen = ChronicleScreen.new()
+	_chronicle_screen.show_chronicle(app.catalog.fragments, profile.chronicle())
+	_chronicle_screen.back_requested.connect(func() -> void:
+		_chronicle_screen.queue_free()
+		_chronicle_screen = null)
+	_ui.add_child(_chronicle_screen)
 
 
 ## Stores a setting and applies it at once (a refused change puts the screen back as it was).

@@ -12,7 +12,7 @@ func test_a_new_profile_has_the_default_settings() -> void:
 
 	assert_dict(store.settings()).is_equal({
 		GameSettings.TEXT_SCALE: 100, GameSettings.COLORBLIND: 0, GameSettings.REDUCED_MOTION: 0,
-		GameSettings.SHOW_RANGE: 1, GameSettings.ENEMY_SPEED: 0, GameSettings.LEFT_PANEL: 0})
+		GameSettings.SHOW_RANGE: 1, GameSettings.ENEMY_SPEED: 0, GameSettings.LEFT_PANEL: 0, GameSettings.HINTS: 1})
 
 
 func test_a_setting_survives_a_restart_and_a_reset_of_the_progress() -> void:

@@ -161,3 +161,61 @@ func test_a_new_game_deletes_the_old_one() -> void:
 	store.delete_match()
 
 	assert_array(files.paths()).is_empty()
+
+
+func _state_of_epoch(epoch: int) -> GameState:
+	var catalog := CatalogFactory.standard()
+	return GameStateFactory.new_game(catalog, TestSessionFactory.shipped_map(catalog), 1, false, [], 0, epoch)
+
+
+func test_a_match_of_an_older_epoch_is_set_aside_and_an_equal_or_newer_one_loads() -> void:
+	var files := FaultInjectingFileStore.new()
+	var store := _store(files)
+	store.save_match(_state_of_epoch(1))
+
+	var stale := _store(files).load_match(2)
+
+	assert_str(stale.code).is_equal(LoadResult.STALE)
+	assert_object(stale.state).is_null()
+	assert_bool(files.exists("user://match.sav")).is_false()
+	assert_bool(files.exists("user://match.bad1")).is_true()  # renamed, never deleted
+	assert_array(Array(stale.warnings)).is_not_empty()
+
+	var again := FaultInjectingFileStore.new()
+	_store(again).save_match(_state_of_epoch(2))
+	assert_str(_store(again).load_match(2).code).is_equal(LoadResult.OK)
+	assert_str(_store(again).load_match(1).code).is_equal(LoadResult.OK)
+	assert_str(_store(again).load_match().code).is_equal(LoadResult.OK)
+
+
+func test_a_stale_current_falls_back_to_a_backup_of_the_right_epoch() -> void:
+	var files := FaultInjectingFileStore.new()
+	var store := _store(files)
+	store.save_match(_state_of_epoch(2))
+	store.save_match(_state_of_epoch(1))  # the current is now the older epoch, the backup the newer
+
+	var loaded := _store(files).load_match(2)
+
+	assert_str(loaded.code).is_equal(LoadResult.OK)
+	assert_bool(loaded.from_backup).is_true()
+	assert_int(loaded.state.header.value(HeaderSlice.PROFILE_EPOCH)).is_equal(2)
+
+
+func test_the_session_refuses_a_match_saved_before_a_reset_of_the_profile() -> void:
+	var t := TestSessionFactory.new()
+	var screen_ports := SessionPorts.new(EventQueue.new(256), AlwaysReadyPacingGate.new())
+	t.app.save_store.save_match(_state_of_epoch(0))
+	var profile := ProfileStore.new(FaultInjectingFileStore.new())
+	profile.load_profile()
+	profile.reset_progress()
+	t.app.profile_port = profile
+	var reason := [LoadResult.NONE]
+
+	var runner := AiRunner.new()
+	var session := SessionFactory.resume(t.app, screen_ports, NodeAiRunnerPort.new(runner), reason)
+	runner.free()
+
+	assert_object(session).is_null()
+	assert_str(reason[0]).is_equal(LoadResult.STALE)
+	assert_str(Bootstrap._load_notice(LoadResult.STALE)).contains("remise à zéro")
+	t.dispose()

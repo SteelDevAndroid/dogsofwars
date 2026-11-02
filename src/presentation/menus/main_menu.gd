@@ -7,11 +7,13 @@ extends Control
 signal continue_requested
 signal new_game_requested
 signal settings_requested
+signal chronicle_requested
 signal quit_requested
 
 var continue_button: Button
 var new_game_button: Button
 var settings_button: Button
+var chronicle_button: Button
 var quit_button: Button
 var confirm_button: Button
 var cancel_button: Button
@@ -28,6 +30,7 @@ func _init() -> void:
 	new_game_button = _button(box, "Nouvelle partie", _on_new_game)
 	confirm_button = _button(box, "Effacer la partie en cours et recommencer", func() -> void: new_game_requested.emit())
 	cancel_button = _button(box, "Annuler", _reset_confirmation)
+	chronicle_button = _button(box, "Chronique", func() -> void: chronicle_requested.emit())
 	settings_button = _button(box, "Réglages", func() -> void: settings_requested.emit())
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
 	best_label = MenuLayout.label(box)

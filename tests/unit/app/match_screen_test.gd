@@ -1153,3 +1153,21 @@ func test_a_drag_reports_viewport_positions_too() -> void:
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+func test_the_advice_of_the_first_turns_follows_the_selection_and_the_setting() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+
+	assert_bool(screen.hud.hint_label.visible).is_true()
+	assert_str(screen.hud.hint_label.text).contains("Touchez une de vos unités")
+	screen.on_tap_tile(state.tile_index(2, 1))
+	assert_str(screen.hud.hint_label.text).contains("case en surbrillance")
+	screen.apply_settings(_settings({GameSettings.HINTS: 0}))
+	assert_bool(screen.hud.hint_label.visible).is_false()
+	screen.apply_settings(GameSettings.defaults())
+	assert_bool(screen.hud.hint_label.visible).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
