@@ -1,0 +1,59 @@
+Dogs of Gods — Chapitre 5 : éléments posés sur la carte
+
+Direction visuelle : roman graphique dystopique original, formes géométriques massives, aplats minéraux, ombres sèches, sans reproduction d'une œuvre existante.
+
+Nœuds : node_niveau_1/2/3 + masks, hexagones concentriques, niveau lisible par taille et anneaux.
+Ruines : 3 sprites 256x384, transparentes, exclusivement ocre/sépia #C8955A.
+Unités : 7 sprites 256x256 + masks, vue de dessus, tête vers le haut, sans contour intégré, marge >=16 px.
+Effets : blancs, monochromes, transparents, teintables par le jeu.
+Animation de réveil non incluse car explicitement optionnelle dans la spécification.
+
+Validation dimensions : OK
+Validation marges unités : {'eclaireur': True, 'assaut': True, 'rempart': True, 'ouvrier': True, 'sentinelle': True, 'chasseur': True, 'bastion': True}
+Validation masks noir/blanc : OK
+
+Fichiers:
+- controle_ruines.png
+- controle_unites.png
+- controle_unites_31pt.png
+- fx_cible_crochets.png
+- fx_debris.png
+- fx_menace.png
+- fx_portee_point.png
+- fx_ruine_lueur.png
+- fx_selection.png
+- node_niveau_1.png
+- node_niveau_1_mask.png
+- node_niveau_2.png
+- node_niveau_2_mask.png
+- node_niveau_3.png
+- node_niveau_3_mask.png
+- ruin_arche_brisee_01.png
+- ruin_arche_brisee_02.png
+- ruin_dome_brise_01.png
+- unit_assaut.png
+- unit_assaut_mask.png
+- unit_bastion.png
+- unit_bastion_mask.png
+- unit_chasseur.png
+- unit_chasseur_mask.png
+- unit_eclaireur.png
+- unit_eclaireur_mask.png
+- unit_ouvrier.png
+- unit_ouvrier_mask.png
+- unit_rempart.png
+- unit_rempart_mask.png
+- unit_sentinelle.png
+- unit_sentinelle_mask.png
+
+
+--- Notes de l'équipe technique (2026-11-02) ---
+Livraison intégrée : 3 nœuds, 3 ruines, 7 unités, 6 effets (31 images + 10 masques), tous aux dimensions du
+cahier des charges. Contrôles refaits : marges transparentes des unités et nœuds d'au moins 36 px (16 exigés),
+effets blancs, ruines monochromes ocre, masques strictement noir et blanc.
+Les masques de faction recouvrent exactement la silhouette (blanc là où l'image est non transparente, vérifié
+pixel à pixel pour les 10) : ils ne portent donc rien de plus que le canal alpha. Le jeu teinte la silhouette
+entière et ne charge pas les masques ; ils restent dans le dépôt (ils serviront si une zone non teintée apparaît)
+mais sont exclus de l'export (`*_mask.png`).
+Teinte : 55 % de la couleur du camp mélangés dans la silhouette, l'ombrage gris reste. Contour : la silhouette
+redessinée à 1 pt, sombre (meute) ou violette (Gardiens). Un drone endormi reste gris.

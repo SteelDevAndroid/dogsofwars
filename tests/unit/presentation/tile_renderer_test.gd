@@ -34,12 +34,59 @@ func test_a_renderer_without_a_snapshot_draws_nothing() -> void:
 	renderer.free()
 
 
-func test_every_unit_type_has_its_own_silhouette() -> void:
-	var sides := {}
-	for type in 5:
-		sides[TileRenderer._shape(type, Vector2.ZERO, 10.0).size()] = true
+func test_every_unit_type_has_its_sprite_and_the_catalog_maps_types_to_them() -> void:
+	var renderer := _renderer()
 
-	assert_int(sides.size()).is_equal(5)
+	assert_array(Array(renderer._type_keys)).is_equal(TileRenderer.UNIT_KEYS)  # the catalog's order is the sprites' order
+	var sizes := {}
+	for key: String in TileRenderer.UNIT_KEYS:
+		var texture: Texture2D = renderer._units[key]
+		assert_array([texture.get_width(), texture.get_height()]).is_equal([256, 256])
+		sizes[key] = FileAccess.get_file_as_bytes("res://assets/art/units/unit_%s.png" % key).size()
+	assert_int(sizes.size()).is_equal(7)
+	assert_int(renderer._nodes.size()).is_equal(3)
+	assert_int(renderer._ruins.size()).is_equal(3)
+	for texture: Texture2D in renderer._ruins:
+		assert_array([texture.get_width(), texture.get_height()]).is_equal([256, 384])
+	for fx in ["selection", "cible_crochets", "portee_point", "menace", "debris", "ruine_lueur"]:
+		assert_object(renderer._fx[fx]).is_not_null()
+	renderer.free()
+
+
+func test_a_sprite_takes_the_colour_of_its_side_inside_its_silhouette_only() -> void:
+	var renderer := _renderer()
+	var grey: Texture2D = renderer._units["assaut"]
+	var teal := TilePalette.owner(Faction.PLAYER)
+
+	var tinted: Texture2D = renderer._unit_sprite(1, Faction.PLAYER, false)
+	var plain := grey.get_image()
+	var coloured := tinted.get_image()
+	plain.convert(Image.FORMAT_RGBA8)
+	coloured.convert(Image.FORMAT_RGBA8)
+
+	assert_array([coloured.get_width(), coloured.get_height()]).is_equal([256, 256])
+	var inside := Vector2i(128, 128)  # the body of the assault drone
+	assert_float(plain.get_pixelv(inside).a).is_greater(0.9)
+	assert_float(coloured.get_pixelv(inside).g - coloured.get_pixelv(inside).r).is_greater(plain.get_pixelv(inside).g - plain.get_pixelv(inside).r + 0.05)  # greener than the grey
+	assert_float(coloured.get_pixelv(inside).a).is_equal_approx(plain.get_pixelv(inside).a, 0.01)
+	assert_float(coloured.get_pixelv(Vector2i(2, 2)).a).is_equal(0.0)  # outside stays transparent
+	assert_object(renderer._unit_sprite(1, Faction.PLAYER, false)).is_same(tinted)  # made once
+	assert_object(renderer._unit_sprite(1, Faction.AI, false)).is_not_same(tinted)
+	assert_object(renderer._unit_sprite(1, Faction.PLAYER, true)).is_same(grey)  # a dormant drone is nobody's
+	assert_object(teal).is_not_null()
+	renderer.free()
+
+
+func test_the_colour_blind_palette_makes_another_tint() -> void:
+	var renderer := _renderer()
+	var normal: Texture2D = renderer._unit_sprite(3, Faction.PLAYER, false)
+
+	renderer.colorblind = true
+	var blind: Texture2D = renderer._unit_sprite(3, Faction.PLAYER, false)
+
+	assert_object(blind).is_not_same(normal)
+	assert_bool(blind.get_image().get_pixel(128, 128) != normal.get_image().get_pixel(128, 128)).is_true()
+	renderer.free()
 
 
 func test_owner_colours_follow_the_art_bible() -> void:
