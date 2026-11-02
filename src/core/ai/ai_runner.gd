@@ -16,6 +16,11 @@ var on_turn_finished: Callable
 
 var step := Step.IDLE
 var refusals := 0
+## Duration of the last `advance` (planning, application, view recompute and the synchronous
+## save of the command) and of the slowest one this phase, in microseconds: the worst frame
+## of the enemy phase that the device spike measures (ADR-0005 §7, review 2026-11-02, A3).
+var last_advance_usec := 0
+var worst_advance_usec := 0
 
 var _state: GameState
 var _pipeline: CommandPipeline
@@ -37,6 +42,7 @@ func start_turn(state: GameState, pipeline: CommandPipeline, pacing: PacingGate,
 	_catalog = catalog
 	_skipped = PackedInt32Array()
 	refusals = 0
+	worst_advance_usec = 0
 	# A resumed phase whose announcement was already made has nothing left to do.
 	step = Step.DONE if state.ai_cursor.announced_turn() == state.turn() else Step.EXECUTING_INTENTIONS
 
@@ -56,6 +62,13 @@ func is_running() -> bool:
 
 ## One step: at most one command submitted.
 func advance() -> void:
+	var started := Time.get_ticks_usec()
+	_advance()
+	last_advance_usec = Time.get_ticks_usec() - started
+	worst_advance_usec = maxi(worst_advance_usec, last_advance_usec)
+
+
+func _advance() -> void:
 	if _state.header.value(HeaderSlice.PHASE) != HeaderSlice.PHASE_ENEMY_EXECUTION:
 		step = Step.IDLE  # the match ended, or the phase is not the AI's
 		return

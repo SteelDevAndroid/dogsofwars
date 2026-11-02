@@ -49,6 +49,8 @@ func test_a_whole_phase_runs_through_the_pipeline_without_a_refusal() -> void:
 
 	assert_int(runner.refusals).is_equal(0)
 	assert_bool(runner.is_running()).is_false()
+	assert_int(runner.worst_advance_usec).is_greater(0)  # the spike's measure of the worst frame
+	assert_int(runner.worst_advance_usec).is_greater_equal(runner.last_advance_usec)
 	assert_int(fx.state.intentions.status_of(0)).is_equal(IntentionsSlice.STATUS_EXECUTED)
 	assert_bool(fx.state.view().unit_acted(1)).is_true()
 	assert_array(fx.state.validate()).is_empty()

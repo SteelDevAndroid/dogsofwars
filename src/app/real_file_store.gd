@@ -8,9 +8,11 @@ func write(path: String, bytes: PackedByteArray) -> Error:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	file.store_buffer(bytes)
+	var stored := file.store_buffer(bytes)  # ADR-0006: every store_* result is checked
 	var error := file.get_error()
 	file.close()
+	if not stored and error == OK:
+		return ERR_FILE_CANT_WRITE
 	return error
 
 

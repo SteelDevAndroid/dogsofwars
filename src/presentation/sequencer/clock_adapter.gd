@@ -12,3 +12,7 @@ func _init(clock: PresentationClock) -> void:
 
 func current() -> float:
 	return _clock.current()
+
+
+func scale() -> float:
+	return _clock.scale()

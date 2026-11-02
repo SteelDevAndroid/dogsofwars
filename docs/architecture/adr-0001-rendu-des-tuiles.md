@@ -212,4 +212,4 @@ Sans objet : aucun code de production n'existe. Le prototype `prototypes/rendu-t
 - Prototype : `prototypes/rendu-tuiles/REPORT.md`.
 - GDD : `design/gdd/recoloration-monde.md` (15), `brouillard-vision.md` (5), `carte-tuiles-terrain.md` (2), `hud-systeme.md` (17), `commandes-evenements.md` (23).
 - Art bible : `design/art/art-bible.md` §4, §8.
-- ADR-0002 (modèle d'événements de présentation et séquenceur) : écrit (Proposed), dépendance directe.
+- ADR-0002 (modèle d'événements de présentation et séquenceur) : Accepted, dépendance directe.

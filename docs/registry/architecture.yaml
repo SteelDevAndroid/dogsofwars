@@ -418,11 +418,11 @@ performance_budgets:
     status: active
     budget_ms: 2.0
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; la planification tourne sur WorkerThreadPool (ADR-0005 §7, revue B1) et n'y compte pas ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état ; 1 par construction au MVP) ; APPELS_MAX = N_IA + N_NŒUDS + 2 (AiPlanner.max_calls_per_turn) et APPELS_MAX × evals_per_call ≤ evals_max (20 000), APPELS_MAX + 1 ≤ 2 500 copies, vérifiés au chargement de chaque carte (MapDefinition) ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; ÉTAT RÉEL AU MVP : la planification tourne sur le fil principal (écart d'ADR-0005 §7, WorkerThreadPool non implémenté), donc elle compte dans l'image, avec l'application, le recalcul de vue et la sauvegarde synchrone de la commande (SaveCoordinator.worst_write_usec, AiRunner.worst_advance_usec : à lire sur appareil, spike A3) ; cible après le spike : planification hors du fil principal si la pire image dépasse le budget ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état ; 1 par construction au MVP) ; APPELS_MAX = N_IA + N_NŒUDS + 2 (AiPlanner.max_calls_per_turn) et APPELS_MAX × evals_per_call ≤ evals_max (20 000), APPELS_MAX + 1 ≤ 2 500 copies, vérifiés au chargement de chaque carte (MapDefinition) ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
-    revised: 2026-11-02   # ancien : produit N_IA × APPELS_PAR_UNITÉ_MAX × plafond d'appel, non implémenté ; avant le 2026-11-01 : budget par appel seul, plafond du tour non borné (revue du 2026-11-01, B3)
+    revised: 2026-11-02   # note corrigée (planification sur le fil principal au MVP, revue du 2026-11-02, A3) ; ancien : produit N_IA × APPELS_PAR_UNITÉ_MAX × plafond d'appel, non implémenté ; avant le 2026-11-01 : budget par appel seul, plafond du tour non borné (revue du 2026-11-01, B3)
 
   - system: command-validate-apply
     status: active
@@ -676,7 +676,7 @@ forbidden_patterns:
 
   - pattern: dictionary_iteration_in_game_rule
     status: active
-    description: "Une règle de jeu ne parcourt jamais un Dictionary : elle parcourt les colonnes par id croissant."
+    description: "Une règle de jeu ne parcourt jamais un Dictionary dont l'ordre déciderait du résultat : elle parcourt les colonnes par id croissant. Un parcours de clés dont le résultat est ensuite trié (lignes par id, clés `.sort()`) est permis (perception_rules.gd, territory_rules.gd)."
     why: "L'ordre d'itération est observé comme celui d'insertion mais non garanti par la référence du moteur (règle 8 du GDD 1)."
     adr: docs/architecture/adr-0003-etat-de-partie.md
     added: 2026-10-30

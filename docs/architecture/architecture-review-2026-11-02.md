@@ -75,3 +75,18 @@
 - Les ADR 0003 à 0011 sont implémentés avec des notes d'écarts datées. Seul ADR-0001 n'en a pas.
 - Les tests de propriété (états aléatoires, rejeu, reprise après chaque commande) couvrent les invariants les plus coûteux à perdre.
 - Le CI garde les règles de structure : écrivain unique par tranche, sens des dépendances, clés JSON dupliquées.
+
+---
+
+## 6. Suivi (2026-11-02)
+
+| Point | État |
+|---|---|
+| A1 | **Ouvert, décision attendue** : remplacer ADR-0001 par un ADR-0012 (rendu immédiat) ou construire le MultiMesh |
+| A2 | Fait : le séquenceur espace de `reduced_slot_ms` de temps réel les lots qui changent les couleurs (`SequenceOrder.is_mergeable`, `ClockSource.scale()`) ; 4 tests sur horloge factice (créneau, vitesse Instantanée, mode normal inchangé, attaque jamais retardée). Au lieu de `handle_merged`, qui n'a rien à fusionner : l'état final d'un lot est déjà la dernière valeur par tuile (ADR-0002, Écarts) |
+| A3 | Partiel : la note du registre dit la vérité (planification sur le fil principal au MVP) ; les compteurs `AiRunner.worst_advance_usec` et `SaveCoordinator.worst_write_usec` et la procédure du spike sont en place (ADR-0005). **Ouvert** : la mesure elle-même, sur un appareil Android de référence |
+| m1 | Fait : écarts 2 et 3 d'ADR-0002 mis à jour |
+| m2 | Fait : ADR-0001, Related (le reste relève d'A1) |
+| m3 | Fait : `RealFileStore.write` vérifie le `bool` de `store_buffer` |
+| m4 | Fait : le motif `dictionary_iteration_in_game_rule` vise l'ordre qui décide du résultat ; les deux parcours triés sont cités comme permis |
+| m5 | Fait : ADR-0005 §3, un refus de l'IA est un bogue, et ce qu'une reprise change à la coupure `N_REFUS_MAX` |

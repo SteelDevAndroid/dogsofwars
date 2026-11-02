@@ -8,3 +8,9 @@ extends RefCounted
 func current() -> float:
 	assert(false, "ClockSource.current is not implemented")
 	return 0.0
+
+
+## Presentation seconds per real second (the enemy-turn speed): the 3 flashes a second cap of
+## reduced animations is a real-time cap, so its slot is stretched by this factor.
+func scale() -> float:
+	return 1.0

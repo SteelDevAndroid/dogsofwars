@@ -214,3 +214,88 @@ func test_the_pacing_gate_follows_the_sequencer() -> void:
 	assert_bool(gate.is_ready()).is_false()  # a batch is waiting
 	sequencer.advance()
 	sequencer.free()
+
+
+func _recolor(revision: int) -> EventBatch:
+	return EventBatch.new(revision, [TileOwnersChangedEvent.new(PackedInt32Array([revision]), Faction.NONE, Faction.PLAYER)])
+
+
+func _batch_ends(recorder: Recorder) -> int:
+	return recorder.log.count("a:batch_end")
+
+
+## Review 2026-11-02, A2 (ADR-0002 §6, WCAG 2.3.1): in reduced motion two batches that change
+## the colours are one slot (334 ms) apart, so at most 3 changes a second.
+func test_reduced_motion_spaces_the_colour_changes_by_one_slot() -> void:
+	var recorder := _recorder("a")
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	sequencer.reduced_motion = true
+	_queue.push(_recolor(1))
+	_queue.push(_recolor(2))
+	_queue.push(_recolor(3))
+
+	sequencer.advance()
+	assert_int(_batch_ends(recorder)).is_equal(1)
+	_clock.advance(0.32)
+	sequencer.advance()
+	assert_int(_batch_ends(recorder)).is_equal(1)
+	_clock.advance(0.02)  # 340 ms
+	sequencer.advance()
+	assert_int(_batch_ends(recorder)).is_equal(2)
+	_clock.advance(0.34)
+	sequencer.advance()
+
+	assert_int(_batch_ends(recorder)).is_equal(3)
+	assert_bool(sequencer.is_idle()).is_true()
+	sequencer.free()
+
+
+func test_the_slot_is_real_time_at_the_instant_speed() -> void:
+	var recorder := _recorder("a")
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	sequencer.reduced_motion = true
+	_clock.speed_scale = 1000.0  # instant: 1 s of the clock is 1 ms of real time
+	_queue.push(_recolor(1))
+	_queue.push(_recolor(2))
+
+	sequencer.advance()
+	_clock.advance(333.0)  # 333 ms of real time
+	sequencer.advance()
+	assert_int(_batch_ends(recorder)).is_equal(1)
+	_clock.advance(2.0)
+	sequencer.advance()
+
+	assert_int(_batch_ends(recorder)).is_equal(2)
+	sequencer.free()
+
+
+func test_without_reduced_motion_colour_changes_are_not_delayed() -> void:
+	var recorder := _recorder("a")
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	_queue.push(_recolor(1))
+	_queue.push(_recolor(2))
+
+	sequencer.advance()
+
+	assert_int(_batch_ends(recorder)).is_equal(2)
+	sequencer.free()
+
+
+func test_reduced_motion_never_delays_an_attack_or_a_batch_without_colour_change() -> void:
+	var recorder := _recorder("a", {"AttackResolvedEvent": 100})
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	sequencer.reduced_motion = true
+	_queue.push(_recolor(1))
+	_queue.push(EventBatch.new(2, [UnitMovedEvent.new(0, 1, 2, 3, 3)]))
+	_queue.push(EventBatch.new(3, [AttackResolvedEvent.new(0, 1, 2, 3, 4)]))
+
+	sequencer.advance()
+
+	assert_int(_batch_ends(recorder)).is_equal(2)  # the move passed; the attack keeps its own hold
+	assert_array(recorder.log).contains(["a:AttackResolvedEvent"])
+	sequencer.free()
+
