@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The same rule for Android 12 and later: cloud backup and device-to-device transfer carry the
+     profile, never the match in progress (GDD 16 rule 18). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="profile.sav"/>
+        <include domain="file" path="profile.bak"/>
+        <include domain="external" path="profile.sav"/>
+        <include domain="external" path="profile.bak"/>
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="profile.sav"/>
+        <include domain="file" path="profile.bak"/>
+        <include domain="external" path="profile.sav"/>
+        <include domain="external" path="profile.bak"/>
+    </device-transfer>
+</data-extraction-rules>
