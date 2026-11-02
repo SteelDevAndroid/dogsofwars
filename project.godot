@@ -11,6 +11,7 @@ config/quit_on_go_back=false
 [display]
 
 window/stretch/mode="disabled"
+window/handheld/orientation=6
 
 [editor_plugins]
 

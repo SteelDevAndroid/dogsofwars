@@ -301,3 +301,33 @@ func test_the_text_scale_is_applied_again_when_the_window_changes() -> void:
 	assert_float(get_window().content_scale_factor).is_equal_approx(2.25, 0.0001)
 	get_window().content_scale_factor = 1.0
 	await _finish(first)
+
+
+func test_a_match_that_cannot_be_resumed_is_explained_in_the_menu() -> void:
+	var files := FaultInjectingFileStore.new()
+	files.write("user://match.sav", FileAccess.get_file_as_bytes("res://tests/fixtures/saves/schema2_enemy.sav"))
+	var boot := _boot(files)
+
+	(boot.screen as MainMenu).continue_button.pressed.emit()
+
+	assert_object(boot.screen).is_instanceof(MainMenu)
+	assert_str((boot.screen as MainMenu).notice_label.text).contains("format de la partie")
+	assert_bool((boot.screen as MainMenu).continue_button.disabled).is_true()
+	await _finish(boot)
+
+
+func test_the_notices_of_the_other_refusals() -> void:
+	assert_str(Bootstrap._load_notice(LoadResult.NEWER)).contains("plus récente")
+	assert_str(Bootstrap._load_notice(LoadResult.CORRUPT)).contains("abîmée")
+	assert_str(Bootstrap._load_notice(LoadResult.NONE)).is_empty()
+
+
+func test_a_schema_two_match_in_the_player_phase_resumes_from_the_menu() -> void:
+	var files := FaultInjectingFileStore.new()
+	files.write("user://match.sav", FileAccess.get_file_as_bytes("res://tests/fixtures/saves/schema2_player.sav"))
+	var boot := _boot(files)
+
+	(boot.screen as MainMenu).continue_button.pressed.emit()
+
+	assert_object(boot.match_screen).is_not_null()
+	await _finish(boot)

@@ -6,7 +6,10 @@
 # files are removed and never promoted; the current file, then the backup, nothing else;
 # a damaged current is set aside; a newer content schema is refused without fallback;
 # after decoding, the vision is rebuilt and the invariants checked, a failure there being
-# a corruption.
+# a corruption. A save of an older schema goes through SaveMigrations; when there is no chain,
+# a step refuses or the result breaks an invariant, the file is set aside (renamed, never
+# deleted) and the result says OLDER (GDD 16 rule 17bis). The migrated file is rewritten in the
+# current schema by the next save.
 class_name SaveStore
 extends RefCounted
 
@@ -54,6 +57,7 @@ func load_match() -> LoadResult:
 	_files.delete(_path("match.tmp"))
 	var result := LoadResult.new()
 	var damaged := false
+	var too_old := false
 	for name in ["match.sav", "match.bak"]:
 		if not _files.exists(_path(name)):
 			continue
@@ -65,17 +69,22 @@ func load_match() -> LoadResult:
 			_current_known_valid = not result.from_backup
 			result.code = LoadResult.OK
 			return result
-		if attempt == &"NEWER" or attempt == &"OLDER":
+		if attempt == &"NEWER":
 			result.state = null
-			result.code = LoadResult.NEWER if attempt == &"NEWER" else LoadResult.OLDER
+			result.code = LoadResult.NEWER
 			return result
+		if attempt == &"OLDER":  # the next candidate may still be loadable
+			too_old = true
+			result.warnings.append("%s comes from an older version and was set aside" % name)
+			_set_aside(name)
+			continue
 		damaged = true
 		result.warnings.append("%s is damaged (%s)" % [name, attempt])
 		if name == "match.sav":
 			_set_aside("match.sav")
 	result.state = null
 	result.vision = null
-	result.code = LoadResult.CORRUPT if damaged else LoadResult.NONE
+	result.code = LoadResult.OLDER if too_old and not damaged else (LoadResult.CORRUPT if damaged else LoadResult.NONE)
 	return result
 
 
@@ -94,15 +103,21 @@ func _try(name: String, result: LoadResult) -> StringName:
 		return code[0]
 	if envelope.content_schema > GameState.SCHEMA_VERSION:
 		return &"NEWER"
+	var payload := envelope.payload
 	if envelope.content_schema < GameState.SCHEMA_VERSION:
-		return &"OLDER"
-	var state := GameState.from_bytes(envelope.payload, envelope.content_schema)
+		payload = SaveMigrations.migrate(payload, envelope.content_schema)
+		if payload.is_empty():
+			return &"OLDER"
+		result.migrated_from = envelope.content_schema
+	var state := GameState.from_bytes(payload, GameState.SCHEMA_VERSION)
 	if state == null:
-		return &"BAD_STATE"
+		result.migrated_from = 0
+		return &"OLDER" if envelope.content_schema < GameState.SCHEMA_VERSION else &"BAD_STATE"
 	var vision := VisionContext.for_map(_catalog, state)
 	VisionService.rebuild(state, vision)
 	if not state.validate().is_empty() or not VisionService.consistency_errors(state).is_empty():
-		return &"BAD_INVARIANTS"
+		result.migrated_from = 0
+		return &"OLDER" if envelope.content_schema < GameState.SCHEMA_VERSION else &"BAD_INVARIANTS"
 	result.state = state
 	result.vision = vision
 	return &"OK"

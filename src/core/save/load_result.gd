@@ -10,11 +10,13 @@ const NONE := &"NONE"
 const CORRUPT := &"CORRUPT"
 ## A save of a newer content schema: left untouched, never fallen back from (ADR-0006 §3).
 const NEWER := &"NEWER"
-## An older content schema: set aside before the closed test (ADR-0006 §3).
+## An older content schema that could not be migrated: the file was set aside (GDD 16 rule 17bis).
 const OLDER := &"OLDER"
 
 var code: StringName = NONE
 var state: GameState
 var vision: VisionContext
 var from_backup := false
+## The schema the loaded save was migrated from, 0 when it was current.
+var migrated_from := 0
 var warnings := PackedStringArray()

@@ -59,10 +59,10 @@ func _notification(what: int) -> void:
 		(match_screen.session.post_commit as SaveCoordinator).retry(match_screen.session.state)
 
 
-func show_menu() -> void:
+func show_menu(notice: String = "") -> void:
 	var menu := MainMenu.new()
 	var best := profile.best_score(Faction.PLAYER, SubmitScoreEffect.DIFFICULTY_STANDARD)
-	menu.configure(app.save_store.has_match(), best)
+	menu.configure(app.save_store.has_match(), best, notice)
 	menu.continue_requested.connect(continue_match)
 	menu.new_game_requested.connect(start_new_game)
 	menu.settings_requested.connect(show_settings)
@@ -91,9 +91,21 @@ func continue_match() -> void:
 	var session := SessionFactory.resume(app, screen_node.ports(EventQueue.new(app.catalog.presentation.value("queue_max"))), screen_node.runner_port(), reason)
 	if session == null:
 		screen_node.free()
-		show_menu()  # nothing to continue: the menu offers a new game
+		show_menu(_load_notice(reason[0]))  # nothing to continue: the menu offers a new game
 		return
 	_bind(screen_node, session)
+
+
+## What the player is told when the saved match cannot be resumed (GDD 16 rule 17bis).
+static func _load_notice(code: StringName) -> String:
+	match code:
+		LoadResult.OLDER:
+			return "Une mise à jour a changé le format de la partie, elle ne peut pas être reprise."
+		LoadResult.NEWER:
+			return "Cette partie vient d'une version plus récente du jeu."
+		LoadResult.CORRUPT:
+			return "La partie est abîmée et ne peut pas être reprise."
+	return ""
 
 
 func toggle_pause() -> void:
@@ -187,6 +199,8 @@ func _show_end() -> void:
 
 
 func _show_data_errors(errors: Array[DataError]) -> void:
+	for error in errors:
+		printerr("data error: ", error)  # also reaches logcat on a device
 	var error_screen := DataErrorScreen.new()
 	error_screen.show_errors(errors)
 	error_screen.quit_requested.connect(func() -> void: get_tree().quit())

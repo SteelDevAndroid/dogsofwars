@@ -41,6 +41,8 @@ jobs:
       # Exit 0 = green; 100 = failures or errors; 101 = orphans. Any non-zero fails the job.
       - name: gdUnit4 suite
         run: '"$GODOT" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
+      - name: The Android pack holds the data and the game runs from it
+        run: bash tools/ci/check-export-pack.sh
       - name: Archive JUnit report
         if: always()
         uses: actions/upload-artifact@v4

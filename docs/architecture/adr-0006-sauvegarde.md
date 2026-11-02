@@ -228,3 +228,15 @@ Sans objet : aucun code de production n'existe.
 ## Related
 - GDD : `design/gdd/sauvegarde-automatique.md` (16), `profil-donnees-meta.md` (22), `modele-etat-partie.md` (1), `tours-conditions-victoire.md` (3), `ruines-fragments.md` (13), `commandes-evenements.md` (23). **GDD SYNC** : GDD 16 (formule 4 : `SHA-256(préfixe ‖ charge utile)`, 32 octets, empreinte en fin d'enveloppe et non dans l'en-tête ; règle 10 : l'écriture de 20 ms n'est masquée que si asynchrone ; Limites connues : retirer « stabilité d'un CRC32 natif ») ; GDD 13 règle 14 (écrire « la partie est écrite, puis le profil »).
 - ADR-0003 (à amender : `to_bytes` rend la charge utile seule, l'intégrité est contrôlée par cet ADR), ADR-0004 §4 (déclencheurs : chaque commande appliquée, IA comprise), ADR-0005 §5.
+
+## Implémentation des migrations (2026-11-02)
+
+`SaveMigrations` (`src/core/save/`) enchaîne des pas purs `N → N + 1` sur la charge utile décodée (le tableau de colonnes), jusqu'à `GameState.SCHEMA_VERSION`. `SaveStore.load_match` migre un fichier d'un schéma plus ancien avant `from_bytes`, puis rejoue les mêmes contrôles (structure, vue, invariants) ; `LoadResult.migrated_from` donne le schéma d'origine. Le fichier du disque n'est pas touché : la sauvegarde suivante l'écrit au schéma courant, l'ancien fichier devenant la copie de secours.
+
+**Pas en place : 2 → 3** (le curseur de l'IA gagne le tour de la dernière annonce, `[curseur]` → `[curseur, -1]`). Fixtures : deux fichiers **réels** du schéma 2, produits par le code du commit `aeac0d7^` (`tests/fixtures/saves/schema2_player.sav` et `schema2_enemy.sav`).
+
+**Refus** (règle 17bis du GDD 16) : sans chaîne (schéma antérieur à `FIRST_SUPPORTED`), pas qui refuse, résultat qui échoue à la structure ou aux invariants → le fichier est **renommé** (`match.bad1`, plafond `BAD_FILE_CAP`), jamais supprimé, `LoadResult.OLDER` est rendu et le menu affiche « Une mise à jour a changé le format de la partie, elle ne peut pas être reprise. » La copie de secours est essayée à son tour. Les messages des refus plus récent et abîmé sont aussi affichés.
+
+**Porte de CI** : `test_every_schema_increment_has_a_migration` échoue si `SCHEMA_VERSION` monte sans pas enregistré de `FIRST_SUPPORTED` au schéma précédent.
+
+**Écarts à confirmer** : (1) une partie du schéma 2 **en phase ennemie** est mise de côté au lieu d'être ramenée à l'état d'après FINIR_LE_TOUR (le GDD l'autorise comme repli, mais l'état d'avant la phase n'est pas reconstruit) : le curseur du schéma 2 ne dit pas si l'annonce a eu lieu, et une reprise annoncerait deux fois ; (2) les schémas antérieurs à 2 n'ont pas de pas : la partie est mise de côté ; (3) le profil n'a qu'un schéma (1) : aucune chaîne de migration du profil n'existe encore, elle sera à écrire avec son premier incrément ; (4) la garde d'époque de la partie (AC-18) reste à écrire ; (5) tant qu'aucun build du test fermé n'a de joueurs, les pas ne sont éprouvés que sur ces fixtures.

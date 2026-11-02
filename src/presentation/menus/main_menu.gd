@@ -16,6 +16,7 @@ var quit_button: Button
 var confirm_button: Button
 var cancel_button: Button
 var best_label: Label
+var notice_label: Label
 var _save_available := false
 
 
@@ -35,11 +36,16 @@ func _init() -> void:
 	quit_button = _button(box, "Quitter", func() -> void: quit_requested.emit())
 	best_label = Label.new()
 	box.add_child(best_label)
+	notice_label = Label.new()
+	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	notice_label.custom_minimum_size = Vector2(300, 0)
+	box.add_child(notice_label)
 	_reset_confirmation()
 
 
 ## Whether a save exists; and the best score of the profile, -1 when there is none yet.
-func configure(save_available: bool, best_score: int = -1) -> void:
+func configure(save_available: bool, best_score: int = -1, notice: String = "") -> void:
+	notice_label.text = notice
 	_save_available = save_available
 	continue_button.disabled = not save_available
 	best_label.text = "" if best_score < 0 else "Meilleur score : %d" % best_score
