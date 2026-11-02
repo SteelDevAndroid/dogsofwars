@@ -65,6 +65,10 @@ func capture(unit_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
 	return pipeline.submit(CaptureCommand.new(faction, emitter, unit_id))
 
 
+func execute_intention(intention_id: int) -> ValidationResult:
+	return pipeline.submit(ExecuteIntentionCommand.new(intention_id))
+
+
 ## Intentions as flat [author, kind, target, action, motive], agents as [unit, role, idle, post, motive].
 func announce(intentions: Array = [], agents: Array = [], siege_node: int = -1, siege_count: int = 0) -> ValidationResult:
 	var flat_intentions := PackedInt64Array()

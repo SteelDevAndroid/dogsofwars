@@ -33,6 +33,8 @@ static func decode(values: PackedInt64Array) -> Command:
 			return CaptureCommand.from_params(values[1], values[2], rest)
 		CommandType.ABANDON:
 			return AbandonCommand.from_params(values[1], values[2], rest)
+		CommandType.EXECUTE_INTENTION:
+			return ExecuteIntentionCommand.from_params(values[1], values[2], rest)
 		CommandType.ANNOUNCE_INTENTIONS:
 			return AnnounceIntentionsCommand.from_params(values[1], values[2], rest)
 		CommandType.RESEARCH:

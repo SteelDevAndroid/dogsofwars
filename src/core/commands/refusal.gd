@@ -45,6 +45,8 @@ const TARGET_NOT_HOSTILE := &"CIBLE_NON_HOSTILE"
 const TARGET_OUT_OF_RANGE := &"CIBLE_HORS_DE_PORTÉE"
 ## ANNONCER_LES_INTENTIONS: no announcement against a passive AI (GDD 9 rule 25).
 const AI_PASSIVE := &"IA_PASSIVE"
+## EXÉCUTER_UNE_INTENTION: no such intention, already settled, not due this turn, or a
+## lower id is still due (one code, GDD 9 rule 4).
 ## ANNONCER_LES_INTENTIONS: malformed content (motive, shape, duplicate author, siege,
 ## role). Params: index of the offending intention or agent (-1 for the siege).
 const INVALID_ANNOUNCEMENT := &"ANNONCE_INVALIDE"

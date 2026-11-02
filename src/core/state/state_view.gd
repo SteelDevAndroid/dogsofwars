@@ -76,6 +76,20 @@ func announced_this_turn(unit_id: int) -> bool:
 	return false
 
 
+## True when the intention is announced, due this turn, and no lower id is still due
+## (GDD 9 rule 4: execution by ascending intention id).
+func intention_executable(intention_id: int) -> bool:
+	var slice := _state.intentions
+	var row := slice.find_row(intention_id)
+	if row < 0 or slice.status_of(row) != IntentionsSlice.STATUS_ANNOUNCED or slice.exec_turn_of(row) != _state.turn():
+		return false
+	for other in slice.row_count():
+		if slice.id_of(other) < intention_id and slice.status_of(other) == IntentionsSlice.STATUS_ANNOUNCED \
+				and slice.exec_turn_of(other) == _state.turn():
+			return false
+	return true
+
+
 func max_turn() -> int:
 	return _state.header.value(HeaderSlice.T_MAX)
 

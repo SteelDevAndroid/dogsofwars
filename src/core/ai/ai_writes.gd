@@ -40,6 +40,13 @@ static func announce_intention(state: GameState, author_id: int, author_tile: in
 	return id
 
 
+## Closes an intention: executed, or cancelled with its reason (GDD 9 rule 4).
+static func settle_intention(state: GameState, intention_id: int, status: int, reason: int) -> void:
+	var row := state.intentions.find_row(intention_id)
+	state.intentions._int_status[row] = status
+	state.intentions._int_cancel_reason[row] = reason
+
+
 ## Writes the new role data of an AI unit, keeping the rows sorted by unit id.
 static func set_agent(state: GameState, unit_id: int, role: int, idle_turns: int, post_tile: int, motive: int) -> void:
 	var agents := state.ai_agents
