@@ -21,6 +21,22 @@ func columns() -> Array:
 	return COLUMNS
 
 
+func unit_of(row: int) -> int:
+	return _track_unit[row]
+
+
+func tile_of(row: int) -> int:
+	return _track_tile[row]
+
+
+func seen_turn_of(row: int) -> int:
+	return _track_seen_turn[row]
+
+
+func kind_of(row: int) -> int:
+	return _track_kind[row]
+
+
 func private_to() -> int:
 	return Faction.AI
 

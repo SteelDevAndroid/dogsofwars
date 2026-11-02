@@ -53,4 +53,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		result.vision = VisionService.recompute(state, rules.vision)
 		if not result.vision.discovered_tiles.is_empty():
 			result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))
+	if not player:
+		# GDD 9 step 3: perception, on the view as it is after the new protocols.
+		PerceptionRules.update(state, rules.catalog.ai)
 	return result

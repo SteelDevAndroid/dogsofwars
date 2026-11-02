@@ -40,6 +40,21 @@ static func announce_intention(state: GameState, author_id: int, author_tile: in
 	return id
 
 
+## Replaces the tracks (GDD 9 rule 9) by `rows` of [unit, tile, seen_turn, kind], already
+## ordered by unit id and capped.
+static func set_tracks(state: GameState, rows: Array) -> void:
+	var tracks := state.ai_tracks
+	tracks._track_unit.clear()
+	tracks._track_tile.clear()
+	tracks._track_seen_turn.clear()
+	tracks._track_kind.clear()
+	for row: Array in rows:
+		tracks._track_unit.append(row[0])
+		tracks._track_tile.append(row[1])
+		tracks._track_seen_turn.append(row[2])
+		tracks._track_kind.append(row[3])
+
+
 ## Closes an intention: executed, or cancelled with its reason (GDD 9 rule 4).
 static func settle_intention(state: GameState, intention_id: int, status: int, reason: int) -> void:
 	var row := state.intentions.find_row(intention_id)

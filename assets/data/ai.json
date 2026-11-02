@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "track_ttl": 4,
   "protocol_calendar": [
     {"turn": 12, "protocol": 4},
     {"turn": 18, "protocol": 5}
