@@ -130,4 +130,3 @@ Un dossier par catégorie (`terrain/`, `nodes/`, `ruins/`, `units/`, `fx/`, `ui/
 |---|---|
 | Unités en vue de dessus pure ou en trois quarts (le moteur actuel est de dessus) ? | art-director |
 | Faut-il 8 orientations dessinées plutôt qu'une rotation par paliers de 45° ? | art-director |
-| Police : choix et licence | art-director, narrative-director |

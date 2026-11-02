@@ -20,6 +20,7 @@ func _init() -> void:
 	var box := MenuLayout.column(self, MenuLayout.WIDTH, 0.12)
 	title_label = MenuLayout.label(box)
 	title_label.add_theme_font_size_override("font_size", 28)
+	title_label.add_theme_font_override("font", load("res://assets/fonts/Inter-Bold.ttf"))
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	scores_label = MenuLayout.label(box)
 	scores_label.add_theme_font_size_override("font_size", 22)

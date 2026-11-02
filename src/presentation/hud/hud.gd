@@ -120,6 +120,7 @@ func _init() -> void:
 	bottom_panel = backdrop(bottom)
 	add_child(bottom_panel)
 	unit_title.add_theme_font_size_override("font_size", 20)
+	unit_title.add_theme_font_override("font", load("res://assets/fonts/Inter-Bold.ttf"))
 	bottom.add_child(unit_title)
 	hp_bar.show_percentage = false
 	hp_bar.custom_minimum_size = Vector2(0, 8)
