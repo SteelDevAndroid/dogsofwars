@@ -43,6 +43,6 @@ func is_over(now: float) -> bool:
 ## `now`: its starting tint until the effect starts, its final one once it is over.
 func wave_state(index: int, now: float) -> Vector2i:
 	var fade_ms := roundi(duration * 1000.0)
-	var u := floori(clampf((now - start) * 1000.0, 0.0, float(fade_ms)))
+	var u := roundi(clampf((now - start) * 1000.0, 0.0, float(fade_ms)))  # to the nearest ms: 0.3 - 0.2 is 99.99999999999997 ms in floats
 	return WaveFade.shown(from_owner[index], from_s[index], to_owner, u, fade_ms)
 
