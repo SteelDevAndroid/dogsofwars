@@ -208,7 +208,7 @@ func test_a_unit_is_a_card_with_a_gauge_and_four_pills_and_only_its_statuses_as_
 	assert_bool(hud.hp_bar.visible).is_true()
 	assert_array([hud.hp_bar.value, hud.hp_bar.max_value]).is_equal([5.0, 8.0])
 	assert_str(hud.hp_label.text).is_equal("PV 5 / 8")
-	var pills := hud.stats_row.get_children().map(func(pill: Node) -> String: return (pill.get_child(0) as Label).text)
+	var pills := hud.stats_row.get_children().map(func(pill: Node) -> String: return ((pill.get_child(0) as HBoxContainer).get_child(-1) as Label).text)
 	assert_array(pills).is_equal(["MVT 3", "ATQ 3", "DÉF 1", "VUE 2"])
 	assert_str(hud.unit_lines.text).is_equal("A bougé")  # the first two lines are the card's; "MVT 3" above is one of them
 	hud.free()
@@ -307,13 +307,13 @@ func test_each_chip_has_the_icon_of_its_kind() -> void:
 	model.loss_chips = ["Drone perdu"]
 	hud.show_model(model)
 
-	var icons := hud.alert_row.get_children().map(func(chip: Node) -> Texture2D: return (chip.get_child(0) as TextureRect).texture)
+	var icons := hud.alert_row.get_children().map(func(chip: Node) -> Texture2D: return (chip as Button).icon)
 	assert_array(icons).is_equal([UiIcons.texture("menace"), UiIcons.texture("perte")])
 	model.threat_chip = ""
 	model.loss_chips = []
 	model.ruin_chip = "Ruine repérée"
 	hud.show_model(model)
-	assert_object((hud.alert_row.get_child(0).get_child(0) as TextureRect).texture).is_same(UiIcons.texture("ruine"))
+	assert_object((hud.alert_row.get_child(0) as Button).icon).is_same(UiIcons.texture("ruine"))
 	hud.free()
 
 
@@ -414,4 +414,33 @@ func test_the_score_explains_itself_and_takes_the_colour_blind_tints() -> void:
 	assert_str(hud.score_box.tooltip_text).is_equal(HudModel.SCORE_HELP)
 	assert_object((hud.score_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color).is_equal(TilePalette.PLAYER_ALT)
 	assert_object((hud.score_bar.get_theme_stylebox("background") as StyleBoxFlat).bg_color).is_equal(TilePalette.ENEMY_ALT)
+	hud.free()
+
+
+func test_each_stat_pill_has_its_icon_and_a_tap_on_them_asks_for_their_meaning() -> void:
+	var hud := _hud()
+	var pressed := [0]
+	hud.stats_pressed.connect(func() -> void: pressed[0] += 1)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+
+	hud.show_model(_unit_model())
+	hud.stats_row.gui_input.emit(release)
+
+	var icons := hud.stats_row.get_children().map(func(pill: Node) -> Texture2D: return ((pill.get_child(0) as HBoxContainer).get_child(0) as TextureRect).texture)
+	assert_array(icons).is_equal([UiIcons.texture("mouvement"), UiIcons.texture("attaque"), UiIcons.texture("defense"), UiIcons.texture("vue")])
+	assert_int(pressed[0]).is_equal(1)
+	assert_str(hud.stats_row.tooltip_text).is_equal(HudModel.STATS_HELP)
+	hud.free()
+
+
+func test_an_armed_end_of_turn_asks_to_confirm() -> void:
+	var hud := _hud()
+	var model := _model()
+	model.end_turn_armed = true
+
+	hud.show_model(model)
+
+	assert_str(hud.end_turn_button.text).is_equal("Confirmer la fin du tour")
 	hud.free()

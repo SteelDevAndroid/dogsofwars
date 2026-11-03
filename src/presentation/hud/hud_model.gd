@@ -8,6 +8,9 @@ extends RefCounted
 const JOURNAL_LINES := 12
 ## Told when the score is tapped (GDD 3 formula 1, decisive score).
 const SCORE_HELP := "Score : territoire, nœuds et leurs niveaux, drones en vie. Au tour 30, le plus haut gagne."
+## Told when the stats of the unit card are tapped (GDD 4 rule 6: a tap, never a long press).
+const STATS_HELP := "MVT : points de mouvement · ATQ : attaque · DÉF : défense · VUE : rayon de vision"
+const TERRAINS := {TerrainGrid.PLAIN: "Plaine", TerrainGrid.FOREST: "Forêt", TerrainGrid.MOUNTAIN: "Montagne", TerrainGrid.WATER: "Eau"}
 
 var turn_text := ""
 var energy_text := ""
@@ -17,6 +20,10 @@ var score_text := ""
 var score_player := 0
 var score_ai := 0
 var can_end_turn := false
+## The player's units that have neither moved nor acted this turn (a marker on the map, GDD 17).
+var idle_units := 0
+## "Fin du tour" was pressed once with idle units: the button now asks to confirm.
+var end_turn_armed := false
 var enemy_turn := false
 var threat_chip := ""
 var loss_chips: Array[String] = []
@@ -50,7 +57,9 @@ var journal: Array[String] = []
 ## `locked`: a player lock is up (attack animation, fragment panel). `selected`: unit id or -1.
 ## `actions`: {"can_attack": bool, "targeting": bool, "preview": CombatPreview or null, "preview_text": String,
 ## "extras": Array[ContextAction], "panel": Dictionary (a selected node), "research_open": bool,
-## "research": Array[ContextAction], "undo": ValidationResult of pipeline.check(UndoMoveCommand)}.
+## "research": Array[ContextAction], "undo": ValidationResult of pipeline.check(UndoMoveCommand),
+## "inspect": a tile tapped with nothing of the player's on it (its sheet fills the panel),
+## "end_turn_armed": bool}.
 static func build(state: GameState, catalog: DataCatalog, locked: bool, selected: int, journal_lines: Array[String],
 		actions: Dictionary = {}) -> HudModel:
 	var model := HudModel.new()
@@ -65,6 +74,9 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	model.score_text = "Vous %d · Gardiens %d" % [model.score_player, model.score_ai]
 	model.enemy_turn = phase == HeaderSlice.PHASE_ENEMY_EXECUTION or phase == HeaderSlice.PHASE_END_OF_TURN
 	model.can_end_turn = phase == HeaderSlice.PHASE_PLAYER and not locked
+	if phase == HeaderSlice.PHASE_PLAYER:
+		model.idle_units = count_idle_units(view)
+	model.end_turn_armed = model.can_end_turn and actions.get("end_turn_armed", false)
 	var threats := IntentionMarkers.visible_to_player(state)
 	if not threats.is_empty():
 		model.threat_chip = "Menace : %d" % threats.size() if threats.size() > 1 else "Menace"
@@ -96,6 +108,8 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	model.can_attack = actions.get("can_attack", false) and not locked and not model.targeting and not model.confirming
 	if model.unit_panel.is_empty():
 		model.unit_panel = actions.get("panel", {})
+	if model.unit_panel.is_empty() and actions.get("inspect", -1) >= 0:
+		model.unit_panel = tile_panel(state, view, catalog, actions["inspect"])
 	if not locked and not model.targeting and not model.confirming:
 		var extras: Array = actions.get("extras", [])
 		for extra: ContextAction in extras:
@@ -112,6 +126,54 @@ static func build(state: GameState, catalog: DataCatalog, locked: bool, selected
 	for row: ContextAction in rows:
 		model.research_rows.append(row if not locked else ContextAction.new(row.id, row.label, false, "Patientez"))
 	return model
+
+
+## The player's units that have neither moved nor acted (the end of turn asks before leaving them).
+static func count_idle_units(view: FactionView) -> int:
+	var count := 0
+	for unit_id in view.unit_ids():
+		if view.unit_faction(unit_id) == Faction.PLAYER and not view.unit_moved(unit_id) and not view.unit_acted(unit_id):
+			count += 1
+	return count
+
+
+## The sheet of a tile, from what the player knows only (FactionView, fog level): the terrain,
+## its entry cost and defense, a node seen there, a visible unit that is not the player's. The
+## stats of a hostile unit are its type's, never its side's protocols (they are not told).
+static func tile_panel(state: GameState, view: FactionView, catalog: DataCatalog, tile: int) -> Dictionary:
+	var fog := VisionService.fog_level(state, Faction.PLAYER, tile)
+	if fog == VisionService.FOG_UNDISCOVERED:
+		return {"title": "Zone inconnue", "lines": ["Pas encore explorée"]}
+	var terrain := view.terrain_at(tile)
+	var terrain_name: String = TERRAINS.get(terrain, "Terrain")
+	var ground := "%s : infranchissable" % terrain_name if not catalog.terrain.is_passable(terrain) \
+			else "%s : entrée %d MVT, défense +%d" % [terrain_name, catalog.terrain.entry_cost(terrain), catalog.terrain.defense_class(terrain)]
+	var lines: Array[String] = []
+	var node := view.node_at(tile)
+	if node >= 0:
+		lines.append("Nœud niveau %d · %s" % [view.node_level(node), _side_name(view.node_owner(node))])
+	if fog == VisionService.FOG_EXPLORED:
+		lines.append("Hors de vue : souvenir de la dernière visite")
+	var unit := view.unit_at(tile) if fog == VisionService.FOG_VISIBLE else -1
+	if unit >= 0 and view.unit_faction(unit) != Faction.PLAYER:
+		var type := view.unit_type(unit)
+		var hp_max := catalog.units.hp(type)
+		var stats := [["MVT", catalog.units.move(type)], ["ATQ", catalog.units.attack(type)],
+				["DÉF", catalog.units.defense(type)], ["VUE", catalog.units.vision(type)]]
+		var card: Array[String] = ["PV %d / %d" % [view.unit_hp(unit), hp_max], ""]
+		card.append(ground)
+		card.append_array(lines)
+		var side := "Drone dormant" if view.unit_asleep(unit) or view.unit_faction(unit) == Faction.NONE else "Gardien"
+		return {"title": "%s · %s" % [side, DisplayNames.unit(catalog.units.key(type))], "lines": card,
+				"hp": view.unit_hp(unit), "hp_max": hp_max, "stats": stats}
+	lines.insert(0, ground)
+	return {"title": terrain_name, "lines": lines}
+
+
+static func _side_name(faction: int) -> String:
+	if faction == Faction.PLAYER:
+		return "à vous"
+	return "Gardiens" if faction == Faction.AI else "libre"
 
 
 static func _unit_panel(view: FactionView, catalog: DataCatalog, selected: int) -> Dictionary:

@@ -6,7 +6,9 @@ extends RefCounted
 
 const DIR := "res://assets/art/ui/ui_icon_%s.svg"
 const NAMES := ["attaque", "chronique", "energie", "menace", "montee_niveau", "noeud", "pause", "perte", "recentrer",
-		"recherche", "reglages", "retour", "reveil", "ruine", "tour", "vitesse", "zoom_moins", "zoom_plus"]
+		"recherche", "reglages", "retour", "reveil", "ruine", "tour", "vitesse", "zoom_moins", "zoom_plus", "mouvement", "defense", "vue"]
+## The icon of each stat pill of the unit card.
+const STATS := {"MVT": "mouvement", "ATQ": "attaque", "DÉF": "defense", "VUE": "vue"}
 ## The icon of each action of the context panel.
 const ACTIONS := {&"capture": "noeud", &"wake": "reveil", &"upgrade": "montee_niveau"}
 ## The shown size of an icon beside a text, in pt (the minimum shown size of the art bible is 20).

@@ -35,6 +35,10 @@ var preview_text := ""
 var target_action := &"attack"
 ## The node selected by a tap on an owned node of the player's (-1 for none).
 var selected_node := -1
+## A tile tapped with nothing of the player's on it: its sheet shows in the panel (-1 for none).
+var inspected_tile := -1
+## "Fin du tour" pressed once while units of the player have not played: the next press ends it.
+var end_turn_armed := false
 var research_open := false
 var camera: MapCamera
 var layout: HudLayout
@@ -62,6 +66,7 @@ var sounds: SoundBank
 var _pacing: PacingGate
 
 const SCORE_HELP_SECONDS := 4.0
+const END_TURN_ASK_SECONDS := 3.0
 var _queue: EventQueue
 
 
@@ -72,7 +77,7 @@ func _ready() -> void:
 	var source := ClockAdapter.new(clock)
 	renderer.clock = source
 	hud_layer.add_child(hud)
-	hud.end_turn_pressed.connect(end_turn)
+	hud.end_turn_pressed.connect(request_end_turn)
 	hud.pause_pressed.connect(func() -> void: pause_requested.emit())
 	hud.speed_pressed.connect(cycle_speed)
 	hud.zoom_in_pressed.connect(func() -> void: zoom_by(1.25))
@@ -90,6 +95,7 @@ func _ready() -> void:
 	hud.chip_pressed.connect(focus_tile)
 	hud.toast_pressed.connect(func() -> void: focus_tile(hud.toast_tile()))
 	hud.score_pressed.connect(func() -> void: hud.show_toast(HudModel.SCORE_HELP, clock.current(), SCORE_HELP_SECONDS))
+	hud.stats_pressed.connect(func() -> void: hud.show_toast(HudModel.STATS_HELP, clock.current(), SCORE_HELP_SECONDS))
 	input_surface.pointer.connect(_on_pointer)
 	_pacing = SequencerPacingGate.new(sequencer)
 	sequencer.clock = source
@@ -180,7 +186,7 @@ func refresh(show_new_state: bool = false) -> void:
 		return
 	if show_new_state or renderer.snapshot == null or sequencer.is_idle():
 		renderer.show_state(session.state, session.catalog)
-	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else -1, reachable if show_range else PackedInt32Array())
+	renderer.set_selection(session.state.view().unit_tile(selected_unit) if selected_unit >= 0 else inspected_tile, reachable if show_range else PackedInt32Array())
 	var advice := HudHint.text(session.state, hints, session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER \
 			and not session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER) and sequencer.is_idle(), selected_unit, false)
 	renderer.hint_tile = _first_unit_tile() if advice != "" and selected_unit < 0 else -1
@@ -240,6 +246,7 @@ func on_tap_tile(tile: int) -> void:
 		else:
 			cancel_targeting()
 		return
+	end_turn_armed = false
 	if selected_unit >= 0 and reachable.has(tile):
 		var moved := selected_unit
 		_submit(MoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, moved, tile))
@@ -250,16 +257,22 @@ func on_tap_tile(tile: int) -> void:
 	if unit >= 0 and view.unit_faction(unit) == Faction.PLAYER:
 		select_unit(unit)
 		return
+	var was_inspected := inspected_tile
 	select_unit(-1)
 	var node := view.node_at(tile)
 	if node >= 0 and view.node_owner(node) == Faction.PLAYER:
 		selected_node = node
 		refresh()
+		return
+	inspected_tile = tile if tile != was_inspected else -1  # a second tap closes the sheet
+	refresh()
 
 
 func select_unit(unit_id: int) -> void:
 	selected_unit = unit_id
 	selected_node = -1
+	inspected_tile = -1
+	end_turn_armed = false
 	reachable = PackedInt32Array()
 	mode = Mode.SELECTED if unit_id >= 0 else Mode.IDLE
 	target_tiles = PackedInt32Array()
@@ -378,7 +391,29 @@ func cancel_targeting() -> void:
 	select_unit(selected_unit)
 
 
-## The player ends their turn (the end-turn button of the HUD).
+## The end-turn button: with units of the player that have not played, the first press asks
+## (a toast and "Confirmer la fin du tour"), the second ends the turn. Any tap on the map in
+## between withdraws the question.
+func request_end_turn() -> void:
+	if session == null or not sequencer.is_idle() or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
+		return
+	var idle := HudModel.count_idle_units(FactionView.new(session.state, Faction.PLAYER))
+	if idle > 0 and not end_turn_armed and session.state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER:
+		select_unit(-1)
+		end_turn_armed = true
+		hud.show_toast(end_turn_question(idle), clock.current(), END_TURN_ASK_SECONDS)
+		refresh()
+		return
+	end_turn()
+
+
+static func end_turn_question(idle: int) -> String:
+	if idle == 1:
+		return "1 unité n'a pas joué. Touchez encore pour finir le tour."
+	return "%d unités n'ont pas joué. Touchez encore pour finir le tour." % idle
+
+
+## The player ends their turn (the end-turn button of the HUD, after its question).
 func end_turn() -> ValidationResult:
 	if session == null:
 		return ValidationResult.refused(Refusal.MATCH_OVER)
@@ -432,6 +467,8 @@ func _hud_actions() -> Dictionary:
 		"research_open": research_open,
 		"research": ContextActions.research_rows(session.state, session.catalog, session.pipeline) if research_open else [],
 		"undo": session.pipeline.check(UndoMoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER)),
+		"inspect": inspected_tile if mode == Mode.IDLE and selected_node < 0 else -1,
+		"end_turn_armed": end_turn_armed,
 	}
 
 

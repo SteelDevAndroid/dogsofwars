@@ -172,3 +172,67 @@ func test_a_move_that_revealed_the_map_shows_a_greyed_undo_and_its_reason() -> v
 	var model := _undo_model(fx)
 	assert_array([model.undo_visible, model.undo_enabled]).is_equal([true, false])
 	assert_str(model.undo_reason).contains("Impossible d'annuler")
+
+
+func test_a_tapped_tile_tells_its_terrain_from_what_the_player_knows() -> void:
+	var state := _board()
+	var catalog := _catalog()
+	var tile := state.tile_index(2, 0)  # plain, beside the player's Assaut
+	assert_int(VisionService.fog_level(state, Faction.PLAYER, tile)).is_equal(VisionService.FOG_VISIBLE)
+
+	var model := HudModel.build(state, catalog, false, -1, [], {"inspect": tile})
+
+	assert_str(model.unit_panel["title"]).is_equal("Plaine")
+	assert_str(model.unit_panel["lines"][0]).is_equal("Plaine : entrée %d MVT, défense +%d" % [
+			catalog.terrain.entry_cost(TerrainGrid.PLAIN), catalog.terrain.defense_class(TerrainGrid.PLAIN)])
+	assert_bool(model.unit_panel.has("hp")).is_false()
+
+
+func test_an_undiscovered_tile_tells_nothing() -> void:
+	var state := _board()
+	var view := FactionView.new(state, Faction.PLAYER)
+	var hidden := -1
+	for tile in state.tile_count():
+		if VisionService.fog_level(state, Faction.PLAYER, tile) == VisionService.FOG_UNDISCOVERED:
+			hidden = tile
+			break
+	assert_int(hidden).is_greater_equal(0)
+
+	var panel := HudModel.tile_panel(state, view, _catalog(), hidden)
+
+	assert_dict(panel).is_equal({"title": "Zone inconnue", "lines": ["Pas encore explorée"]})
+
+
+func test_a_visible_enemy_shows_its_card_with_the_stats_of_its_type() -> void:
+	var state := _board()
+	var catalog := _catalog()
+	var tile := state.tile_index(3, 1)
+
+	var panel := HudModel.tile_panel(state, FactionView.new(state, Faction.PLAYER), catalog, tile)
+
+	assert_str(panel["title"]).is_equal("Gardien · Chasseur")
+	assert_int(panel["hp_max"]).is_equal(catalog.units.hp(CHASSEUR))
+	assert_array(panel["stats"]).is_equal([["MVT", catalog.units.move(CHASSEUR)], ["ATQ", catalog.units.attack(CHASSEUR)],
+			["DÉF", catalog.units.defense(CHASSEUR)], ["VUE", catalog.units.vision(CHASSEUR)]])
+	assert_str(panel["lines"][2]).starts_with("Plaine : ")
+
+
+func test_a_selection_wins_over_the_tapped_tile() -> void:
+	var state := _board()
+	var assaut := state.view().unit_at(state.tile_index(2, 1))
+
+	var model := HudModel.build(state, _catalog(), false, assaut, [], {"inspect": state.tile_index(2, 0)})
+
+	assert_str(model.unit_panel["title"]).is_equal("Assaut")
+
+
+func test_idle_units_are_counted_in_the_players_phase_and_the_end_turn_asks_only_when_it_can_end() -> void:
+	var state := _board()
+
+	var model := HudModel.build(state, _catalog(), false, -1, [], {"end_turn_armed": true})
+
+	assert_int(model.idle_units).is_equal(1)
+	assert_bool(model.end_turn_armed).is_true()
+	assert_bool(HudModel.build(state, _catalog(), true, -1, [], {"end_turn_armed": true}).end_turn_armed).is_false()  # locked
+	GameStateSetup.set_phase(state, HeaderSlice.PHASE_ENEMY_EXECUTION, Faction.AI)
+	assert_int(HudModel.build(state, _catalog(), false, -1, []).idle_units).is_equal(0)

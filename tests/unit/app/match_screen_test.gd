@@ -220,6 +220,7 @@ func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
 	var screen: MatchScreen = started[1]
 	var state: GameState = started[2].state
 
+	screen.hud.end_turn_button.pressed.emit()  # units have not played: the first press asks
 	screen.hud.end_turn_button.pressed.emit()
 	for step in 600:
 		if not screen.ai_runner.is_running():
@@ -1356,6 +1357,59 @@ func test_a_tap_on_the_score_explains_it() -> void:
 
 	assert_str(screen.hud.toast_label.text).is_equal(HudModel.SCORE_HELP)
 	assert_bool(screen.hud.toast_panel.visible).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_a_tile_without_anything_of_the_players_shows_its_sheet_and_a_second_closes_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var far := state.tile_count() - 1
+	var expected: Dictionary = HudModel.tile_panel(state, FactionView.new(state, Faction.PLAYER), started[2].catalog, far)
+
+	screen.on_tap_tile(far)
+
+	assert_str(screen.hud.unit_title.text).is_equal(expected["title"])
+	assert_int(screen.renderer.selected_tile).is_equal(far)
+	screen.on_tap_tile(far)
+	assert_str(screen.hud.unit_title.text).is_equal("")
+	assert_int(screen.renderer.selected_tile).is_equal(-1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_ending_the_turn_with_idle_units_asks_once_then_ends_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var idle := HudModel.count_idle_units(FactionView.new(state, Faction.PLAYER))
+	assert_int(idle).is_greater(0)  # a new game: nobody has played
+
+	screen.hud.end_turn_pressed.emit()
+
+	assert_int(state.header.value(HeaderSlice.PHASE)).is_equal(HeaderSlice.PHASE_PLAYER)
+	assert_str(screen.hud.toast_label.text).is_equal(MatchScreen.end_turn_question(idle))
+	assert_str(screen.hud.end_turn_button.text).is_equal("Confirmer la fin du tour")
+	screen.on_tap_tile(state.tile_count() - 1)  # a tap on the map withdraws the question
+	assert_str(screen.hud.end_turn_button.text).is_equal("Fin du tour")
+	screen.hud.end_turn_pressed.emit()
+	screen.hud.end_turn_pressed.emit()
+	assert_int(state.header.value(HeaderSlice.PHASE)).is_not_equal(HeaderSlice.PHASE_PLAYER)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_the_stats_explains_them() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.stats_pressed.emit()
+
+	assert_str(screen.hud.toast_label.text).is_equal(HudModel.STATS_HELP)
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()

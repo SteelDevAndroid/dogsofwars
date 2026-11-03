@@ -24,6 +24,8 @@ signal chip_pressed(tile: int)
 ## The toast was tapped while it points at a tile (the enemy-turn summary).
 signal toast_pressed
 signal score_pressed
+## The stat pills of the unit card were tapped: their definitions are told.
+signal stats_pressed
 
 var turn_label := Label.new()
 var energy_label := Label.new()
@@ -147,6 +149,11 @@ func _init() -> void:
 	hp_bar.add_theme_stylebox_override("background", hp_back)
 	hp_label.add_theme_font_size_override("font_size", 14)
 	stats_row.add_theme_constant_override("separation", 6)
+	stats_row.mouse_filter = Control.MOUSE_FILTER_STOP  # a tap tells what the stats mean
+	stats_row.tooltip_text = HudModel.STATS_HELP
+	stats_row.gui_input.connect(func(event: InputEvent) -> void:
+		if _is_release(event):
+			stats_pressed.emit())
 	for node in [hp_label, hp_bar, stats_row]:
 		node.visible = false
 		bottom.add_child(node)
@@ -288,11 +295,26 @@ func tick_toast(now: float) -> void:
 		toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-static func _pill(text: String) -> PanelContainer:
+## A stat pill: its icon (when it has one), then its text.
+static func _pill(text: String, icon_name: String = "") -> PanelContainer:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", 14)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 3)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if icon_name != "":
+		var icon := TextureRect.new()
+		icon.texture = UiIcons.texture(icon_name)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(16, 16)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+	row.add_child(label)
 	var pill := PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_PASS
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("2B323A")
 	style.set_corner_radius_all(4)
@@ -301,7 +323,7 @@ static func _pill(text: String) -> PanelContainer:
 	style.content_margin_top = 3
 	style.content_margin_bottom = 3
 	pill.add_theme_stylebox_override("panel", style)
-	pill.add_child(label)
+	pill.add_child(row)
 	return pill
 
 
@@ -368,7 +390,7 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	var total := model.score_player + model.score_ai
 	score_bar.value = 50.0 if total <= 0 else 100.0 * model.score_player / total
 	end_turn_button.disabled = not model.can_end_turn
-	end_turn_button.text = "Tour ennemi…" if model.enemy_turn else "Fin du tour"
+	end_turn_button.text = "Tour ennemi…" if model.enemy_turn else ("Confirmer la fin du tour" if model.end_turn_armed else "Fin du tour")
 	for child in alert_row.get_children():
 		alert_row.remove_child(child)
 		child.queue_free()
@@ -398,7 +420,7 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 		hp_bar.value = model.unit_panel["hp"]
 		hp_label.text = "PV %d / %d" % [model.unit_panel["hp"], model.unit_panel["hp_max"]]
 		for stat: Array in model.unit_panel["stats"]:
-			stats_row.add_child(_pill("%s %d" % [stat[0], stat[1]]))
+			stats_row.add_child(_pill("%s %d" % [stat[0], stat[1]], UiIcons.STATS.get(stat[0], "")))
 	# the first two lines (hit points, stats) are the card; the others are statuses
 	var lines: Array = model.unit_panel.get("lines", [])
 	unit_lines.text = "" if model.unit_panel.is_empty() else "\n".join(lines.slice(2) if card else lines)
