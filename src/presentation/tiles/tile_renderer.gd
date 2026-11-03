@@ -17,6 +17,18 @@ var effects: Array[TileEffect] = []
 var clip_area := Rect2(-1e6, -1e6, 2e6, 2e6)
 var targets := PackedInt32Array()
 var chosen_target := -1
+var _terrain := {}
+var _units := {}
+var _nodes: Array[Texture2D] = []
+var _ruins: Array[Texture2D] = []
+var _glow: Texture2D
+var _fx := {}
+var _type_keys := PackedStringArray()
+var _tinted := {}
+var _fog_texture: Texture2D
+var _edge_texture: Texture2D
+var _corner_out_texture: Texture2D
+var _corner_in_texture: Texture2D
 ## The colour-blind palette of hud.md 10.5 (ownership colours only).
 var colorblind := false
 ## The tile of the unit to touch first (the advice of the first turns): a small arrow bobs above it.
@@ -24,21 +36,52 @@ var hint_tile := -1
 ## No movement of the arrow (reduced motion).
 var still := false
 
-const GRAIN := 0.03
+const ART := "res://assets/art/terrain/"
+const VARIANTS := 3
+const UNIT_KEYS := ["eclaireur", "assaut", "rempart", "ouvrier", "sentinelle", "chasseur", "bastion"]
+const RUIN_FILES := ["ruin_arche_brisee_01", "ruin_arche_brisee_02", "ruin_dome_brise_01"]
+const NODE_LEVELS := 3
+## How much of the side's colour a grey sprite takes (its shading stays).
+const TINT_STRENGTH := 0.55
+const TERRAIN_NAMES := {TerrainGrid.PLAIN: "plaine", TerrainGrid.FOREST: "foret", TerrainGrid.MOUNTAIN: "montagne", TerrainGrid.WATER: "eau"}
+const CORNER_TL := 1
+const CORNER_TR := 2
+const CORNER_BR := 4
+const CORNER_BL := 8
 const SIDE_LEFT := 1
 const SIDE_RIGHT := 2
 const SIDE_UP := 4
 const SIDE_DOWN := 8
-const FOG_EDGE_DEPTH := 0.45
-const FOG_EDGE_ALPHA := 0.7
 
 
 func _init() -> void:
 	process_priority = 10
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # 256 px sources drawn at 24 to 64 pt
+	for code: int in TERRAIN_NAMES:
+		var variants: Array[Texture2D] = []
+		for k in VARIANTS:
+			variants.append(load("%sterrain_%s_%02d.png" % [ART, TERRAIN_NAMES[code], k + 1]))
+		_terrain[code] = variants
+	_fog_texture = load(ART + "terrain_brouillard_01.png")
+	for key in UNIT_KEYS:
+		_units[key] = load("res://assets/art/units/unit_%s.png" % key)
+	for level in NODE_LEVELS:
+		_nodes.append(load("res://assets/art/nodes/node_niveau_%d.png" % (level + 1)))
+	for file in RUIN_FILES:
+		_ruins.append(load("res://assets/art/ruins/%s.png" % file))
+	for fx in ["selection", "cible_crochets", "portee_point", "menace", "debris", "ruine_lueur"]:
+		_fx[fx] = load("res://assets/art/fx/fx_%s.png" % fx)
+	_edge_texture = load(ART + "fog_lisiere_bord.png")
+	_corner_out_texture = load(ART + "fog_lisiere_angle_ext.png")
+	_corner_in_texture = load(ART + "fog_lisiere_angle_int.png")
 
 
 func show_state(state: GameState, catalog: DataCatalog) -> void:
 	snapshot = TileSnapshot.take(state, catalog)
+	if _type_keys.size() != catalog.units.count():
+		_type_keys = PackedStringArray()
+		for type in catalog.units.count():
+			_type_keys.append(catalog.units.key(type))
 	queue_redraw()
 
 
@@ -105,14 +148,11 @@ func _draw() -> void:
 	for effect in effects:
 		_draw_effect(effect)
 	for tile in targets:
-		if _inside(tile):
-			_draw_brackets(tile, TilePalette.THREAT, 3.0 if tile == chosen_target else 2.0)
+		_draw_clipped(_fx["cible_crochets"], layout.rect_of(tile), Color(TilePalette.THREAT, 1.0 if tile == chosen_target else 0.8))
 	for tile in highlighted:
-		var shown := layout.rect_of(tile).grow(-2.0).intersection(clip_area)
-		if shown.size.x > 0.0 and shown.size.y > 0.0:
-			draw_rect(shown, Color(TilePalette.SELECTION, 0.35))
-	if selected_tile >= 0 and _inside(selected_tile):
-		draw_rect(layout.rect_of(selected_tile), TilePalette.SELECTION, false, 2.0)
+		_draw_clipped(_fx["portee_point"], layout.rect_of(tile), Color(TilePalette.SELECTION, 0.9))
+	if selected_tile >= 0:
+		_draw_clipped(_fx["selection"], layout.rect_of(selected_tile), TilePalette.SELECTION)
 
 
 ## The tiles that show, at least in part, inside the map area.
@@ -127,16 +167,15 @@ func visible_tiles() -> PackedInt32Array:
 
 
 func _draw_tile(tile: int) -> void:
-	var rect := layout.rect_of(tile).intersection(clip_area)
+	var full := layout.rect_of(tile)
+	var rect := full.intersection(clip_area)
 	var level := snapshot.fog_at(tile)
 	if level == VisionService.FOG_UNDISCOVERED:
-		draw_rect(rect, TilePalette.FOG)
+		_draw_clipped(_fog_texture, full, Color.WHITE)
 		return
-	var color := TilePalette.terrain(snapshot.terrain[tile])
-	color = color.lightened(grain(tile)) if grain(tile) >= 0.0 else color.darkened(-grain(tile))
-	if level == VisionService.FOG_EXPLORED:
-		color = color.darkened(1.0 - TilePalette.MEMORY_DIM)
-	draw_rect(rect, color)
+	var textures: Array = _terrain[snapshot.terrain[tile]]
+	var dim := TilePalette.MEMORY_DIM if level == VisionService.FOG_EXPLORED else 1.0
+	_draw_clipped(textures[variant_of(tile)], full, Color(dim, dim, dim))
 	_draw_fog_edges(tile)
 	var owner: int = snapshot.owners[tile]
 	if owner != Faction.NONE:
@@ -150,35 +189,69 @@ func _draw_tile(tile: int) -> void:
 			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner, colorblind), 1.0)
 
 
-## A faint, fixed variation of a tile's value, in -GRAIN..GRAIN (the same for the same tile
-## whatever the zoom): the ground reads as ground, not as a flat colour. Never a signal.
-static func grain(tile: int) -> float:
-	var h := (tile * 2654435761) & 0xFFFF
-	return (float(h % 1000) / 999.0 - 0.5) * 2.0 * GRAIN
+## Which of the three variants of a terrain a tile shows: fixed for the tile whatever the zoom
+## (the edges of the variants are identical, so any neighbour may differ).
+static func variant_of(tile: int) -> int:
+	return int(((tile * 2654435761) & 0xFFFFFFFF) >> 8) % VARIANTS
 
 
-## Where a discovered tile touches the fog, a soft dark strip fades the edge in; a tile cut
-## by the edge of the map area keeps its hard edge.
+## The part of `texture` that falls inside the map area, drawn over the part of `full` that does.
+func _draw_clipped(texture: Texture2D, full: Rect2, modulate_color: Color) -> void:
+	var shown := full.intersection(clip_area)
+	if shown.size.x <= 0.0 or shown.size.y <= 0.0:
+		return
+	var scale := texture.get_size() / full.size
+	draw_texture_rect_region(texture, shown, Rect2((shown.position - full.position) * scale, shown.size * scale), modulate_color)
+
+
+## `texture` (drawn for the left or the top-left of a tile) turned by quarter turns clockwise
+## about the centre of `full`.
+func _draw_turned(texture: Texture2D, full: Rect2, quarter_turns: int) -> void:
+	draw_set_transform(full.get_center(), quarter_turns * PI / 2.0)
+	draw_texture_rect(texture, Rect2(-full.size / 2.0, full.size), false)
+	draw_set_transform(Vector2.ZERO)
+
+
+## Where a discovered tile meets the fog its edge is softened with the delivered strips: a side
+## touching the fog gets the edge strip, two sides in a corner the inner corner, a fog only on the
+## diagonal the outer corner. A tile cut by the edge of the map area keeps its hard edge.
 func _draw_fog_edges(tile: int) -> void:
 	var full := layout.rect_of(tile)
 	if not clip_area.encloses(full):
 		return
 	var sides := fog_sides(tile)
-	if sides == 0:
-		return
-	var depth := full.size.x * FOG_EDGE_DEPTH
-	var near := Color(TilePalette.FOG, FOG_EDGE_ALPHA)
-	var far := Color(TilePalette.FOG, 0.0)
-	if sides & SIDE_LEFT:
-		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(depth, 0), full.position + Vector2(depth, full.size.y), full.position + Vector2(0, full.size.y)]), PackedColorArray([near, far, far, near]))
-	if sides & SIDE_RIGHT:
-		var r := full.end.x
-		draw_polygon(PackedVector2Array([Vector2(r - depth, full.position.y), Vector2(r, full.position.y), Vector2(r, full.end.y), Vector2(r - depth, full.end.y)]), PackedColorArray([far, near, near, far]))
-	if sides & SIDE_UP:
-		draw_polygon(PackedVector2Array([full.position, full.position + Vector2(full.size.x, 0), full.position + Vector2(full.size.x, depth), full.position + Vector2(0, depth)]), PackedColorArray([near, near, far, far]))
-	if sides & SIDE_DOWN:
-		var d := full.end.y
-		draw_polygon(PackedVector2Array([Vector2(full.position.x, d - depth), Vector2(full.end.x, d - depth), full.end, Vector2(full.position.x, d)]), PackedColorArray([far, far, near, near]))
+	var rest := sides
+	# (the two sides of a corner, the quarter turns from top-left)
+	for corner in [[SIDE_LEFT | SIDE_UP, 0], [SIDE_UP | SIDE_RIGHT, 1], [SIDE_RIGHT | SIDE_DOWN, 2], [SIDE_DOWN | SIDE_LEFT, 3]]:
+		if rest & corner[0] == corner[0]:
+			_draw_turned(_corner_in_texture, full, corner[1])
+			rest &= ~corner[0]
+	for side in [[SIDE_LEFT, 0], [SIDE_UP, 1], [SIDE_RIGHT, 2], [SIDE_DOWN, 3]]:
+		if rest & side[0]:
+			_draw_turned(_edge_texture, full, side[1])
+	var corners := fog_corners(tile)
+	for k in 4:
+		if corners & (1 << k):
+			_draw_turned(_corner_out_texture, full, k)
+
+
+## The corners of a tile where only the diagonal neighbour is fog (CORNER_* bits).
+func fog_corners(tile: int) -> int:
+	if snapshot == null or snapshot.fog_at(tile) == VisionService.FOG_UNDISCOVERED:
+		return 0
+	var sides := fog_sides(tile)
+	var x := tile % snapshot.columns
+	var y := tile / snapshot.columns
+	var corners := 0
+	for entry in [[-1, -1, SIDE_LEFT | SIDE_UP, CORNER_TL], [1, -1, SIDE_UP | SIDE_RIGHT, CORNER_TR],
+			[1, 1, SIDE_RIGHT | SIDE_DOWN, CORNER_BR], [-1, 1, SIDE_DOWN | SIDE_LEFT, CORNER_BL]]:
+		var nx: int = x + entry[0]
+		var ny: int = y + entry[1]
+		if nx < 0 or ny < 0 or nx >= snapshot.columns or ny >= snapshot.rows or sides & entry[2] != 0:
+			continue
+		if snapshot.fog_at(ny * snapshot.columns + nx) == VisionService.FOG_UNDISCOVERED:
+			corners |= entry[3]
+	return corners
 
 
 ## The sides of a tile that touch undiscovered ground (SIDE_* bits); 0 for an undiscovered tile.
@@ -211,51 +284,70 @@ func _draw_hint_arrow() -> void:
 
 
 func _draw_node(node: Array) -> void:
-	if not clip_area.encloses(layout.rect_of(node[0]).grow(-layout.tile_size * 0.2)):
-		return
-	var rect := layout.rect_of(node[0])
 	if snapshot.fog_at(node[0]) == VisionService.FOG_UNDISCOVERED:
 		return
-	var c := rect.get_center()
-	var r := layout.tile_size * 0.36
-	var diamond := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
-	draw_colored_polygon(diamond, TilePalette.owner(node[1], colorblind))
-	draw_polyline(diamond + PackedVector2Array([diamond[0]]), TilePalette.OUTLINE, 1.5)
-	for k in node[2]:  # the level, one pip per level
-		draw_circle(c + Vector2((k - (node[2] - 1) / 2.0) * layout.tile_size * 0.14, 0), layout.tile_size * 0.04, TilePalette.OUTLINE)
+	var level: int = clampi(node[2], 1, NODE_LEVELS) - 1
+	var texture := _nodes[level]
+	if node[1] != Faction.NONE:  # grey while nobody holds it
+		texture = _tint("node%d" % level, texture, TilePalette.owner(node[1], colorblind))
+	_draw_clipped(texture, layout.rect_of(node[0]), Color.WHITE)
 
 
+## A ruin stands on its tile and rises half a tile above it; unread ones glow, read ones go dark.
 func _draw_ruin(ruin: Array) -> void:
-	if not clip_area.encloses(layout.rect_of(ruin[0]).grow(-layout.tile_size * 0.2)):
-		return
-	var rect := layout.rect_of(ruin[0])
-	var c := rect.get_center()
-	var s := layout.tile_size * 0.28
-	var color: Color = TilePalette.RUIN if not ruin[1] else TilePalette.RUIN.darkened(0.5)
-	draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(-s, -s), c + Vector2(s, -s * 0.2), c + Vector2(s, s)]), color, 2.0)
+	var tile := layout.rect_of(ruin[0])
+	var rect := Rect2(tile.position.x, tile.end.y - 1.5 * tile.size.y, tile.size.x, 1.5 * tile.size.y)
+	if not ruin[1]:
+		_draw_clipped(_fx["ruine_lueur"], rect, Color(TilePalette.RUIN, 0.9))
+	_draw_clipped(_ruins[variant_of(ruin[0])], rect, Color(0.5, 0.5, 0.5) if ruin[1] else Color.WHITE)
 
 
 func _draw_unit(unit: Array) -> void:
-	if not clip_area.encloses(layout.rect_of(unit[1]).grow(-layout.tile_size * 0.2)):
-		return
 	var rect := layout.rect_of(unit[1])
 	var c := rect.get_center()
 	var moving := _moving_center(unit[0])
 	if moving.x >= 0.0:
 		rect.position += moving - c
 		c = moving
-	var r := layout.tile_size * 0.30
-	var fill := TilePalette.owner(unit[2], colorblind) if not unit[6] else TilePalette.owner(Faction.NONE, colorblind).darkened(0.3)
+	var sprite := _unit_sprite(unit[3], unit[2], unit[6])
 	var outline := TilePalette.ENEMY_OUTLINE if unit[2] == Faction.AI else TilePalette.OUTLINE
-	var points := _shape(unit[3], c, r)
-	draw_colored_polygon(points, fill)
-	draw_polyline(points + PackedVector2Array([points[0]]), outline, 1.5)
+	var thickness := maxf(1.0, layout.tile_size / 48.0)
+	for offset in [Vector2(thickness, 0), Vector2(-thickness, 0), Vector2(0, thickness), Vector2(0, -thickness)]:
+		_draw_clipped(sprite, Rect2(rect.position + offset, rect.size), outline)  # the dark or violet edge, 1 pt
+	_draw_clipped(sprite, rect, Color.WHITE)
 	if unit[6]:  # asleep: a bar across the body
-		draw_line(c + Vector2(-r, 0), c + Vector2(r, 0), TilePalette.OUTLINE, 2.0)
+		draw_line(c + Vector2(-layout.tile_size * 0.3, 0), c + Vector2(layout.tile_size * 0.3, 0), TilePalette.OUTLINE, 2.0)
 	if unit[4] < unit[5]:
 		var bar := Rect2(rect.position + Vector2(layout.tile_size * 0.1, layout.tile_size * 0.86), Vector2(layout.tile_size * 0.8, 3.0))
 		draw_rect(bar, TilePalette.OUTLINE)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(unit[4]) / unit[5], bar.size.y)), TilePalette.owner(Faction.PLAYER, colorblind))
+
+
+## The sprite of a unit type for a side: grey with the colour of the side in it; a dormant
+## drone stays grey (it belongs to nobody).
+func _unit_sprite(type: int, faction: int, asleep: bool) -> Texture2D:
+	var key: String = _type_keys[type] if type < _type_keys.size() else UNIT_KEYS[type % UNIT_KEYS.size()]
+	var grey: Texture2D = _units[key]
+	if asleep or faction == Faction.NONE:
+		return grey
+	return _tint(key, grey, TilePalette.owner(faction, colorblind))
+
+
+## `texture` with `tint` blended into the silhouette (the sprite is its own mask; the delivered
+## masks cover exactly the silhouette), made once per texture and colour.
+func _tint(key: String, texture: Texture2D, tint: Color) -> Texture2D:
+	var id := "%s|%s" % [key, tint.to_html(false)]
+	if _tinted.has(id):
+		return _tinted[id]
+	var image := Image.new()
+	image.copy_from(texture.get_image())  # a copy: the texture's own image is shared, never written
+	image.convert(Image.FORMAT_RGBA8)
+	var overlay := Image.create(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	overlay.fill(Color(tint, TINT_STRENGTH))
+	image.blend_rect_mask(overlay, image, Rect2i(Vector2i.ZERO, image.get_size()), Vector2i.ZERO)
+	image.generate_mipmaps()
+	_tinted[id] = ImageTexture.create_from_image(image)
+	return _tinted[id]
 
 
 ## Where an animated unit is drawn: along its MOVE effect, (-1, -1) when it is not moving.
@@ -278,12 +370,10 @@ func _draw_effect(effect: TileEffect) -> void:
 			var at := layout.center_of(effect.tile) + Vector2(-layout.tile_size * 0.2, -layout.tile_size * 0.3 - layout.tile_size * 0.4 * p)
 			draw_string(ThemeDB.fallback_font, at, effect.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(effect.color, 1.0 - p * p))
 		TileEffect.Kind.GHOST:
-			var c := layout.center_of(effect.tile)
-			var r := layout.tile_size * 0.30
-			var points := _shape(effect.unit_type, c + Vector2(0, r * 0.4 * p), r)
-			for k in points.size():
-				points[k].y = c.y + (points[k].y - c.y) * (1.0 - 0.5 * p)  # it sags
-			draw_colored_polygon(points, Color(TilePalette.NEUTRAL, 0.8 * (1.0 - p)))
+			var tile := layout.rect_of(effect.tile)
+			var sag := Rect2(tile.position.x, tile.end.y - tile.size.y * (1.0 - 0.5 * p), tile.size.x, tile.size.y * (1.0 - 0.5 * p))
+			_draw_clipped(_unit_sprite(effect.unit_type, Faction.NONE, true), sag, Color(1, 1, 1, 0.8 * (1.0 - p)))  # it sags
+			_draw_clipped(_fx["debris"], tile, Color(TilePalette.owner(Faction.NONE, colorblind), p))  # and leaves its debris
 		TileEffect.Kind.PULSE:  # a ring leaves the selected tile and fades
 			var ring := layout.rect_of(effect.tile).grow(layout.tile_size * 0.3 * p)
 			draw_rect(ring, Color(TilePalette.SELECTION, 0.9 * (1.0 - p)), false, 2.0)
@@ -298,33 +388,9 @@ func _draw_effect(effect: TileEffect) -> void:
 
 
 func _draw_threat(threat: Array) -> void:
-	_draw_brackets(threat[2], TilePalette.THREAT, 2.0)
+	_draw_clipped(_fx["menace"], layout.rect_of(threat[2]), Color(TilePalette.THREAT, 0.85))
 
 
 ## True when the whole tile is inside the shown part of the map.
 func _inside(tile: int) -> bool:
 	return clip_area.encloses(layout.rect_of(tile))
-
-
-func _draw_brackets(tile: int, color: Color, width: float) -> void:
-	if not _inside(tile):
-		return
-	var rect := layout.rect_of(tile).grow(-3.0)
-	var corner := layout.tile_size * 0.25
-	for sx in [0, 1]:
-		for sy in [0, 1]:
-			var p := rect.position + Vector2(rect.size.x * sx, rect.size.y * sy)
-			var dx := Vector2(corner * (1 - 2 * sx), 0)
-			var dy := Vector2(0, corner * (1 - 2 * sy))
-			draw_line(p, p + dx, color, width)
-			draw_line(p, p + dy, color, width)
-
-
-## A polygon per unit type (the shape tells the type apart, not the colour).
-static func _shape(type: int, c: Vector2, r: float) -> PackedVector2Array:
-	var sides := 3 + (type % 5)
-	var points := PackedVector2Array()
-	for k in sides:
-		var angle := -PI / 2.0 + TAU * k / sides
-		points.append(c + Vector2(cos(angle), sin(angle)) * r)
-	return points

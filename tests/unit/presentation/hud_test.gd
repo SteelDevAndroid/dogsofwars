@@ -62,7 +62,7 @@ func test_at_most_two_alert_chips_show_and_the_rest_is_counted() -> void:
 	hud.show_model(model)
 	await await_idle_frame()
 
-	var texts := hud.alert_row.get_children().map(func(label: Label) -> String: return label.text)
+	var texts := hud.alert_row.get_children().map(func(chip: Node) -> String: return (chip as Label).text if chip is Label else (chip.get_child(1) as Label).text)
 	assert_array(texts).is_equal(["Menace", "Drone perdu", "+1"])
 	model.threat_chip = ""
 	model.loss_chips.clear()
@@ -261,4 +261,69 @@ func test_the_end_turn_button_is_the_filled_main_action() -> void:
 	assert_object(hud.end_turn_button.get_theme_stylebox("normal")).is_instanceof(StyleBoxFlat)
 	assert_object((hud.end_turn_button.get_theme_stylebox("normal") as StyleBoxFlat).bg_color).is_equal(Color("1FA38F"))
 	assert_float(hud.end_turn_button.custom_minimum_size.y).is_greater_equal(56.0)
+	hud.free()
+
+
+func test_the_buttons_of_the_hud_carry_their_icons_and_the_camera_buttons_only_icons() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+
+	assert_object(hud.pause_button.icon).is_same(UiIcons.texture("pause"))
+	assert_object(hud.research_button.icon).is_same(UiIcons.texture("recherche"))
+	assert_object(hud.attack_button.icon).is_same(UiIcons.texture("attaque"))
+	assert_object(hud.speed_button.icon).is_same(UiIcons.texture("vitesse"))
+	assert_object(hud.zoom_in_button.icon).is_same(UiIcons.texture("zoom_plus"))
+	assert_object(hud.zoom_out_button.icon).is_same(UiIcons.texture("zoom_moins"))
+	assert_object(hud.recenter_button.icon).is_same(UiIcons.texture("recentrer"))
+	for button in [hud.zoom_in_button, hud.zoom_out_button, hud.recenter_button]:
+		assert_str(button.text).is_empty()
+		assert_str(button.accessibility_name).is_not_empty()
+	hud.free()
+
+
+func test_the_rail_keeps_the_icons_of_pause_and_research_and_drops_their_words() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var portrait := HudLayout.compute(Vector2(390, 844), Rect2(0, 0, 390, 844), 130.0, 300.0)
+	var landscape := HudLayout.compute(Vector2(844, 390), Rect2(0, 0, 844, 390), 0.0, 0.0)
+
+	hud.apply_layout(landscape)
+	assert_array([hud.pause_button.text, hud.research_button.text]).is_equal(["", ""])
+	assert_str(hud.pause_button.accessibility_name).is_equal("Pause")
+	assert_str(hud.research_button.tooltip_text).is_equal("Recherche")
+	hud.apply_layout(portrait)
+	assert_array([hud.pause_button.text, hud.research_button.text]).is_equal(["Pause", "Recherche"])
+	hud.free()
+
+
+func test_each_chip_has_the_icon_of_its_kind() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+	model.threat_chip = "Menace"
+	model.loss_chips = ["Drone perdu"]
+	hud.show_model(model)
+
+	var icons := hud.alert_row.get_children().map(func(chip: Node) -> Texture2D: return (chip.get_child(0) as TextureRect).texture)
+	assert_array(icons).is_equal([UiIcons.texture("menace"), UiIcons.texture("perte")])
+	model.threat_chip = ""
+	model.loss_chips = []
+	model.ruin_chip = "Ruine repérée"
+	hud.show_model(model)
+	assert_object((hud.alert_row.get_child(0).get_child(0) as TextureRect).texture).is_same(UiIcons.texture("ruine"))
+	hud.free()
+
+
+func test_the_actions_of_the_panel_show_their_icons() -> void:
+	var hud := Hud.new()
+	add_child(hud)
+	var model := HudModel.new()
+	model.extra_actions = [ContextAction.new(&"capture", "Capturer", true, ""), ContextAction.new(&"wake", "Réveiller", true, ""), ContextAction.new(&"research:1", "Autre", true, "")]
+
+	hud.show_model(model)
+
+	var icons := hud.extra_row.get_children().map(func(button: Node) -> Texture2D: return (button as Button).icon)
+	assert_object(icons[0]).is_same(UiIcons.texture("noeud"))
+	assert_object(icons[1]).is_same(UiIcons.texture("reveil"))
+	assert_object(icons[2]).is_null()
 	hud.free()

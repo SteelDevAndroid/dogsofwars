@@ -13,9 +13,21 @@ cd "$root"
 grep -q "DONE" "$work/export.log" || { cat "$work/export.log"; echo "export-pack failed"; exit 1; }
 stored="$(grep -o 'Storing File: .*' "$work/export.log" | sed 's/Storing File: //')"
 fail=0
-for file in assets/data/*.json assets/data/maps/*.json; do
+for file in assets/data/*.json assets/data/maps/*.json assets/audio/*.wav.import; do
   grep -qx "res://$file" <<<"$stored" || { echo "missing from the pack: $file"; fail=1; }
 done
+# an imported sound travels as its .import record plus a compiled .sample under .godot/imported
+for wav in assets/audio/*.wav; do
+  grep -q "^res://.godot/imported/$(basename "$wav")-.*\.sample$" <<<"$stored" || { echo "sound not imported in the pack: $wav"; fail=1; }
+done
+# the delivered textures (terrain, nodes, ruins, units, effects) travel as compiled .ctex under .godot/imported
+for png in assets/art/*/*.png assets/art/*/*.svg; do
+  case "$png" in *_mask.png) continue ;; esac  # the faction masks equal the silhouettes: not shipped
+  grep -q "^res://.godot/imported/$(basename "$png")-.*\.ctex$" <<<"$stored" || { echo "texture not imported in the pack: $png"; fail=1; }
+done
+if grep -E '_mask\.png' <<<"$stored"; then
+  echo "faction masks are in the pack"; fail=1
+fi
 if grep -E '^res://(tests|addons|docs|design|tools|reports)/' <<<"$stored"; then
   echo "files that must not ship are in the pack"; fail=1
 fi

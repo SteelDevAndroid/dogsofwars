@@ -19,6 +19,8 @@ var colorblind_check := CheckButton.new()
 var left_panel_check := CheckButton.new()
 var hints_check := CheckButton.new()
 var palette_swatch := PaletteSwatch.new()
+var effects_slider := HSlider.new()
+var ui_slider := HSlider.new()
 var back_button := Button.new()
 
 var _loading := false
@@ -61,7 +63,10 @@ func _init() -> void:
 	colorblind_check.toggled.connect(func(on: bool) -> void: palette_swatch.colorblind = on)
 	_flag(box, left_panel_check, "Panneau à gauche (paysage)", GameSettings.LEFT_PANEL)
 	_flag(box, hints_check, "Conseils des premiers tours", GameSettings.HINTS)
+	_volume(box, "Effets sonores", effects_slider, GameSettings.VOLUME_EFFECTS)
+	_volume(box, "Sons de l'interface", ui_slider, GameSettings.VOLUME_UI)
 	back_button.text = "Retour"
+	UiIcons.put(back_button, "retour")
 	back_button.custom_minimum_size = Vector2(0, 50)
 	back_button.pressed.connect(func() -> void: back_requested.emit())
 	box.add_child(back_button)
@@ -77,6 +82,8 @@ func configure(settings: Dictionary) -> void:
 	colorblind_check.button_pressed = settings[GameSettings.COLORBLIND] == 1
 	left_panel_check.button_pressed = settings[GameSettings.LEFT_PANEL] == 1
 	hints_check.button_pressed = settings[GameSettings.HINTS] == 1
+	effects_slider.value = settings[GameSettings.VOLUME_EFFECTS]
+	ui_slider.value = settings[GameSettings.VOLUME_UI]
 	_loading = false
 
 
@@ -85,8 +92,22 @@ func _emit(key: StringName, value: int) -> void:
 		changed.emit(key, value)
 
 
+func _volume(parent: Control, text: String, slider: HSlider, key: StringName) -> void:
+	var label := Label.new()
+	label.text = text
+	parent.add_child(label)
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 10
+	slider.custom_minimum_size = Vector2(0, 40)
+	slider.accessibility_name = text
+	slider.value_changed.connect(func(value: float) -> void: _emit(key, int(value)))
+	parent.add_child(slider)
+
+
 func _flag(parent: Control, check: CheckButton, text: String, key: StringName) -> void:
 	check.text = text
+	check.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	check.custom_minimum_size = Vector2(0, 50)
 	check.toggled.connect(func(on: bool) -> void: _emit(key, 1 if on else 0))
 	parent.add_child(check)

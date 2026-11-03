@@ -36,7 +36,7 @@ func _init() -> void:
 	entries_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	entries_box.add_theme_constant_override("separation", 12)
 	scroll.add_child(entries_box)
-	back_button = MenuLayout.button(column, "Retour", func() -> void: back_requested.emit())
+	back_button = MenuLayout.button(column, "Retour", func() -> void: back_requested.emit(), "retour")
 
 
 ## `found`: the profile's chronicle rows [faction, fragment id].
@@ -51,8 +51,10 @@ func show_chronicle(pool: FragmentPool, found: Array, faction: int = Faction.PLA
 		var has := found.has([faction, id])
 		known += 1 if has else 0
 		bar += "●" if has else "○"
+		var card := MenuLayout.framed_panel()
+		entries_box.add_child(card)
 		if has:
-			MenuLayout.label(entries_box, "%s\n%s\n« %s »" % [pool.title_of(id), pool.source_of(id), pool.text_of(id)])
+			MenuLayout.label(card, "%s\n%s\n« %s »" % [pool.title_of(id), pool.source_of(id), pool.text_of(id)])
 		else:
-			MenuLayout.label(entries_box, "○  Fragment non trouvé")
+			MenuLayout.label(card, "○  Fragment non trouvé")
 	bar_label.text = "%s   %d / %d" % [bar, known, ids.size()]

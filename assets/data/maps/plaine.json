@@ -109,6 +109,22 @@
    "y": 8,
    "post_x": -1,
    "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 3,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 1,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
   }
  ],
  "dormants": [

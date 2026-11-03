@@ -107,6 +107,8 @@ L'écart de **valeur** (et non de teinte) doit distinguer les quatre terrains : 
 
 `.glb` (glTF 2.0 binaire), un asset par fichier, source `.blend` ; **couleurs par sommet** sans texture, valeurs de gris, lumière et occlusion cuites ; masque de faction dans l'alpha de la couleur de sommet (1 = prend la teinte) ; **150 à 400 triangles par unité**, un seul niveau de détail ; origine au centre de la tuile, échelle 1 unité = 1 tuile ; contour des unités par coque inversée. Un prototype de rendu sur Android d'entrée de gamme (60 unités, carte 16 × 16) doit confirmer ces budgets **avant** de modéliser quoi que ce soit.
 
+**Décision (2026-11-02) : voie A retenue.** La voie B reste documentée ci-dessus mais n'est pas lancée ; le pack de préparation du chapitre 8 (porte de validation, benchmark, validateur `.glb`) n'est pas intégré. Rouvrir la question seulement si le benchmark Android est un jour demandé.
+
 ## 9. Contrôle à la réception
 
 Fait dans le jeu, avec la caméra du jeu, avant d'accepter une ressource :
@@ -126,7 +128,5 @@ Un dossier par catégorie (`terrain/`, `nodes/`, `ruins/`, `units/`, `fx/`, `ui/
 
 | Question | Qui décide |
 |---|---|
-| Voie A (2D) ou voie B (3D) ? | art-director, creative-director |
 | Unités en vue de dessus pure ou en trois quarts (le moteur actuel est de dessus) ? | art-director |
 | Faut-il 8 orientations dessinées plutôt qu'une rotation par paliers de 45° ? | art-director |
-| Police : choix et licence | art-director, narrative-director |

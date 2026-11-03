@@ -157,3 +157,17 @@ func test_the_ai_turn_budget_of_the_map_is_checked() -> void:
 
 	assert_int(AiPlanner.max_calls_per_turn(4, 6)).is_equal(12)
 	assert_bool(errors.any(func(error: DataError) -> bool: return error.message.contains("AI turn budget"))).is_true()
+
+
+func test_every_shipped_map_is_valid_and_symmetric_with_its_own_size() -> void:
+	var catalog := CatalogFactory.standard()
+	var sizes := {}
+	for file in DirAccess.get_files_at("res://assets/data/maps"):
+		if not file.ends_with(".json"):
+			continue
+		var errors: Array[DataError] = []
+		var map := MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/" + file), file, catalog, errors)
+		assert_array(errors).override_failure_message("%s: %s" % [file, errors]).is_empty()
+		assert_object(map).is_not_null()
+		sizes[file] = Vector2i(map.width, map.height)
+	assert_dict(sizes).is_equal({"plaine.json": Vector2i(12, 12), "marais.json": Vector2i(14, 14)})
