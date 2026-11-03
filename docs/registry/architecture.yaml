@@ -267,7 +267,7 @@ interfaces:
     consumers:
       - tile-renderer
     adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
-    signal_signature: "TileRendererHandler.handle(event, ctx) -> PresentationHold crée un TileEffect (WAVE pour TileOwnersChangedEvent, MOVE, LINE, FLOAT_TEXT, GHOST) et appelle TileRenderer.add_effect(effect) ; la carte reprend un TileSnapshot à la fin du lot (MatchScreen.refresh) ; rebuild_from_state efface les effets"
+    signal_signature: "TileRendererHandler.handle(event, ctx) -> PresentationHold crée un TileEffect (un WAVE par anneau pour TileOwnersChangedEvent, d'après sa source effective WaveSource et WaveSchedule ; MOVE, LINE, FLOAT_TEXT, GHOST) et appelle TileRenderer.add_effect(effect) ; la carte reprend un TileSnapshot à la fin du lot (MatchScreen.refresh) ; rebuild_from_state efface les effets"
     referenced_by:
       - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
       - docs/architecture/adr-0002-evenements-de-presentation.md

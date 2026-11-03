@@ -82,7 +82,7 @@
 
 | Point | État |
 |---|---|
-| A1 | Fait (décision de l'utilisateur, 2026-11-03) : ADR-0012 « Rendu immédiat par instantané » remplace ADR-0001 (Superseded) ; registre et renvois d'ADR-0002, ADR-0007 et du GDD 15 mis à jour. **Ouvert**, dans ADR-0012 : cinq écarts au GDD 15 (anneaux, fondu binaire, écriture pendant une onde, transition de brouillard, source effective) à trancher par le game-designer, et la mesure de coût du redessin sur appareil |
+| A1 | Fait (décision de l'utilisateur, 2026-11-03) : ADR-0012 « Rendu immédiat par instantané » remplace ADR-0001 (Superseded) ; registre et renvois d'ADR-0002, ADR-0007 et du GDD 15 mis à jour. Anneaux et source effective faits le 2026-11-03 (`WaveSource`, `WaveSchedule`). **Ouvert**, dans ADR-0012 : fondu binaire et écriture pendant une onde (GDD 15, règles 14 et 15) et transition de brouillard, à trancher par le game-designer ; la mesure de coût du redessin sur appareil |
 | A2 | Fait : le séquenceur espace de `reduced_slot_ms` de temps réel les lots qui changent les couleurs (`SequenceOrder.is_mergeable`, `ClockSource.scale()`) ; 4 tests sur horloge factice (créneau, vitesse Instantanée, mode normal inchangé, attaque jamais retardée). Au lieu de `handle_merged`, qui n'a rien à fusionner : l'état final d'un lot est déjà la dernière valeur par tuile (ADR-0002, Écarts) |
 | A3 | Partiel : la note du registre dit la vérité (planification sur le fil principal au MVP) ; les compteurs `AiRunner.worst_advance_usec` et `SaveCoordinator.worst_write_usec` et la procédure du spike sont en place (ADR-0005). **Ouvert** : la mesure elle-même, sur un appareil Android de référence |
 | m1 | Fait : écarts 2 et 3 d'ADR-0002 mis à jour |

@@ -31,7 +31,7 @@ par une couche mécanique ajoutée (note du directeur créatif, `design/gdd/syst
 recoloration se comporte de la même façon du premier au dernier fragment lu.
 
 *Cadrage : une fonction pure de l'état (la couleur) et la lecture visuelle de la croissance de la
-meute. Le rendu des tuiles est décidé dans ADR-0012 (qui remplace ADR-0001 ; ses écarts aux règles 12 à 15 sont à trancher).*
+meute. Le rendu des tuiles est décidé dans ADR-0012 (qui remplace ADR-0001 ; les règles 11 à 13 sont faites, les règles 14 et 15 sont à trancher).*
 
 ## Player Fantasy
 

@@ -49,13 +49,25 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 		_renderer.add_effect(ghost)
 		return PresentationHold.new(_params.value("destroy_ms"))
 	if event is TileOwnersChangedEvent:
-		var changed := event as TileOwnersChangedEvent
-		var wave := _effect(TileEffect.Kind.WAVE, context, _ms("recolor_ms", context))
-		wave.tiles = changed.changed_tiles
-		wave.color = TilePalette.owner(changed.new_owner, _renderer.colorblind)
-		_renderer.add_effect(wave)
-		return PresentationHold.new(_ms("recolor_ms", context))
+		return _recolor(event as TileOwnersChangedEvent, context)
 	return PresentationHold.new(0)
+
+
+## The colour wave (GDD 15): one effect per ring, each starting `min(k, K_MAX) x T_ANNEAU_eff`
+## after the step and fading for T_FONDU; the hold is the length of the whole wave. With no
+## effective source (the player sees none of the tiles), in reduced motion and in a direct
+## display the colours change at once, with the next snapshot.
+func _recolor(changed: TileOwnersChangedEvent, context: SequenceContext) -> PresentationHold:
+	if context.reduced or context.direct:
+		return PresentationHold.new(0)
+	var plan := WaveSchedule.plan(_renderer.layout.columns, changed.changed_tiles, changed.source_tile, _params)
+	var color := TilePalette.owner(changed.new_owner, _renderer.colorblind)
+	for step: Array in plan.steps:
+		var wave := TileEffect.new(TileEffect.Kind.WAVE, context.t0 + step[0] / 1000.0, _params.value("recolor_ms") / 1000.0)
+		wave.tiles = step[1]
+		wave.color = color
+		_renderer.add_effect(wave)
+	return PresentationHold.new(plan.duration_ms)
 
 
 func rebuild_from_state(_state: GameState) -> void:

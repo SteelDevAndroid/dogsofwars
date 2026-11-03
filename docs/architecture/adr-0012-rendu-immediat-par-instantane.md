@@ -63,7 +63,9 @@ ADR-0001, accepté le 2026-10-30, décrivait un rendu en MultiMesh à deux vec4 
 
 **3. Quand l'instantané est repris.** L'état du Core est déjà final quand ses événements jouent. Pendant un lot, la carte garde l'**ancien** instantané et les effets jouent par-dessus ; `MatchScreen.refresh` reprend un instantané neuf à la fin du lot (`batch_finished`), à l'état inactif (`idle_reached`) et au chargement. Une resynchronisation (`rebuild_from_state`) efface les effets et la carte affiche l'état directement.
 
-**4. Effets transitoires minutés par l'horloge de présentation.** `TileEffect` est une donnée pure (genre, début, durée, tuiles, texte, couleur) ; `progress(now)` est une fonction pure. `TileRendererHandler` (adaptateur du séquenceur, ADR-0002) transforme chaque événement en effet : `MOVE` (glissement), `LINE` (trait d'attaque), `FLOAT_TEXT` (chiffre de dégâts ou de soin), `GHOST` (affaissement d'une unité détruite), `WAVE` (recoloration), `PULSE` (anneau de sélection). Le temps est `ClockSource.current()` (injecté ; `FakeClock` en test) : jamais `TIME`, `Time.get_ticks_*`, `create_timer` ni `Tween` dans le rendu des tuiles. Les durées sont des données (`presentation.json` : `move_step_ms`, `attack_line_ms`, `hit_ms`, `destroy_ms`, `recolor_ms`, `damage_number_ms`).
+**4. Effets transitoires minutés par l'horloge de présentation.** `TileEffect` est une donnée pure (genre, début, durée, tuiles, texte, couleur) ; `progress(now)` est une fonction pure. `TileRendererHandler` (adaptateur du séquenceur, ADR-0002) transforme chaque événement en effet : `MOVE` (glissement), `LINE` (trait d'attaque), `FLOAT_TEXT` (chiffre de dégâts ou de soin), `GHOST` (affaissement d'une unité détruite), `WAVE` (recoloration, un effet par anneau, voir plus bas), `PULSE` (anneau de sélection). Le temps est `ClockSource.current()` (injecté ; `FakeClock` en test) : jamais `TIME`, `Time.get_ticks_*`, `create_timer` ni `Tween` dans le rendu des tuiles. Les durées sont des données (`presentation.json` : `move_step_ms`, `attack_line_ms`, `hit_ms`, `destroy_ms`, `recolor_ms`, `damage_number_ms`, `wave_ring_ms`, `wave_rings_max`, `wave_total_max_ms`).
+
+**4 bis. L'onde de recoloration par anneaux (GDD 15, règles 11 à 13, F3, F4, F7).** `WaveSource` (Core, `src/core/vision/`) estampille chaque `TileOwnersChangedEvent` de la **source effective** que le joueur peut connaître : la tuile de la source (nœud capturé ou monté, ruine lue) si le joueur la voit après la commande, sinon la tuile changée visible la plus proche (Chebyshev, puis index le plus bas), sinon aucune (-1) ; l'événement ne porte jamais la tuile d'un nœud caché. `WaveSchedule` (Presentation, fonction pure) en tire un `WavePlan` : l'anneau k d'une tuile est sa distance de Chebyshev à la source, il démarre à `min(k, K_MAX) × T_ANNEAU_eff` avec `T_ANNEAU_eff = min(T_ANNEAU, (T_TOTAL_MAX − T_FONDU) div K_MAX)`, chaque tuile se fond en `T_FONDU` (`recolor_ms`), et la durée de l'onde est `min(K_MAX, k_max) × T_ANNEAU_eff + T_FONDU`. À l'intérieur d'un anneau, l'ordre croissant d'index ne donne aucun décalage. `TileRendererHandler` crée un `WAVE` par anneau non vide, démarré à `t0 + début`, et rend la durée de l'onde comme tenue. Sans source (le joueur ne voit aucune tuile changée), en animations réduites et en affichage direct, les couleurs changent d'un coup avec l'instantané suivant : aucun effet, tenue de 0.
 
 **5. Politique de redessin.** `queue_redraw()` est appelé sur un changement d'instantané, de sélection, de cibles, de portée, de mise en page ou de rectangle de découpe. Un redessin **à chaque image** n'a lieu que tant qu'un effet est actif ou que la flèche d'aide des premiers tours oscille hors animations réduites. Au repos, aucun redessin et aucun travail par image (`_process` ne fait que tester deux conditions).
 
@@ -95,6 +97,9 @@ class_name TileEffect extends RefCounted                                   # don
 enum Kind { MOVE, LINE, FLOAT_TEXT, GHOST, WAVE, PULSE }
 func progress(now: float) -> float                                         # 0 au début, 1 une fois fini
 func is_over(now: float) -> bool
+
+class_name WaveSource extends RefCounted                                  # Core : source effective (F7) ; stamp(events, source, state)
+class_name WaveSchedule extends RefCounted                                # pure : plan(columns, tiles, source, params) -> WavePlan (steps, duration_ms)
 
 class_name TileRenderer extends Node2D
 var clock: ClockSource                       # injectée ; null pour une image fixe
@@ -146,7 +151,7 @@ func set_clip_rect(rect: Rect2) -> void
 
 ### Negative
 - Un redessin complet de la carte (terrain, lisières, propriétaires, nœuds, unités) à chaque image d'effet : de l'ordre de plusieurs centaines à environ 1 500 commandes de dessin sur une carte pleine (estimation, non mesurée).
-- Pas de calcul d'onde déterministe par anneaux (voir Écarts ci-dessous) ; le code de l'onde du GDD 15 n'est pas testé de façon isolée.
+- Le fondu binaire et la réécriture en cours d'onde du GDD 15 (F5) ne sont pas faits (voir Écarts ci-dessous) ; les anneaux le sont, en fonctions pures testées.
 - Les teintes de `TilePalette` sont des constantes du code, pas un fichier de données (ADR-0009 prévoyait `TABLE_TEINTES`).
 - La première teinte d'une texture coûte une copie d'image : repérée par la vérification 3.
 
@@ -157,21 +162,20 @@ func set_clip_rect(rect: Rect2) -> void
 - **Écart au GDD 15** (ci-dessous) non tranché : l'onde ne reproduit pas le GDD.
 
 ## Écarts au GDD 15 (recoloration du monde), à décider
-Le rendu livré ne reproduit pas les formules F3 à F5 du GDD 15 :
-- **Anneaux** (règles 12 et 13) : toutes les tuiles d'un groupe `TileOwnersChangedEvent` se fondent **ensemble** sur `recolor_ms` (400 ms) ; il n'y a ni anneau par distance à la source, ni retard `T_ANNEAU` (200 ms), ni plafond `T_TOTAL_MAX`.
+Les anneaux et la source effective sont **faits** (Decision 4 bis : F3, F4, F7 ; tests dans `tests/unit/recoloration/` et `tile_renderer_handler_test.gd`, critères AC-RC8 à AC-RC13). Le rendu livré ne reproduit pas encore les règles 14 et 15 (F5) du GDD 15, ni la transition de brouillard :
 - **Fondu binaire** (règle 14) : la recoloration est une teinte de camp dont l'opacité monte à 0,30 sur la tuile (`WAVE`), pas un fondu gris ↔ teinte, et f → g ne passe pas par le gris.
 - **Écriture pendant une onde** (règle 15) : deux ondes se jouent en parallèle sur la même tuile, sans animation depuis la valeur affichée.
-- **Révélation de brouillard** : le passage d'un état de brouillard à l'autre est instantané (pas de transition de 150 ms).
-- **Source effective** (F7, règle 18) : l'événement `TileOwnersChangedEvent` ne porte ni source ni drapeau VISIBLE par tuile.
+- **Autres écarts mineurs** : la révélation de brouillard (`TilesRevealedEvent`, `T_REV` = 150 ms) n'est pas animée ; les tuiles de révélation et d'onde ne sont pas distinguées dans un même événement (AC-RC14) ; réduire `T_ANNEAU_eff` à la lecture des données n'écrit pas la trace demandée par AC-RC10.
 
-Deux issues, au choix du game-designer : **simplifier le GDD 15** (une seule teinte qui apparaît, sans anneaux) ou **construire les anneaux** dans `TileRendererHandler` (une fonction pure de la source et de la distance de Chebyshev, testée sur horloge factice, qui crée un `WAVE` par anneau avec un départ décalé). Cet ADR ne tranche pas.
+Il reste à choisir, par le game-designer : **simplifier le GDD 15** (règles 14 et 15 : une teinte qui apparaît, sans fondu par le gris ni réécriture) ou **construire F5** (saturation par tuile, réécriture depuis la valeur affichée) dans le rendu.
 
 ## GDD Requirements Addressed
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
 | recoloration-monde.md (15) | Règles 16 et 20, E10 : animations réduites, palette daltonienne sans écrire d'état | `still`, durées à 0, drapeau `colorblind` qui ne change que `TilePalette` |
-| recoloration-monde.md (15) | Règles 12 à 15 : anneaux, fondu binaire, écriture pendant une onde | **Non couvert** : voir Écarts |
+| recoloration-monde.md (15) | Règles 11 à 13, F3, F4, F7 : source, anneaux, rythme, plafond | `WaveSource` (Core), `WaveSchedule`, un `WAVE` par anneau |
+| recoloration-monde.md (15) | Règles 14 et 15 : fondu binaire, écriture pendant une onde | **Non couvert** : voir Écarts |
 | brouillard-vision.md (5) | INCONNUE aplatie, EXPLORÉE assombrie, VISIBLE ; aucune fuite | `TileSnapshot` sur `FactionView` et `fog_level` ; texture de brouillard, assombrissement `MEMORY_DIM`, lisières orientées |
 | carte-tuiles-terrain.md (2) | Carte 12×12 à 16×16, tuiles carrées | `TileLayout` et `visible_tiles()` |
 | hud-systeme.md (17) | Règles 2, 10, 16, 17 : le HUD ne lit pas l'état pendant la file, reconstruction sans onde | Instantané repris à la fin d'un lot ; `rebuild_from_state` efface les effets |
@@ -189,7 +193,7 @@ Aucune migration de code : le rendu décrit est celui qui existe. Marquer ADR-00
 
 ## Validation Criteria
 - `TileSnapshot` ne contient ni unité cachée, ni nœud non découvert, ni ruine non repérée (suite `tile_snapshot_test.gd`, dont `test_the_snapshot_of_random_states_never_shows_what_the_player_cannot_see` sur 120 états aléatoires).
-- Le minutage des effets sur horloge factice : début, milieu, fin, durée 0 en animations réduites (`tile_renderer_handler_test.gd`).
+- Le minutage des effets sur horloge factice : début, milieu, fin, durée 0 en animations réduites (`tile_renderer_handler_test.gd`) ; les anneaux (`tests/unit/recoloration/wave_schedule_test.gd`, `wave_source_test.gd`).
 - Mesure sur l'appareil Android de référence (Mobile et Compatibility) : durée de `_draw` et nombre de commandes, carte 14×14 puis 16×16, au repos, pendant un glissement d'unité, pendant un défilement ; décision du repli (Decision, 8) sur le seuil de 1 ms.
 - Captures retenues validées par l'art-director : carte pleine, brouillard, mode daltonien, animations réduites.
 

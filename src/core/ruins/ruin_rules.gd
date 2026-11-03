@@ -34,6 +34,7 @@ static func read_on_arrival(state: GameState, unit_id: int, rules: RuleTable, re
 	result.events.append(RuinReadEvent.new(Faction.PLAYER, ruin_id, fragment_id, tile))
 	if not changed.is_empty():
 		result.events.append(TileOwnersChangedEvent.new(changed, Faction.NONE, Faction.PLAYER))
+		WaveSource.stamp(result.events, tile, state)
 	if fragment_id > 0:
 		result.profile_effects.append(RecordFragmentEffect.new(Faction.PLAYER, fragment_id, ruin_id))
 

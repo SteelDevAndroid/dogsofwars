@@ -36,6 +36,9 @@ func test_ending_a_move_on_a_ruin_reads_it_in_the_same_command() -> void:
 	assert_array(read.map(func(event: RuinReadEvent) -> Array: return [event.ruin_id, event.fragment_id, event.tile]))\
 			.is_equal([[0, 1, tile]])
 	assert_bool(events.any(func(event: PresentationEvent) -> bool: return event is TileOwnersChangedEvent)).is_true()
+	for event in events:
+		if event is TileOwnersChangedEvent:
+			assert_int((event as TileOwnersChangedEvent).source_tile).is_equal(tile)  # the wave spreads from the ruin
 
 
 func test_the_zone_is_recoloured_without_taking_an_enemy_tile() -> void:
