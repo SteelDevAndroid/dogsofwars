@@ -21,7 +21,9 @@ var gate: CommandGate
 var params: PresentationParams
 ## Presenters, called in this order for every event.
 var handlers: Array[PresentationHandler] = []
-## Reduced animations: waves merge into slots, attack steps keep their order and lengths.
+## Reduced animations: the colour changes of the map come at most once per slot of
+## `reduced_slot_ms` of real time (3 flashes a second at most, WCAG 2.3.1), whatever the speed
+## of the enemy turn; attack steps keep their order and lengths.
 var reduced_motion := false
 var state: GameState
 ## True while the fragment panel is open (a resynchronisation then keeps its lock).
@@ -34,6 +36,9 @@ var _playing := false
 var _attack_lock_until := -1.0
 var _attack_locked := false
 var _idle_announced := true
+## Presentation time before which no batch that changes the colours may start (reduced motion).
+var _slot_end := -1.0
+var _batch_mergeable := false
 
 
 func _init() -> void:
@@ -84,6 +89,9 @@ func advance() -> void:
 			resync()
 			continue
 		_steps = SequenceOrder.steps(batch, params)
+		_batch_mergeable = SequenceOrder.has_mergeable(batch)
+		if reduced_motion and _batch_mergeable and now < _slot_end:
+			_steps.push_front(PresentationPause.new(ceili((_slot_end - now) * 1000.0)))
 		_step = 0
 		_playing = true
 		_deadline = now
@@ -101,10 +109,12 @@ func resync() -> void:
 	_playing = false
 	_steps.clear()
 	_attack_locked = false
+	_batch_mergeable = false
 	gate.clear_player_locks(FRAGMENT_PANEL if panel_open else &"")
 	for handler in handlers:
 		handler.rebuild_from_state(state)
 	_idle_announced = false
+	_open_slot()
 
 
 func _dispatch(event: PresentationEvent, now: float) -> void:
@@ -133,4 +143,14 @@ func _end_batch() -> void:
 		_attack_locked = false
 	for handler in handlers:
 		handler.on_batch_end(state)
+	if _batch_mergeable:
+		_open_slot()
+	_batch_mergeable = false
 	batch_finished.emit()
+
+
+## The map has just changed: in reduced motion the next colour change waits one slot, which is
+## `reduced_slot_ms` of real time (the enemy-turn speed stretches presentation time).
+func _open_slot() -> void:
+	if reduced_motion:
+		_slot_end = clock.current() + params.value("reduced_slot_ms") / 1000.0 * clock.scale()

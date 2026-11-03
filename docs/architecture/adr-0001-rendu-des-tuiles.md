@@ -1,7 +1,9 @@
 # ADR-0001: Rendu des tuiles — MultiMesh, deux vec4 par instance, module d'onde pur
 
 ## Status
-Accepted
+Superseded by ADR-0012 (2026-11-03)
+
+> Ce rendu (MultiMesh, shader, `WaveScheduler`) n'a jamais été construit : le rendu livré est un dessin immédiat sur un instantané, décrit par `docs/architecture/adr-0012-rendu-immediat-par-instantane.md` (revue du 2026-11-02, A1). Ce document est conservé : son contrat de données à huit canaux et son module d'onde pur sont le **dernier repli** d'ADR-0012 (Decision, 8) si la mesure sur appareil dépasse le budget de 1 ms.
 
 ## Date
 2026-10-30
@@ -212,4 +214,4 @@ Sans objet : aucun code de production n'existe. Le prototype `prototypes/rendu-t
 - Prototype : `prototypes/rendu-tuiles/REPORT.md`.
 - GDD : `design/gdd/recoloration-monde.md` (15), `brouillard-vision.md` (5), `carte-tuiles-terrain.md` (2), `hud-systeme.md` (17), `commandes-evenements.md` (23).
 - Art bible : `design/art/art-bible.md` §4, §8.
-- ADR-0002 (modèle d'événements de présentation et séquenceur) : écrit (Proposed), dépendance directe.
+- ADR-0002 (modèle d'événements de présentation et séquenceur) : Accepted, dépendance directe.

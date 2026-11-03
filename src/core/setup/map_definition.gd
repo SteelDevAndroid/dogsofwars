@@ -149,6 +149,7 @@ func check(catalog: DataCatalog) -> PackedStringArray:
 	if symmetric:
 		_check_symmetry(errors)
 	_check_dormant_cover(catalog, errors)
+	_check_ai_turn_budget(catalog, errors)
 	return errors
 
 
@@ -310,3 +311,19 @@ func _check_dormant_cover(catalog: DataCatalog, errors: PackedStringArray) -> vo
 				covered = true
 		if not covered:
 			errors.append("dormant %d on the AI side is not covered by an armed Guardian (GDD 9 rule 11)" % k)
+
+
+## ADR-0005 §4: the budget is per planner call, so the phase is bounded by its calls; on this
+## map that product must stay within EVALS_MAX and the copies of formula 5 (GDD 1).
+func _check_ai_turn_budget(catalog: DataCatalog, errors: PackedStringArray) -> void:
+	var ai_units := 0
+	for unit: Array in units:
+		if unit[1] == Faction.AI:
+			ai_units += 1
+	var calls := AiPlanner.max_calls_per_turn(ai_units, nodes.size() + start_tile.size())
+	var evals := calls * catalog.ai.planner("evals_per_call")
+	if evals > catalog.ai.planner("evals_max"):
+		errors.append("AI turn budget: %d planner calls x evals_per_call = %d evaluations, above evals_max %d"
+				% [calls, evals, catalog.ai.planner("evals_max")])
+	if calls + 1 > AiPlanner.COPIES_PER_TURN_MAX:
+		errors.append("AI turn budget: %d copies, above %d" % [calls + 1, AiPlanner.COPIES_PER_TURN_MAX])

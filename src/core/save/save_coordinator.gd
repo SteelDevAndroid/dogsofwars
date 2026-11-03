@@ -7,6 +7,10 @@ extends PostCommitPort
 
 var last_error: Error = OK
 var writes := 0
+## Duration of the last write and of the slowest one, in microseconds: what the device
+## spike reads to decide the write thread (ADR-0006 §7, review 2026-11-02, A3).
+var last_write_usec := 0
+var worst_write_usec := 0
 var _store: SaveStore
 
 
@@ -19,7 +23,10 @@ func on_commit(state: GameState, _command: Command, _result: ApplyResult) -> voi
 
 
 func save(state: GameState) -> void:
+	var started := Time.get_ticks_usec()
 	last_error = _store.save_match(state)
+	last_write_usec = Time.get_ticks_usec() - started
+	worst_write_usec = maxi(worst_write_usec, last_write_usec)
 	writes += 1
 
 

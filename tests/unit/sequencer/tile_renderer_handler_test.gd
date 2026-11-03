@@ -16,6 +16,13 @@ func _context(clock: FakeClock, reduced: bool = false, direct: bool = false) -> 
 	return SequenceContext.new(clock.current(), clock, direct, reduced)
 
 
+## A tile owner event as the Core publishes it: stamped with its effective source (`source` -1: none).
+func _wave(tiles: Array, new_owner: int, source: int) -> TileOwnersChangedEvent:
+	var wave := TileOwnersChangedEvent.new(PackedInt32Array(tiles), Faction.NONE, new_owner)
+	wave.source_tile = source
+	return wave
+
+
 func test_a_move_slides_the_unit_for_a_step_time_per_tile() -> void:
 	var set_up := _setup()
 	var handler: TileRendererHandler = set_up[0]
@@ -52,9 +59,9 @@ func test_reduced_motion_and_direct_display_shorten_slides_and_waves_but_not_the
 	var handler: TileRendererHandler = set_up[0]
 	var renderer: TileRenderer = set_up[1]
 	var clock: FakeClock = set_up[2]
-	var wave := TileOwnersChangedEvent.new(PackedInt32Array([1, 2]), Faction.NONE, Faction.PLAYER)
+	var wave := _wave([1, 2], Faction.PLAYER, 1)
 
-	assert_int(handler.handle(wave, _context(clock)).duration_ms).is_equal(400)
+	assert_int(handler.handle(wave, _context(clock)).duration_ms).is_equal(600)  # ring 1 starts at 200 ms, then 400 ms of fade
 	assert_int(handler.handle(wave, _context(clock, true)).duration_ms).is_equal(0)
 	assert_int(handler.handle(UnitMovedEvent.new(0, 5, 14, 17, 17), _context(clock, true)).duration_ms).is_equal(0)
 	assert_int(handler.handle(UnitMovedEvent.new(0, 5, 14, 17, 17), _context(clock, false, true)).duration_ms).is_equal(0)
@@ -101,10 +108,12 @@ func test_a_recolouring_spreads_in_the_colour_of_the_new_owner() -> void:
 	var renderer: TileRenderer = set_up[1]
 	var clock: FakeClock = set_up[2]
 
-	handler.handle(TileOwnersChangedEvent.new(PackedInt32Array([3, 4]), Faction.NONE, Faction.AI), _context(clock))
+	handler.handle(_wave([3, 4], Faction.AI, 3), _context(clock))
 
-	assert_array(Array(renderer.effects[0].tiles)).is_equal([3, 4])
+	assert_array(Array(renderer.effects[0].tiles)).is_equal([3])  # the ring of the source
+	assert_array(Array(renderer.effects[1].tiles)).is_equal([4])
 	assert_object(renderer.effects[0].color).is_equal(TilePalette.ENEMY)
+	assert_object(renderer.effects[1].color).is_equal(TilePalette.ENEMY)
 	renderer.free()
 
 
@@ -149,7 +158,7 @@ func test_the_colour_wave_follows_the_colour_blind_palette() -> void:
 	var handler: TileRendererHandler = set_up[0]
 	var renderer: TileRenderer = set_up[1]
 	var clock: FakeClock = set_up[2]
-	var wave := TileOwnersChangedEvent.new(PackedInt32Array([1]), Faction.NONE, Faction.PLAYER)
+	var wave := _wave([1], Faction.PLAYER, 1)
 
 	handler.handle(wave, _context(clock))
 	renderer.colorblind = true
@@ -169,3 +178,50 @@ func test_only_the_ownership_colours_change_in_the_colour_blind_palette() -> voi
 	assert_object(TilePalette.owner(Faction.NONE)).is_equal(TilePalette.NEUTRAL)
 	assert_object(TilePalette.THREAT).is_equal(Color("FF6A3D"))
 	assert_object(TilePalette.RUIN).is_equal(Color("C8955A"))
+
+
+## GDD 15 rules 12 and 13: one effect per ring, the ring k starting k x 200 ms after the step,
+## each fading for 400 ms; the hold is the length of the whole wave.
+func test_a_wave_spreads_ring_by_ring_from_its_source() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	clock.advance(5.0)
+	# 12 columns: the source (2,1) = 14, then (3,1) = 15 and (3,2) = 27 at ring 1, (5,1) = 17 at ring 3
+	var wave := _wave([17, 27, 15, 14], Faction.PLAYER, 14)
+
+	var hold := handler.handle(wave, _context(clock))
+
+	assert_int(hold.duration_ms).is_equal(3 * 200 + 400)
+	assert_array(renderer.effects.map(func(effect: TileEffect) -> int: return roundi(effect.start * 1000.0))).is_equal([5000, 5200, 5600])
+	assert_array(renderer.effects.map(func(effect: TileEffect) -> Array: return Array(effect.tiles))).is_equal([[14], [15, 27], [17]])
+	assert_array(renderer.effects.map(func(effect: TileEffect) -> float: return effect.duration)).is_equal([0.4, 0.4, 0.4])
+	renderer.free()
+
+
+func test_a_tile_of_a_far_ring_has_not_started_when_the_first_one_is_half_way() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	handler.handle(_wave([14, 17], Faction.PLAYER, 14), _context(clock))
+
+	assert_float(renderer.effects[0].progress(0.2)).is_equal(0.5)
+	assert_float(renderer.effects[1].progress(0.2)).is_equal(0.0)  # ring 3 starts at 600 ms
+	renderer.free()
+
+
+func test_a_wave_without_a_source_or_in_reduced_motion_changes_the_colours_at_once() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+
+	assert_int(handler.handle(_wave([14, 15], Faction.PLAYER, -1), _context(clock)).duration_ms).is_equal(0)
+	assert_int(handler.handle(_wave([14, 15], Faction.PLAYER, 14), _context(clock, true)).duration_ms).is_equal(0)
+	assert_int(handler.handle(_wave([14, 15], Faction.PLAYER, 14), _context(clock, false, true)).duration_ms).is_equal(0)
+
+	assert_array(renderer.effects).is_empty()
+	renderer.free()
+

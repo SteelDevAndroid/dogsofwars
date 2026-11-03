@@ -49,7 +49,7 @@ static func documents() -> Dictionary:
 			_fragment(3, 2, "verbe", "On a allumé le relais."), _fragment(4, 3, "verbe", "Les lampes s'allument."),
 			_fragment(5, 3, "question", "Pour qui allume-t-on ?")]},
 		"presentation.json": {"schema_version": 1, "move_step_ms": 120, "attack_line_ms": 250, "hit_ms": 350, "destroy_ms": 400,
-			"recolor_ms": 400, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
+			"recolor_ms": 400, "wave_ring_ms": 200, "wave_rings_max": 3, "wave_total_max_ms": 1000, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
 			"enemy_action_ms": 500, "recenter_ms": 300, "reduced_slot_ms": 334, "queue_max": 256},
 		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
@@ -65,7 +65,7 @@ static func documents() -> Dictionary:
 			"w_units": 2, "unit_cap": 20, "w_fragments": 60, "w_domination": 8},
 		"ai.json": {"schema_version": 1, "track_ttl": 4, "planner": {
 			"w_damage": 10, "w_lethal": 30, "w_loss": 8, "w_danger": 6, "w_node": 12, "w_leash": 3, "w_progress": 2,
-			"leash": 4, "k_dest": 6, "state_margin": 2, "return_after": 2, "evals_per_call": 2000, "refusals_max": 32}, "protocol_calendar": [
+			"leash": 4, "k_dest": 6, "state_margin": 2, "return_after": 2, "evals_per_call": 1000, "evals_max": 20000, "refusals_max": 32}, "protocol_calendar": [
 			{"turn": 12, "protocol": 4}, {"turn": 18, "protocol": 5}]},
 	}
 

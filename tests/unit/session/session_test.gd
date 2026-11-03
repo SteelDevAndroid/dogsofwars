@@ -25,7 +25,10 @@ func test_a_whole_round_goes_through_the_ai_and_back_to_the_player() -> void:
 	t.run_ai()
 
 	assert_array([session.state.turn(), session.state.header.value(HeaderSlice.PHASE)]).is_equal([2, HeaderSlice.PHASE_PLAYER])
-	assert_int((session.post_commit as SaveCoordinator).writes).is_equal(session.state.revision())
+	var coordinator := session.post_commit as SaveCoordinator
+	assert_int(coordinator.writes).is_equal(session.state.revision())
+	assert_int(coordinator.worst_write_usec).is_greater(0)  # the spike's measure of t_write
+	assert_int(coordinator.worst_write_usec).is_greater_equal(coordinator.last_write_usec)
 	assert_array(session.state.validate()).is_empty()
 	session.shutdown()
 	t.dispose()

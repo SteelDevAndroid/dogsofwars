@@ -8,6 +8,10 @@ extends PresentationEvent
 var changed_tiles: PackedInt32Array
 var old_owner: int
 var new_owner: int
+## The effective source of the wave (GDD 15 F7, rule 18): the tile the rings spread from, one
+## the player may know (never a hidden one), or -1 when the player sees none of the changed
+## tiles (the colours then change at once). Set by `WaveSource.stamp`.
+var source_tile := -1
 
 
 func _init(p_tiles: PackedInt32Array, p_old: int, p_new: int) -> void:

@@ -60,3 +60,19 @@ func test_restore_from_returns_to_snapshot_and_keeps_revision() -> void:
 	assert_int(state.view().unit_tile(0)).is_equal(snapshot.view().unit_tile(0))
 	assert_int(state.revision()).is_equal(7)
 	assert_bool(is_same(state.terrain, snapshot.terrain)).is_true()
+
+
+## Review 2026-11-01, B4: restore_from brings back the snapshot's cache, valid and owned,
+## without a rebuild (it has no VisionContext).
+func test_restore_from_copies_the_view_cache_of_the_snapshot() -> void:
+	var state := StateFactory.minimal()
+	var snapshot := state.duplicate_state()
+	state.view_cache.seen[Faction.PLAYER][0] = 1 - snapshot.view_cache.seen[Faction.PLAYER][0]
+	state.view_cache.valid = false
+
+	state.restore_from(snapshot)
+
+	assert_array(state.view_cache.seen).is_equal(snapshot.view_cache.seen)
+	assert_bool(state.view_cache.valid).is_equal(snapshot.view_cache.valid)
+	state.view_cache.seen[Faction.PLAYER][0] = 1 - snapshot.view_cache.seen[Faction.PLAYER][0]
+	assert_bool(state.view_cache.seen[Faction.PLAYER][0] == snapshot.view_cache.seen[Faction.PLAYER][0]).is_false()

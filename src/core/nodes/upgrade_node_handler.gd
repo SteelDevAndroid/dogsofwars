@@ -40,6 +40,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	for group: Array in TerritoryRules.recompute(state, rules.catalog.nodes, MapSlice.CAUSE_UPGRADE):
 		result.events.append(TileOwnersChangedEvent.new(group[0], group[1], group[2]))
 	result.vision = VisionService.recompute(state, rules.vision)
+	WaveSource.stamp(result.events, state.nodes.tile_of(row), state)
 	if not result.vision.discovered_tiles.is_empty():
 		result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))
 	return result

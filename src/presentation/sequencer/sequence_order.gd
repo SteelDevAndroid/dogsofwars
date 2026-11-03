@@ -6,6 +6,20 @@ class_name SequenceOrder
 extends RefCounted
 
 
+## Events whose only effect is to change the colours of the map: the reduced-motion slots
+## apply to them (ADR-0002 §6). Attack steps, ruin readings and the end of the match are never
+## merged or delayed.
+static func is_mergeable(event: PresentationEvent) -> bool:
+	return event is TileOwnersChangedEvent or event is TilesRevealedEvent
+
+
+static func has_mergeable(batch: EventBatch) -> bool:
+	for event in batch.events:
+		if is_mergeable(event):
+			return true
+	return false
+
+
 ## The steps to play for a batch: events and pauses.
 static func steps(batch: EventBatch, params: PresentationParams) -> Array[PresentationEvent]:
 	var ordinary: Array[PresentationEvent] = []

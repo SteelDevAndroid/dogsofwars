@@ -88,3 +88,19 @@ Outils promis par des ADR acceptés et non encore créés (attendu, à planifier
 - Données en entiers seulement, schéma strict, échec franc : rien de flottant n'entre dans les règles.
 - Gestes, caméra et décision d'appui purs et testables sans appareil ; la portée affichée **est** la validation.
 - Registre : budgets d'image désormais vérifiables (cible 60 i/s, coût unitaire de copie séparé, planification sortie du fil principal).
+
+---
+
+## 6. Suivi (2026-11-02)
+
+| Point | État |
+|---|---|
+| B1 | Fait sur `main` (ADR-0004 §6, ADR-0007, `preview` / `apply_on` sur la variante de simulation) ; test ajouté : `test_preview_and_apply_on_never_recompute_the_view_of_a_copy` |
+| B2 | Fait sur `main` (ADR-0004 §4, `_prefix`, `ruin_reading_test`) ; GDD 23 aligné (règle 0, règle 12, AC-12) |
+| B3 | Implémenté : `AiPlanner.max_calls_per_turn` = N_IA + N_NŒUDS + 2 (un appel par unité au MVP), contrôle par carte dans `MapDefinition`, `evals_max` dans `ai.json`, `evals_per_call` ramené à 1 000 ; ADR-0005 §4 et registre |
+| B4 | Fait sur `main` (`VisionContext.for_map` pur, `setup` à la mise en place, `rebuild` au chargement seulement, `restore_from` recopie le cache) ; ADR-0007 aligné ; test `test_restore_from_copies_the_view_cache_of_the_snapshot` |
+| M1 | Corrigé : ADR-0004 Related (aucune faction recalculée en simulation) |
+| M2 | Corrigé : `check_move_range(view, faction, unit_id)`, méthode d'instance, dans ADR-0004 et ADR-0010 comme dans le code |
+| M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M14, M15 | Déjà faits sur `main` |
+| M13 | Corrigé : `start_turn` et `resume` prennent le catalogue (ADR-0005, registre `ai_turn_handoff`) ; la phrase des Risks était déjà faite |
+| Points d'attention | AC-IA33 « à catalogue égal », placement d'`AiRunner` (ADR-0008 §7), AC-HU23 à 1 600 ms et `references-externes.md` : faits. **Ouvert** : la mesure de `t_write` sur appareil, qui décide du fil d'écriture (ADR-0004 §4, ADR-0006 §7) |

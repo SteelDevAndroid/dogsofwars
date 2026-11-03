@@ -35,6 +35,7 @@ func test_capture_takes_the_node_down_one_level_and_recomputes_the_territory() -
 	assert_int((events[0] as NodeCapturedEvent).previous_owner).is_equal(Faction.NONE)
 	var changed := events[1] as TileOwnersChangedEvent
 	assert_array([changed.old_owner, changed.new_owner]).is_equal([Faction.NONE, Faction.PLAYER])
+	assert_int(changed.source_tile).is_equal(fx.state.view().node_tile(0))  # the wave spreads from the node (GDD 15 rule 11)
 
 
 func test_validation_order_returns_the_first_failure() -> void:

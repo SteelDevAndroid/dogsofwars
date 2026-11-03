@@ -13,6 +13,10 @@ const SCHEMA := {
 	"hit_ms": {"kind": &"int", "min": 0, "max": 1000},
 	"destroy_ms": {"kind": &"int", "min": 0, "max": 800},
 	"recolor_ms": {"kind": &"int", "min": 0, "max": 1000},
+	# GDD 15 F4: T_ANNEAU 150..200, K_MAX 1..5, T_TOTAL_MAX 600..1200; recolor_ms is T_FONDU.
+	"wave_ring_ms": {"kind": &"int", "min": 100, "max": 400},
+	"wave_rings_max": {"kind": &"int", "min": 1, "max": 5},
+	"wave_total_max_ms": {"kind": &"int", "min": 400, "max": 1500},
 	"panel_delay_ms": {"kind": &"int", "min": 0, "max": 1000},
 	"close_delay_ms": {"kind": &"int", "min": 0, "max": 2000},
 	"attack_lock_ms": {"kind": &"int", "min": 500, "max": 3000},

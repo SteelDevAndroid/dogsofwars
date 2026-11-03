@@ -35,6 +35,7 @@ func test_upgrade_pays_the_price_raises_the_level_and_widens_the_territory() -> 
 	assert_array([(events[1] as NodeUpgradedEvent).node_id, (events[1] as NodeUpgradedEvent).level]).is_equal([0, 2])
 	var changed := events[2] as TileOwnersChangedEvent
 	assert_array([changed.old_owner, changed.new_owner]).is_equal([Faction.NONE, Faction.PLAYER])
+	assert_int(changed.source_tile).is_equal(fx.state.view().node_tile(0))
 	assert_int(fx.state.map._tile_change_cause[widened]).is_equal(MapSlice.CAUSE_UPGRADE)
 
 

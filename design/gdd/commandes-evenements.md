@@ -96,7 +96,7 @@ l'écriture réussit, applique la commande interne VALIDER_LA_LECTURE.
 
 #### Règles
 
-0. **Préfixe commun de refus** (ADR-0004), dans cet ordre fixe : réentrance (COMMANDES_VERROUILLÉES, erreur en développement), PARTIE_TERMINÉE, PAS_VOTRE_TOUR, verrou du joueur (COMMANDES_VERROUILLÉES), puis les vérifications propres à la commande. PARTIE_TERMINÉE et PAS_VOTRE_TOUR sont des lectures d'état, pas du `CommandGate` ; ABANDONNER est permis en phase ennemie. `command_id` d'un lot = la révision de l'état (un seul numéro).
+0. **Préfixe commun de refus** (ADR-0004), dans cet ordre fixe : réentrance (COMMANDES_VERROUILLÉES, erreur en développement), PARTIE_TERMINÉE, PAS_VOTRE_TOUR, verrou du joueur (COMMANDES_VERROUILLÉES), puis les vérifications propres à la commande. PARTIE_TERMINÉE et PAS_VOTRE_TOUR sont des lectures d'état, pas du `CommandGate` ; PAS_VOTRE_TOUR ne vaut que pour les émetteurs J et IA (une commande interne n'est jamais refusée pour le tour : VALIDER_LA_LECTURE, de faction J, peut être retentée pendant la phase ennemie) ; ABANDONNER est permis en phase ennemie. `command_id` d'un lot = la révision de l'état (un seul numéro).
 1. **Valider, puis appliquer.** Chaque commande passe par « valider (état, faction,
    commande) », qui rend un résultat, puis, seulement si elle est permise, par
    « appliquer ». Aucune autre fonction ne modifie l'état en partie
@@ -152,8 +152,8 @@ l'écriture réussit, applique la commande interne VALIDER_LA_LECTURE.
     COMMANDES_VERROUILLÉES (et signalée comme erreur en version de développement). Les
     commandes du joueur ne viennent que des contrôles (4) ; celles de l'IA et les
     commandes internes, que du déroulé du tour (3, 9).
-12. **Verrouillage des commandes du joueur.** Une commande d'une faction est refusée avec
-    PAS_VOTRE_TOUR hors de sa phase, et avec PARTIE_TERMINÉE après la fin de la partie.
+12. **Verrouillage des commandes du joueur.** Une commande du joueur ou de l'IA est refusée avec
+    PAS_VOTRE_TOUR hors de la phase de sa faction (jamais une commande interne), et avec PARTIE_TERMINÉE après la fin de la partie.
     Une commande du joueur est refusée avec COMMANDES_VERROUILLÉES pendant le verrou de
     résolution d'une attaque du HUD (durée `ATTACK_LOCK_MS` = 1 600 ms, valeur unique en données,
     propriété de ce document ; l'animation dure environ 1,5 s et le verrou la dépasse de 100 ms) ; ce verrou ne touche ni l'IA ni les commandes internes.
@@ -550,7 +550,8 @@ et des auditeurs doublés enregistrent ce qu'ils reçoivent. Aucun test ne crée
 - **AC-12 (règle 12)** [U] — **GIVEN** le verrou de résolution d'une attaque, **WHEN** le
   joueur et l'IA soumettent une commande, **THEN** celle du joueur est refusée avec
   COMMANDES_VERROUILLÉES et celle de l'IA est permise ; **GIVEN** la phase ennemie,
-  **THEN** une commande du joueur est refusée avec PAS_VOTRE_TOUR ; **GIVEN** une partie
+  **THEN** une commande du joueur est refusée avec PAS_VOTRE_TOUR et VALIDER_LA_LECTURE
+  (interne, de faction J) est appliquée ; **GIVEN** une partie
   terminée, **THEN** toute commande est refusée avec PARTIE_TERMINÉE.
 - **AC-13 (règle 13)** [U] — **GIVEN** un début de tour, **WHEN** COMMENCER_LE_TOUR est
   appliquée, **THEN** la révision augmente de 1 et TOUR_COMMENCÉ est rendu.

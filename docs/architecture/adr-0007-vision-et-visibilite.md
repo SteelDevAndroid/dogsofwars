@@ -71,7 +71,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
 
 **8. Simulations de l'IA : pas de recalcul.** La variante de simulation de la `RuleTable` (`RuleTable.simulation()`) a `VisionContext.factions = []` : `apply_on` ne recalcule rien et ne révèle rien. L'IA planifie sur sa vue figée, reperçue avant **chaque** appel à `plan_next` à partir de l'état réel (ADR-0005 §1) ; l'effet d'une embuscade n'est donc pas simulé (il l'est dans le run réel). La même variante sert à `preview` (joueur comme IA) et à `apply_on` (ADR-0004 §2 et §6 ; revue du 2026-11-01, B1) : **aucune copie, filtrée ou non, n'est jamais recalculée** avec la `FieldTable`, construite sur le vrai terrain. Cela règle à la fois la fuite de terrain par `FieldTable` et le coût : le recalcul n'entre pas dans les 2 500 copies du tour d'IA, contrairement à ce que craignait le GDD 5 (750 ms).
 
-**9. Rendu du brouillard.** Hors de ce périmètre : le canal `fog` du shader et les transitions sont décidés par ADR-0001 ; la présentation lit `TUILES_RÉVÉLÉES`, le cache reconstruit au chargement (`RESYNCHRONISER`) et jamais l'état brut.
+**9. Rendu du brouillard.** Hors de ce périmètre : l'affichage du brouillard (texture, assombrissement, lisières) est décidé par ADR-0012 (ADR-0001, remplacé, prévoyait un canal `fog` de shader) ; la présentation lit `TUILES_RÉVÉLÉES`, le cache reconstruit au chargement (`RESYNCHRONISER`) et jamais l'état brut.
 
 **10. Budgets et seuil de repli.** Deux budgets séparés au registre : **recalcul de vue par commande réelle ≤ 1 ms** pour deux factions (GDD 5), compté dans l'image du commit mais distinct du 0,3 ms de validation plus application des commandes de l'IA (ADR-0004), qui n'en inclut pas puisque les simulations ne recalculent pas ; **plage de déplacement ≤ 2 ms** (ADR-0010). Si la mesure sur l'appareil dépasse 1 ms, `recompute` passe à un compteur par tuile et par faction (1 octet, même emplacement dans `ViewCache`) ; le contrat des fonctions ne change pas.
 
@@ -88,7 +88,7 @@ Le brouillard décide ce que chaque faction sait. Le GDD 5 fixe les états (INCO
    ├─► can_see(cache, f, tuile) ──► FactionView (validation)       ┐ test de parité
    ├─► can_see(cache, f, tuile) ──► filtered_copy(f) (IA, aperçus) ┘
    └─► event_visible(avant, après, f, evt) ──► lot filtré ──► EventSink.push
- GameState ── duplicate_state() et restore_from copient le ViewCache ; mise en place et chargement (SaveStore, étape 5) ──► rebuild(state, ctx)
+ GameState ── duplicate_state() et restore_from copient le ViewCache ; mise en place ──► setup(state, ctx) ; chargement (SaveStore, étape 5) ──► rebuild(state, ctx)
 ```
 
 ### Key Interfaces
@@ -115,7 +115,8 @@ var discovered_tiles: PackedInt32Array           # triées, pour TUILES_RÉVÉL�
 var newly_seen_units: PackedInt32Array
 
 class_name VisionService extends RefCounted      # fonctions statiques, aucun état
-static func rebuild(state: GameState, ctx: VisionContext) -> void                # appelants : GameStateFactory.new_game, SaveStore (chargement, étape 5)
+static func setup(state: GameState, ctx: VisionContext) -> void                  # appelant unique : GameStateFactory.new_game (règle 22 du GDD 5)
+static func rebuild(state: GameState, ctx: VisionContext) -> void                # appelant unique : SaveStore (chargement, étape 5)
 static func recompute(state: GameState, ctx: VisionContext) -> VisionDelta     # ctx.factions : deux (réel) ou aucune (simulation)
 static func reveal_step(state: GameState, ctx: VisionContext, unit_id: int, tile: int) -> VisionDelta
 static func can_see(cache: ViewCache, faction: int, tile: int) -> bool
@@ -128,7 +129,7 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 ### Implementation Guidelines
 - Aucun code hors `VisionService` **ne doit** décider de la visibilité ni lire le propriétaire réel d'une tuile pour une faction ; la validation **doit** passer par `FactionView`.
 - `ViewCache` et `FieldTable` **ne doivent jamais** être sérialisés, comparés par `equals` ni écrits ailleurs que par `VisionService`.
-- `duplicate_state()` et `restore_from` **doivent** copier le cache en profondeur ; la mise en place et le chargement **doivent** appeler `rebuild` avec le contexte de `VisionContext.for_map` ; `from_bytes` et `restore_from` **ne doivent jamais** appeler `rebuild`.
+- `duplicate_state()` et `restore_from` **doivent** copier le cache en profondeur ; la mise en place **doit** appeler `setup` et le chargement `rebuild`, chacun avec le contexte de `VisionContext.for_map(catalogue, état)` (fonction pure, construite avant `SessionFactory.build`, qui reçoit ce contexte et n'appelle jamais `rebuild`) ; `from_bytes` et `restore_from` **ne doivent jamais** appeler `rebuild`.
 - `preview`, `apply_on` et toute simulation **doivent** utiliser la variante de simulation : aucune copie n'est recalculée avec la `FieldTable`.
 - Le parcours **doit** se faire par id croissant ; la table de champs **doit** être construite sans `Dictionary` parcouru.
 - Tout nouveau lecteur d'information de faction **doit** être ajouté au test de parité `FactionView` / `filtered_copy`.
@@ -164,7 +165,7 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 - Annulation du déplacement, chargement et rejeu restaurent la vue sans état redondant.
 
 ### Negative
-- Un objet transitoire de plus à copier et à reconstruire ; oublier `rebuild` après une restauration produit une vue périmée (test dédié).
+- Un objet transitoire de plus à copier et à reconstruire ; oublier `rebuild` après un chargement laisse un cache invalide, qui fait échouer `can_see` en développement ; `restore_from` recopie le cache de l'instantané (test dédié).
 - Le test de parité est un coût de maintenance à chaque nouvelle requête de faction.
 
 ### Neutral
@@ -194,7 +195,7 @@ static func event_visible(before: ViewCache, after: ViewCache, faction: int, eve
 - **Network**: sans objet.
 
 ## Migration Plan
-Aucun code existant. Amendements : **faits** — ADR-0003 (le cache accompagne `duplicate_state`, `rebuild` après `restore_from` et `from_bytes`, colonne de terrain propre à la copie filtrée), ADR-0004 (`FactionView` sur `can_see`, `apply` rend `VisionDelta`, `RuleTable` instance immuable avec variante de simulation, filtre d'événements dans le flux, écart permis étendu à l'obstacle non découvert), registre (budgets vision et plage) ; **à faire** — GDD 5 (règle 24 : refuser plutôt que réparer ; règle 25 : état reconstruit ; cache transitoire ; mémoire du précalcul).
+Aucun code existant. Amendements : **faits** — ADR-0003 (le cache accompagne `duplicate_state` et `restore_from`, qui le recopie ; `rebuild` après `from_bytes`, par `SaveStore` seulement ; colonne de terrain propre à la copie filtrée), ADR-0004 (`FactionView` sur `can_see`, `apply` rend `VisionDelta`, `RuleTable` instance immuable avec variante de simulation, filtre d'événements dans le flux, écart permis étendu à l'obstacle non découvert), registre (budgets vision et plage) ; **à faire** — GDD 5 (règle 24 : refuser plutôt que réparer ; règle 25 : état reconstruit ; cache transitoire ; mémoire du précalcul).
 
 **Implémenté le 2026-11-01** dans `src/core/vision/` : `VisionService` (`setup` pour la règle 22 du GDD 5, `rebuild`, `recompute`, `reveal_step`, `can_see`, `can_see_unit`, `can_see_node`, `tile_state`, `event_visible`, `consistency_errors` pour l'étape 5 du chargement), `FieldTable` paresseuse (formule 3 du GDD 2, Bresenham à terme d'erreur doublé, départage au coin), `VisionContext` (`for_map`, `simulation`), `VisionDelta` ; `filtered_copy` dans `GameState` sur ces prédicats. **Écarts à confirmer** : (1) résolu le 2026-11-01 : `VisionContext.for_map(catalog, state)` lit les rayons et le bonus de montagne (`mountain_bonus`, auparavant +1 en dur) dans le catalogue ; (2) l'octet 1 vaut `Faction.NONE` (255) pour « aucun », au lieu de 0 (GDD 5, règle 1) : même invariant, encodage de `GameState` ; (3) la copie filtrée masque aussi l'énergie et la recherche en cours de l'autre faction et retire ses lignes de chronique et de journal (choix prudent : le GDD 5 ne les classe pas) ; elle garde les protocoles acquis, que l'aperçu de combat peut demander ; (4) `newly_seen_units` est relatif à la vue d'avant l'appel : le déplacement fusionne les pas et compare au début. `FactionView` (`src/core/vision/faction_view.gd`, 2026-11-01) répond sans copie par les mêmes fonctions de `VisionService` que `filtered_copy` (`known_terrain`, `known_tile_owner`, `known_anchor`, `knows_node`, `known_node_owner`, `known_node_level`, `knows_ruins`) ; le test de parité (`tests/unit/vision/faction_view_parity_test.gd`) compare chaque requête de `StateView`, pour chaque tuile et chaque id (ids inconnus compris), sur 1 000 états aléatoires et les deux factions ; il échoue sur chacune des six fuites introduites volontairement dans `FactionView`. Comme les deux côtés partagent ces fonctions, une erreur commune n'est vue que par les tests de `filtered_copy` (`tests/unit/state/game_state_filtered_copy_test.gd`).
 

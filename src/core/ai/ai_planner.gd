@@ -16,6 +16,16 @@ extends RefCounted
 const RANK_CAPTURER := 0
 const RANK_HUNTER := 1
 const RANK_OTHER := 2
+## Copies of one enemy phase at most (formula 5 of GDD 1, ADR-0005 §4).
+const COPIES_PER_TURN_MAX := 2500
+
+
+## Upper bound on the plan_next calls of one enemy phase (ADR-0005 §4), structural at the
+## MVP: a call returns at most one command per AI unit (one MOVE, then "has moved"; a refused
+## unit is skipped) and per node (one upgrade a turn), a refused upgrade ends the moves, and
+## the last call returns null. Each call perceives once; the announcement adds one copy.
+static func max_calls_per_turn(ai_units: int, nodes: int) -> int:
+	return ai_units + nodes + 2
 
 
 ## The next ordinary command of the phase, or null. `skipped`: units whose command was

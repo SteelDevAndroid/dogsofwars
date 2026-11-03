@@ -45,6 +45,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 		if submission != null:
 			result.profile_effects.append(submission)
 	result.vision = VisionService.recompute(state, rules.vision)
+	WaveSource.stamp(result.events, tile, state)
 	if not result.vision.discovered_tiles.is_empty():
 		result.events.append(TilesRevealedEvent.new(result.vision.discovered_tiles))
 	return result
