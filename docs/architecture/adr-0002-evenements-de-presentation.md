@@ -32,7 +32,7 @@ Les commandes publient leurs événements en lots dans une file explicite, par u
 | Field | Value |
 |-------|-------|
 | **Depends On** | ADR-0003 `docs/architecture/adr-0003-etat-de-partie.md` (déclare `StateView`, interface de lecture seule ; couche Foundation) — doit être Accepted avant l'acceptation de celui-ci |
-| **Enables** | ADR-0001 (rendu des tuiles) ; ADR audio ; ADR de composition des couches de présentation |
+| **Enables** | ADR-0012 (rendu des tuiles, qui remplace ADR-0001) ; ADR audio ; ADR de composition des couches de présentation |
 | **Blocks** | Stories du séquenceur, de l'horloge, du HUD (distribution) et de la présentation de la recoloration. Les stories Logic de `EventQueue`, `EventSink` et de la fusion peuvent démarrer |
 | **Ordering Note** | À accepter **après** ADR-0003 (qui déclare `StateView`) et **avant** ADR-0001. `StateView` est ici une **interface abstraite en lecture seule** ; ADR-0003 la déclare et l'implémente |
 
@@ -85,7 +85,7 @@ Le GDD 23 fixe que les événements d'une commande sont publiés en un lot aprè
         │                                              EventQueue (RefCounted, Q_max 256)
         │                                                         │ pop, un lot à la fois
         └───────────────────── PresentationSequencer (machine à états, _process) ◄── PresentationClock (−20, pausable)
-                                   ├─► TileRendererHandler ──► TileRenderer (ADR-0001) ◄── TileTimeSource (écrit g_time)
+                                   ├─► TileRendererHandler ──► TileRenderer (ADR-0012), effets minutés sur ClockSource.current()
                                    ├─► HudPresenter
                                    └─► AudioPresenter (plus tard)
                                          handle / handle_merged / on_idle / rebuild_from_state → PresentationHold
@@ -212,7 +212,7 @@ Sans objet : aucun code de production n'existe.
 
 ## Related
 - GDD : `design/gdd/commandes-evenements.md` (23), `hud-systeme.md` (17), `recoloration-monde.md` (15), `modele-etat-partie.md` (1, règle 9 et copies).
-- ADR-0001 (rendu des tuiles) : dépend de celui-ci ; amendé (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
+- ADR-0001 (rendu des tuiles, remplacé par ADR-0012) : dépendait de celui-ci ; amendé (adaptateur `TileRendererHandler`, `StateView`, `event_id`, propriété de l'horloge).
 - ADR-0003 (`StateView`, modèle d'état, copies) : celui-ci en dépend ; ordre d'acceptation ADR-0003, puis celui-ci, puis ADR-0001.
 
 ## Implémentation du séquenceur de présentation (2026-11-02)
@@ -223,6 +223,6 @@ Verrous : le séquenceur pose `ATTACK_RESOLUTION` dès l'événement d'attaque e
 
 Le rendu et le séquenceur sont reliés ainsi : l'état du Core est déjà final quand ses événements jouent, donc la carte affiche l'ancien instantané pendant le lot, avec par-dessus des **effets transitoires** (`TileEffect` : glissement d'une unité, trait d'attaque, chiffre de dégâts 800 ms, affaissement d'une unité détruite, onde de recoloration) ; à la fin du lot l'écran de partie redessine le nouvel instantané. Les boutons et les appuis sont inactifs hors de l'état inactif (hud.md, règle 6) et sous un verrou du joueur.
 
-**Écarts à confirmer** : (1) `TileTimeSource` et le `g_time` du shader n'existent pas : le renderer lit l'horloge directement pour ses effets (ADR-0001 à reprendre avec les shaders) ; (2) les animations réduites (réglage « Réduire les animations », `GameSettings.REDUCED_MOTION`) raccourcissent les ondes et les glissements à 0 ; seules les étapes d'attaque gardent leurs durées. **Limite des 3 flashs par seconde** (revue du 2026-11-02, A2) : au lieu de `handle_merged`, le séquenceur espace les lots qui changent les couleurs (`TileOwnersChangedEvent`, `TilesRevealedEvent`, `SequenceOrder.is_mergeable`) d'un créneau de `reduced_slot_ms` de **temps réel** (la durée est multipliée par l'échelle de l'horloge, `ClockSource.scale()` : la vitesse Instantanée ne la raccourcit pas) ; un lot d'attaque, de lecture de ruine ou sans changement de couleur n'attend jamais. L'état final de chaque lot est déjà la « dernière valeur par tuile » : `handle_merged` n'a rien à fusionner et reste le comportement par défaut du gestionnaire ; (3) le `CameraHandler` existe (recentrage avant l'onde d'une lecture de ruine) ; (4) le panneau de fragment ne montre que le numéro du fragment (les textes du contenu ne sont pas écrits) ; (5) le chiffre de dégâts garde 800 ms même en animations réduites (valeur fixe de l'ADR) mais n'est pas fusionné ; (6) la vitesse « instantanée » est un facteur de 1 000 sur l'horloge et ne se règle que par le bouton du HUD, pas encore par un réglage mémorisé ; (7) l'ordre des gestionnaires est tuiles puis HUD, l'audio viendra après.
+**Écarts à confirmer** : (1) `TileTimeSource` et le `g_time` du shader n'existent pas : le renderer lit l'horloge directement pour ses effets (ADR-0012 remplace ADR-0001, qui prévoyait le shader) ; (2) les animations réduites (réglage « Réduire les animations », `GameSettings.REDUCED_MOTION`) raccourcissent les ondes et les glissements à 0 ; seules les étapes d'attaque gardent leurs durées. **Limite des 3 flashs par seconde** (revue du 2026-11-02, A2) : au lieu de `handle_merged`, le séquenceur espace les lots qui changent les couleurs (`TileOwnersChangedEvent`, `TilesRevealedEvent`, `SequenceOrder.is_mergeable`) d'un créneau de `reduced_slot_ms` de **temps réel** (la durée est multipliée par l'échelle de l'horloge, `ClockSource.scale()` : la vitesse Instantanée ne la raccourcit pas) ; un lot d'attaque, de lecture de ruine ou sans changement de couleur n'attend jamais. L'état final de chaque lot est déjà la « dernière valeur par tuile » : `handle_merged` n'a rien à fusionner et reste le comportement par défaut du gestionnaire ; (3) le `CameraHandler` existe (recentrage avant l'onde d'une lecture de ruine) ; (4) le panneau de fragment ne montre que le numéro du fragment (les textes du contenu ne sont pas écrits) ; (5) le chiffre de dégâts garde 800 ms même en animations réduites (valeur fixe de l'ADR) mais n'est pas fusionné ; (6) la vitesse « instantanée » est un facteur de 1 000 sur l'horloge et ne se règle que par le bouton du HUD, pas encore par un réglage mémorisé ; (7) l'ordre des gestionnaires est tuiles puis HUD, l'audio viendra après.
 
 **Preuve visuelle** : `production/qa/evidence/sequencer-slide-2026-11-02.png` (Xvfb, 390 × 844, horloge de présentation figée à mi-glissement) : l'Éclaireur est dessiné entre sa tuile de départ et son arrivée, la carte montre encore le brouillard d'avant le déplacement, « Fin du tour » est grisé tant que le séquenceur joue. Une première capture avait montré la carte redessinée à l'état final dès l'appui (le redessin de la sélection reprenait un instantané neuf) : `MatchScreen.refresh` ne reprend maintenant un instantané qu'à la fin d'un lot ou quand le séquenceur est inactif.

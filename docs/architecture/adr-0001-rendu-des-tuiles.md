@@ -1,7 +1,9 @@
 # ADR-0001: Rendu des tuiles — MultiMesh, deux vec4 par instance, module d'onde pur
 
 ## Status
-Accepted
+Superseded by ADR-0012 (2026-11-03)
+
+> Ce rendu (MultiMesh, shader, `WaveScheduler`) n'a jamais été construit : le rendu livré est un dessin immédiat sur un instantané, décrit par `docs/architecture/adr-0012-rendu-immediat-par-instantane.md` (revue du 2026-11-02, A1). Ce document est conservé : son contrat de données à huit canaux et son module d'onde pur sont le **dernier repli** d'ADR-0012 (Decision, 8) si la mesure sur appareil dépasse le budget de 1 ms.
 
 ## Date
 2026-10-30

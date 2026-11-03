@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -55,7 +55,7 @@ last_updated: 2026-10-30
 
 state_ownership:
   - state: tile_render_data
-    status: active
+    status: "superseded_by: ADR-0012"   # le MultiMesh à huit canaux n'a jamais été construit ; le rendu lit un TileSnapshot (ADR-0012)
     owner_system: tile-renderer
     adr: docs/architecture/adr-0001-rendu-des-tuiles.md
     interface: "8 canaux par instance du MultiMesh (custom data x,y,z,w : shown, previous, fog, start ; color r,g,b,a : s0, dur, fog_start, fog_prev), miroir CPU PackedFloat32Array de WaveScheduler"
@@ -69,7 +69,7 @@ state_ownership:
     status: active
     owner_system: presentation-clock
     adr: docs/architecture/adr-0002-evenements-de-presentation.md
-    interface: "PresentationClock.current() (secondes, pausable, avancée par _process(delta), jamais sauvegardée) ; TileTimeSource écrit g_time depuis l'horloge ; jamais global_shader_parameter_get ni create_timer"
+    interface: "PresentationClock.current() (secondes, pausable, avancée par _process(delta), jamais sauvegardée) ; lue par les effets du rendu et par le séquenceur via ClockSource (TileTimeSource et g_time n'existent pas, ADR-0012) ; jamais create_timer"
     write_access: presentation-clock-only
     referenced_by:
       - docs/architecture/adr-0001-rendu-des-tuiles.md
@@ -266,13 +266,13 @@ interfaces:
     producer: presentation-sequencer
     consumers:
       - tile-renderer
-    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
-    signal_signature: "TileRendererHandler.handle(event, ctx) -> PresentationHold appelle TileRenderer.apply_color_event(event: ColorTilesChanged, t0: float) -> int (durée de l'onde en ms, 0 si affichage direct) ; signal wave_finished(event_id: Vector2i) réservé aux tests"
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
+    signal_signature: "TileRendererHandler.handle(event, ctx) -> PresentationHold crée un TileEffect (WAVE pour TileOwnersChangedEvent, MOVE, LINE, FLOAT_TEXT, GHOST) et appelle TileRenderer.add_effect(effect) ; la carte reprend un TileSnapshot à la fin du lot (MatchScreen.refresh) ; rebuild_from_state efface les effets"
     referenced_by:
-      - docs/architecture/adr-0001-rendu-des-tuiles.md
+      - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
       - docs/architecture/adr-0002-evenements-de-presentation.md
     added: 2026-10-30
-    revised: 2026-10-30   # ancien motif : signal
+    revised: 2026-11-03   # ancien (ADR-0001) : TileRenderer.apply_color_event(event: ColorTilesChanged, t0: float) -> int et signal wave_finished ; avant : motif signal
 
   - contract: ai_turn_handoff
     status: active
@@ -325,7 +325,7 @@ interfaces:
     signal_signature: "handle(event, ctx) -> PresentationHold ; handle_merged(events, ctx) -> PresentationHold ; on_idle(view: StateView) ; rebuild_from_state(view: StateView)"
     referenced_by:
       - docs/architecture/adr-0002-evenements-de-presentation.md
-      - docs/architecture/adr-0001-rendu-des-tuiles.md
+      - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
     revised: ""
 
@@ -377,12 +377,12 @@ performance_budgets:
   - system: tile-rendering
     status: active
     budget_ms: 1.0
-    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
-    notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par image, écriture de 256 tuiles au plus 0,5 ms, 1 appel de dessin, 0 allocation par image ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
+    notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par redessin, 0 allocation par image au repos ; redessin complet à chaque image d'effet ou de défilement ; NON MESURÉ ; repli si dépassé : couche statique, puis MultiMesh (ADR-0012 §8) ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
     referenced_by:
-      - docs/architecture/adr-0001-rendu-des-tuiles.md
+      - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-03   # ancien (ADR-0001) : 1 ms par image, écriture de 256 tuiles au plus 0,5 ms, 1 appel de dessin
 
   - system: save-main-thread
     status: active
@@ -498,7 +498,7 @@ api_decisions:
     revised: ""
 
   - purpose: tile_wave_animation
-    status: active
+    status: "superseded_by: ADR-0012"   # jamais construit ; revient avec le repli MultiMesh
     api: "MultiMeshInstance2D + shader canvas_item + uniforme global g_time + WaveScheduler (GDScript pur)"
     not: "TIME, Time.get_ticks_msec() pour les instants de début, Tween ou nœud par tuile"
     adr: docs/architecture/adr-0001-rendu-des-tuiles.md
@@ -506,6 +506,17 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0001-rendu-des-tuiles.md
     added: 2026-10-30
+    revised: ""
+
+  - purpose: tile_rendering
+    status: active
+    api: "TileRenderer (Node2D) dessine en mode immédiat dans _draw() un TileSnapshot pris sur FactionView(JOUEUR) et VisionService.fog_level ; animations = TileEffect (donnée pure) minutés par ClockSource.current() ; teintes dans TilePalette (drapeau colorblind) ; durées dans presentation.json"
+    not: "MultiMeshInstance2D, shader ou uniforme global pour les tuiles (repli seulement après mesure sur appareil), TIME, Time.get_ticks_*, Tween ou create_timer pour animer la carte, nœud par tuile, lecture de GameState hors TileSnapshot.take"
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
+    reason: "Rendu livré et testé ; l'entrée en lecture seule tient la frontière anti-fuite par son type ; le MultiMesh d'ADR-0001 n'a jamais été construit et son gain n'est pas démontré"
+    referenced_by:
+      - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
+    added: 2026-11-03
     revised: ""
 
 
@@ -591,13 +602,14 @@ api_decisions:
 forbidden_patterns:
   - pattern: per_tile_node_or_material
     status: active
-    description: "Un nœud, un matériau ou un uniforme d'instance par tuile de carte est interdit : les tuiles sont rendues par un seul MultiMeshInstance2D."
-    why: "Coût d'appels de dessin et d'animation non mesuré, état d'animation réparti qui complique la règle 15 et la reconstruction."
-    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    description: "Un nœud, un matériau ou un uniforme d'instance par tuile de carte est interdit : les tuiles sont dessinées par un seul nœud (TileRenderer._draw)."
+    why: "Coût d'appels de dessin et d'animation non mesuré, état d'animation réparti qui complique la reconstruction."
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
+    revised: 2026-11-03   # ancien (ADR-0001) : un seul MultiMeshInstance2D
 
   - pattern: shader_reads_game_state
-    status: active
+    status: "superseded_by: ADR-0012"   # aucun shader de tuiles ; revient avec le repli MultiMesh
     description: "Le shader des tuiles ne lit que les huit canaux d'instance, pal et g_time."
     why: "Garde la présentation reconstruisible depuis l'état et le shader sans règle de jeu."
     adr: docs/architecture/adr-0001-rendu-des-tuiles.md
@@ -607,11 +619,19 @@ forbidden_patterns:
     status: active
     description: "Le moteur de rendu des tuiles n'écrit jamais d'état de jeu."
     why: "Respecte la règle 2 de design/gdd/hud-systeme.md et la séparation logique/présentation."
-    adr: docs/architecture/adr-0001-rendu-des-tuiles.md
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
+    revised: 2026-11-03   # ancien : ADR-0001
+
+  - pattern: renderer_reads_real_state
+    status: active
+    description: "TileRenderer ne lit GameState que dans TileSnapshot.take (FactionView du joueur, VisionService, IntentionMarkers.visible_to_player) ; il dessine uniquement l'instantané."
+    why: "La frontière anti-fuite (ADR-0007) est tenue par le type de l'entrée : le rendu ne peut pas afficher une information cachée."
+    adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
+    added: 2026-11-03
 
   - pattern: global_shader_parameter_get_in_game
-    status: active
+    status: "superseded_by: ADR-0012"   # aucun uniforme global ; revient avec le repli MultiMesh
     description: "global_shader_parameter_get n'est jamais appelé en jeu ni dans les tests ; lire la valeur côté TileTimeSource."
     why: "Erreur moteur observée en 4.7.2 (fonction réservée à l'éditeur, coûteuse)."
     adr: docs/architecture/adr-0001-rendu-des-tuiles.md
