@@ -444,3 +444,33 @@ func test_an_armed_end_of_turn_asks_to_confirm() -> void:
 
 	assert_str(hud.end_turn_button.text).is_equal("Confirmer la fin du tour")
 	hud.free()
+
+
+## hud.md 10.4: everything that reacts to a tap is at least 48 x 48, in both orientations.
+func test_every_touch_target_is_at_least_48_in_portrait_and_landscape() -> void:
+	var hud := _hud()
+	var model := _unit_model()
+	model.threat_chip = "Menace"
+	model.threat_tile = 3
+	model.ruin_chip = "Ruine repérée"
+	model.ruin_tile = 4
+	model.undo_visible = true
+	model.undo_enabled = true
+	model.can_attack = true
+	model.enemy_turn = true  # the speed button shows
+	hud.show_model(model)
+	hud.show_toast("Résumé", 0.0, 4.0, 3)
+	for layout in [HudLayout.compute(Vector2(390, 844), Rect2(0, 0, 390, 844), 130.0, 300.0),
+			HudLayout.compute(Vector2(844, 390), Rect2(0, 0, 844, 390), 130.0, 300.0)]:
+		hud.apply_layout(layout)
+		await await_idle_frame()
+		var targets: Array[Control] = [hud.score_box, hud.stats_row, hud.toast_panel]
+		for node in hud.find_children("*", "BaseButton", true, false):
+			if (node as Control).is_visible_in_tree():
+				targets.append(node)
+		assert_int(targets.size()).is_greater(8)
+		for target in targets:
+			var label := "%s %s (%s)" % [target.get_class(), target.name, "paysage" if layout.landscape else "portrait"]
+			assert_float(target.size.y).override_failure_message(label + " %s" % target.size).is_greater_equal(48.0)
+			assert_float(target.size.x).override_failure_message(label + " %s" % target.size).is_greater_equal(48.0)
+	hud.free()

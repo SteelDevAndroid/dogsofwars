@@ -28,6 +28,7 @@ var screen: Control
 var _ui: CanvasLayer
 ## The sound effects of the whole app (buttons, match); its volumes are settings.
 var sounds: SoundBank
+var haptics := Haptics.new()
 var _pause: PauseMenu
 var _settings_screen: SettingsScreen
 var _chronicle_screen: ChronicleScreen
@@ -216,6 +217,7 @@ func _new_match_screen() -> MatchScreen:
 	node.pause_requested.connect(toggle_pause)
 	node.speed_changed.connect(func(speed: int) -> void: profile.set_setting(GameSettings.ENEMY_SPEED, speed))
 	node.sounds = sounds
+	node.haptics = haptics
 	node.apply_settings(profile.settings())
 	return node
 
@@ -236,6 +238,7 @@ func _apply_settings() -> void:
 
 func _apply_volumes() -> void:
 	sounds.set_volumes(profile.setting(GameSettings.VOLUME_EFFECTS), profile.setting(GameSettings.VOLUME_UI))
+	haptics.enabled = profile.setting(GameSettings.VIBRATION) == 1
 
 
 func _apply_text_scale() -> void:

@@ -84,6 +84,19 @@ func test_the_events_have_their_cues_and_a_direct_display_is_silent() -> void:
 	bank.free()
 
 
+func test_a_capture_vibrates_through_the_handler_even_without_sound_and_a_direct_display_does_not() -> void:
+	var pulses: Array[int] = []
+	var haptics := Haptics.new(func(duration_ms: int) -> void: pulses.append(duration_ms))
+	var handler := SoundHandler.new(null, haptics)
+	var clock := FakeClock.new()
+
+	handler.handle(NodeCapturedEvent.new(1, 0, 1, 8), SequenceContext.new(0.0, clock, true))
+	handler.handle(NodeCapturedEvent.new(1, 0, 1, 8), SequenceContext.new(0.0, clock))
+	handler.handle(UnitMovedEvent.new(0, 5, 14, 17, 17), SequenceContext.new(0.0, clock))  # a move does not vibrate
+
+	assert_array(pulses).is_equal([Haptics.PULSES[&"capture"]])
+
+
 ## The instant enemy speed plays a whole phase in a few frames: the same cue twice in one frame
 ## starts one sound and takes one player, another cue still sounds (review 2026-11-03).
 func test_a_cue_starts_once_per_frame() -> void:

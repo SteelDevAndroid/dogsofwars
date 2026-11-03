@@ -1,6 +1,7 @@
 # The fragment panel (hud.md rule 15, GDD 13 rule 15): it opens once the colour wave is over,
-# blocks the player's commands, cannot be folded, and is closed by "Continuer", ignored until
-# `close_delay` after it opened. It shows the title, the in-world source and the text of the
+# blocks the player's commands, and is closed by "Continuer", ignored until `close_delay` after
+# it opened. "Voir la carte" folds it to a tab at the top of the screen so the map can be looked
+# at (scrolled, zoomed); the commands stay blocked until "Continuer", and the tab unfolds it. It shows the title, the in-world source and the text of the
 # fragment (the content of the pool); without a text it falls back to the fragment's number.
 # The text scrolls inside the panel rather than being cut (hud.md 10.2).
 class_name FragmentPanel
@@ -13,7 +14,13 @@ var source_label := Label.new()
 var body_label := Label.new()
 var scroll := ScrollContainer.new()
 var continue_button := Button.new()
+var fold_button := Button.new()
+## The folded panel: one button that unfolds it.
+var tab_button := Button.new()
 var is_open := false
+var folded := false
+
+var _box := VBoxContainer.new()
 
 var _opened_at := 0.0
 var _close_delay := 0.5
@@ -34,7 +41,7 @@ func _init() -> void:
 	style.shadow_color = Color(0, 0, 0, 0.5)
 	style.shadow_size = 12
 	add_theme_stylebox_override("panel", style)
-	var box := VBoxContainer.new()
+	var box := _box
 	add_child(box)
 	var ink := Color("1E2329")
 	title_label.add_theme_color_override("font_color", ink)
@@ -55,7 +62,22 @@ func _init() -> void:
 	continue_button.custom_minimum_size = Vector2(0, 52)
 	MenuLayout.make_primary(continue_button)
 	continue_button.pressed.connect(close)
-	box.add_child(continue_button)
+	continue_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fold_button.text = "Voir la carte"
+	fold_button.custom_minimum_size = Vector2(0, 52)
+	fold_button.pressed.connect(fold)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 8)
+	buttons.add_child(fold_button)
+	buttons.add_child(continue_button)
+	box.add_child(buttons)
+	tab_button.text = "Fragment : reprendre la lecture"
+	tab_button.custom_minimum_size = Vector2(0, 48)
+	tab_button.add_theme_color_override("font_color", ink)
+	tab_button.flat = true
+	tab_button.visible = false
+	tab_button.pressed.connect(unfold)
+	add_child(tab_button)
 
 
 func open(fragment_id: int, now: float, close_delay: float, title: String = "", text: String = "", source: String = "") -> void:
@@ -69,6 +91,29 @@ func open(fragment_id: int, now: float, close_delay: float, title: String = "", 
 	scroll.scroll_vertical = 0
 	continue_button.disabled = true
 	visible = true
+	_set_folded(false)
+
+
+## Folds the panel to its tab at the top of the screen: the map shows, the commands stay blocked.
+func fold() -> void:
+	if is_open:
+		_set_folded(true)
+
+
+func unfold() -> void:
+	if is_open:
+		_set_folded(false)
+
+
+func _set_folded(on: bool) -> void:
+	folded = on
+	_box.visible = not on
+	tab_button.visible = on
+	custom_minimum_size = Vector2(0, 0) if on else Vector2(340, 0)
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP if on else Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_END if on else Control.GROW_DIRECTION_BOTH
+	reset_size()
 
 
 ## The button is dead until the close delay has passed.
@@ -81,5 +126,6 @@ func close() -> void:
 	if not is_open or continue_button.disabled:
 		return
 	is_open = false
+	_set_folded(false)
 	visible = false
 	closed.emit()

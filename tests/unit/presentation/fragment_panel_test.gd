@@ -54,3 +54,38 @@ func test_the_panel_is_a_sheet_of_paper_with_dark_ink() -> void:
 	assert_int(panel.title_label.get_theme_font_size("font_size")).is_equal(22)
 	assert_object(panel.continue_button.get_theme_stylebox("normal")).is_instanceof(StyleBoxFlat)
 	panel.free()
+
+
+func test_the_panel_folds_to_a_tab_and_unfolds_and_stays_open_meanwhile() -> void:
+	var panel := FragmentPanel.new()
+	add_child(panel)
+	var closes := [0]
+	panel.closed.connect(func() -> void: closes[0] += 1)
+	panel.open(2, 0.0, 0.5, "Titre", "Texte")
+
+	panel.fold_button.pressed.emit()
+
+	assert_bool(panel.folded).is_true()
+	assert_bool(panel.is_open).is_true()  # the commands stay blocked
+	assert_bool(panel.tab_button.visible).is_true()
+	assert_bool(panel.continue_button.is_visible_in_tree()).is_false()
+	assert_int(closes[0]).is_equal(0)
+	panel.tab_button.pressed.emit()
+	assert_bool(panel.folded).is_false()
+	assert_bool(panel.continue_button.is_visible_in_tree()).is_true()
+	panel.fold()
+	panel.tick(1.0)
+	panel.close()
+	assert_bool(panel.folded).is_false()  # the next one opens unfolded
+	assert_int(closes[0]).is_equal(1)
+	panel.free()
+
+
+func test_a_closed_panel_does_not_fold() -> void:
+	var panel := FragmentPanel.new()
+	add_child(panel)
+
+	panel.fold()
+
+	assert_bool(panel.folded).is_false()
+	panel.free()

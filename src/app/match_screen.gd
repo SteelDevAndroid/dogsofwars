@@ -63,6 +63,8 @@ var _runner_port: NodeAiRunnerPort
 var _pulsed_unit := -1
 ## The sound effects, set by the app (null in a bare screen: silent).
 var sounds: SoundBank
+## The vibrations, set by the app (null in a bare screen: none).
+var haptics: Haptics
 var _pacing: PacingGate
 
 const SCORE_HELP_SECONDS := 4.0
@@ -171,8 +173,8 @@ func bind(p_session: GameSession) -> void:
 	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
 			TileRendererHandler.new(renderer, session.catalog.presentation), presenter]
-	if sounds != null:
-		sequencer.handlers.append(SoundHandler.new(sounds))
+	if sounds != null or haptics != null:
+		sequencer.handlers.append(SoundHandler.new(sounds, haptics))
 	session.turns.start()
 	refresh()  # the HUD has its content, so its real heights are known
 	_center_on_first_unit()
@@ -330,6 +332,8 @@ func _told(result: ValidationResult) -> ValidationResult:
 	if not result.permitted:
 		hud.show_toast(RefusalText.of(result), clock.current())
 		_sound(&"refusal")
+		if haptics != null:
+			haptics.pulse(&"refusal")
 	return result
 
 

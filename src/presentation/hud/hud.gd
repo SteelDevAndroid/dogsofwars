@@ -111,6 +111,8 @@ func _init() -> void:
 	score_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	score_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	score_box.mouse_filter = Control.MOUSE_FILTER_STOP  # a tap explains the score
+	score_box.custom_minimum_size = Vector2(HudLayout.BUTTON, HudLayout.BUTTON)  # a touch target (hud.md 10.4)
+	score_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	score_box.tooltip_text = HudModel.SCORE_HELP
 	score_box.accessibility_name = "Score"
 	score_box.gui_input.connect(func(event: InputEvent) -> void:
@@ -150,6 +152,7 @@ func _init() -> void:
 	hp_label.add_theme_font_size_override("font_size", 14)
 	stats_row.add_theme_constant_override("separation", 6)
 	stats_row.mouse_filter = Control.MOUSE_FILTER_STOP  # a tap tells what the stats mean
+	stats_row.custom_minimum_size = Vector2(0, HudLayout.BUTTON)  # the pills are drawn smaller, centred in it
 	stats_row.tooltip_text = HudModel.STATS_HELP
 	stats_row.gui_input.connect(func(event: InputEvent) -> void:
 		if _is_release(event):
@@ -189,7 +192,7 @@ func _init() -> void:
 	bottom.add_child(end_turn_button)
 	speed_button.text = "Vitesse : normale"
 	UiIcons.put(speed_button, "vitesse")
-	speed_button.custom_minimum_size = Vector2(0, 40)
+	speed_button.custom_minimum_size = Vector2(0, HudLayout.BUTTON)
 	speed_button.pressed.connect(func() -> void: speed_pressed.emit())
 	bottom.add_child(speed_button)
 	for entry in [[zoom_in_button, "zoom_plus", "Zoom avant", zoom_in_pressed], [zoom_out_button, "zoom_moins", "Zoom arrière", zoom_out_pressed],
@@ -211,6 +214,7 @@ func _init() -> void:
 	toast_label.custom_minimum_size = Vector2(200, 0)
 	toast_panel = backdrop(toast_label)
 	toast_panel.visible = false
+	toast_panel.custom_minimum_size = Vector2(0, HudLayout.BUTTON)  # tapped when it points at a tile
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE  # STOP while it points at a tile
 	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.gui_input.connect(func(event: InputEvent) -> void:
@@ -315,6 +319,7 @@ static func _pill(text: String, icon_name: String = "") -> PanelContainer:
 	row.add_child(label)
 	var pill := PanelContainer.new()
 	pill.mouse_filter = Control.MOUSE_FILTER_PASS
+	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("2B323A")
 	style.set_corner_radius_all(4)
