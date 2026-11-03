@@ -36,6 +36,9 @@ var hint_tile := -1
 ## No movement of the arrow (reduced motion).
 var still := false
 
+var _wave_by_tile := {}  # tile -> [WAVE effect, index of the tile in it]: the latest write wins
+var _was_animating := false
+
 const ART := "res://assets/art/terrain/"
 const VARIANTS := 3
 const UNIT_KEYS := ["eclaireur", "assaut", "rempart", "ouvrier", "sentinelle", "chasseur", "bastion"]
@@ -78,6 +81,7 @@ func _init() -> void:
 
 func show_state(state: GameState, catalog: DataCatalog) -> void:
 	snapshot = TileSnapshot.take(state, catalog)
+	_drop_waves()  # the new snapshot shows what the waves led to
 	if _type_keys.size() != catalog.units.count():
 		_type_keys = PackedStringArray()
 		for type in catalog.units.count():
@@ -87,6 +91,9 @@ func show_state(state: GameState, catalog: DataCatalog) -> void:
 
 func add_effect(effect: TileEffect) -> void:
 	effects.append(effect)
+	if effect.kind == TileEffect.Kind.WAVE:
+		for index in effect.tiles.size():
+			_wave_by_tile[effect.tiles[index]] = [effect, index]
 	queue_redraw()
 
 
@@ -105,6 +112,7 @@ func set_targets(tiles: PackedInt32Array, chosen: int) -> void:
 
 func clear_effects() -> void:
 	effects.clear()
+	_wave_by_tile.clear()
 	queue_redraw()
 
 
@@ -114,8 +122,36 @@ func _process(_delta: float) -> void:
 	if effects.is_empty() or clock == null:
 		return
 	var now := clock.current()
-	effects = effects.filter(func(effect: TileEffect) -> bool: return not effect.is_over(now))
-	queue_redraw()
+	var kept: Array[TileEffect] = []
+	var animating := false
+	for effect in effects:
+		if not effect.is_over(now):
+			animating = true
+			kept.append(effect)
+		elif effect.kind == TileEffect.Kind.WAVE:
+			kept.append(effect)  # a finished wave holds its tint until the next snapshot replaces it
+	var dropped := kept.size() != effects.size()
+	effects = kept
+	if animating or dropped or _was_animating:
+		queue_redraw()  # the last frame of a fade draws its end
+	_was_animating = animating
+
+
+## (tint, saturation 0..1000) the tile shows at presentation time `now`: its colour wave's fade
+## while a wave covers it, its owner in the snapshot otherwise (GDD 15 F5, rule 15).
+func shown_state(tile: int, now: float) -> Vector2i:
+	if _wave_by_tile.has(tile):
+		var written: Array = _wave_by_tile[tile]
+		return (written[0] as TileEffect).wave_state(written[1], now)
+	if snapshot == null:
+		return Vector2i(Faction.NONE, 0)
+	var owner: int = snapshot.owners[tile]
+	return Vector2i(owner, 0 if owner == Faction.NONE else 1000)
+
+
+func _drop_waves() -> void:
+	_wave_by_tile.clear()
+	effects = effects.filter(func(effect: TileEffect) -> bool: return effect.kind != TileEffect.Kind.WAVE)
 
 
 func set_selection(tile: int, reachable: PackedInt32Array) -> void:
@@ -177,16 +213,18 @@ func _draw_tile(tile: int) -> void:
 	var dim := TilePalette.MEMORY_DIM if level == VisionService.FOG_EXPLORED else 1.0
 	_draw_clipped(textures[variant_of(tile)], full, Color(dim, dim, dim))
 	_draw_fog_edges(tile)
-	var owner: int = snapshot.owners[tile]
-	if owner != Faction.NONE:
-		draw_rect(rect, Color(TilePalette.owner(owner, colorblind), 0.30))
+	var shown := shown_state(tile, clock.current() if clock != null else INF)
+	if shown.y > 0:
+		var tint := TilePalette.owner(shown.x, colorblind)
+		var strength := shown.y / 1000.0  # never two tints at once: one tint, more or less saturated
+		draw_rect(rect, Color(tint, 0.30 * strength))
 		# A pattern besides the colour (accessibility): a chevron for the pack, a bar for the enemy.
 		var c := rect.get_center()
 		var s := layout.tile_size * 0.12
-		if owner == Faction.PLAYER:
-			draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(0, -s), c + Vector2(s, s)]), TilePalette.owner(owner, colorblind), 1.0)
+		if shown.x == Faction.PLAYER:
+			draw_polyline(PackedVector2Array([c + Vector2(-s, s), c + Vector2(0, -s), c + Vector2(s, s)]), Color(tint, strength), 1.0)
 		else:
-			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), TilePalette.owner(owner, colorblind), 1.0)
+			draw_line(c + Vector2(-s, 0), c + Vector2(s, 0), Color(tint, strength), 1.0)
 
 
 ## Which of the three variants of a terrain a tile shows: fixed for the tile whatever the zoom
@@ -381,10 +419,7 @@ func _draw_effect(effect: TileEffect) -> void:
 			var here := layout.center_of(effect.tile).lerp(layout.center_of(effect.tile2), p)
 			draw_line(layout.center_of(effect.tile), here, Color(TilePalette.SELECTION, 0.55 * (1.0 - p * p)), 3.0)
 		TileEffect.Kind.WAVE:
-			for tile in effect.tiles:
-				var shown := layout.rect_of(tile).intersection(clip_area)
-				if shown.size.x > 0.0 and shown.size.y > 0.0:
-					draw_rect(shown, Color(effect.color, 0.30 * p))
+			pass  # drawn with the tiles themselves (_draw_tile): a wave changes the tint of a tile
 
 
 func _draw_threat(threat: Array) -> void:

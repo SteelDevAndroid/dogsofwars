@@ -225,3 +225,95 @@ func test_a_wave_without_a_source_or_in_reduced_motion_changes_the_colours_at_on
 	assert_array(renderer.effects).is_empty()
 	renderer.free()
 
+
+## GDD 15 rules 14 and 15: a tile leaves the tint it shows, fades through grey, and a wave
+## written while another fades starts from the shown saturation, with no jump.
+func _shown(renderer: TileRenderer, tile: int, now: float) -> Array:
+	var state := renderer.shown_state(tile, now)
+	return [state.x, state.y]
+
+
+func test_a_wave_starts_from_the_tint_the_tile_shows_and_goes_to_the_new_owner() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	renderer.snapshot.owners[14] = Faction.NONE
+	renderer.snapshot.owners[15] = Faction.AI
+
+	handler.handle(_wave([14, 15], Faction.PLAYER, 14), _context(clock))
+
+	var rings := renderer.effects
+	assert_array([rings[0].from_owner[0], rings[0].from_s[0], rings[0].to_owner]).is_equal([Faction.NONE, 0, Faction.PLAYER])
+	assert_array([rings[1].from_owner[0], rings[1].from_s[0], rings[1].to_owner]).is_equal([Faction.AI, 1000, Faction.PLAYER])
+	renderer.free()
+
+
+func test_a_tile_fades_through_grey_between_two_tints() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	renderer.snapshot.owners[14] = Faction.PLAYER
+
+	handler.handle(_wave([14], Faction.AI, 14), _context(clock))
+
+	assert_array(_shown(renderer, 14, 0.0)).is_equal([Faction.PLAYER, 1000])
+	assert_array(_shown(renderer, 14, 0.1)).is_equal([Faction.PLAYER, 500])
+	assert_array(_shown(renderer, 14, 0.2)).is_equal([Faction.PLAYER, 0])
+	assert_array(_shown(renderer, 14, 0.3)).is_equal([Faction.AI, 500])
+	assert_array(_shown(renderer, 14, 0.4)).is_equal([Faction.AI, 1000])
+	renderer.free()
+
+
+func test_a_wave_written_during_a_fade_starts_from_the_shown_saturation() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	renderer.snapshot.owners[14] = Faction.NONE
+	handler.handle(_wave([14], Faction.PLAYER, 14), _context(clock))
+	clock.advance(0.2)  # the first wave shows the friend tint at 500
+	var before := _shown(renderer, 14, clock.current())
+
+	handler.handle(_wave([14], Faction.AI, 14), _context(clock))
+
+	assert_array(before).is_equal([Faction.PLAYER, 500])
+	assert_array(_shown(renderer, 14, clock.current())).is_equal(before)  # no jump at the write
+	assert_array(_shown(renderer, 14, 0.3)).is_equal([Faction.PLAYER, 0])  # 100 ms down
+	assert_array(_shown(renderer, 14, 0.4)).is_equal([Faction.AI, 500])  # 100 ms down, then 100 of the 200 up
+	assert_array(_shown(renderer, 14, 0.5)).is_equal([Faction.AI, 1000])
+	renderer.free()
+
+
+func test_a_ring_that_has_not_started_holds_the_tint_the_tile_showed() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	renderer.snapshot.owners[17] = Faction.AI
+
+	handler.handle(_wave([14, 17], Faction.PLAYER, 14), _context(clock))  # tile 17 is ring 3, 600 ms in
+
+	assert_array(_shown(renderer, 17, 0.3)).is_equal([Faction.AI, 1000])
+	assert_array(_shown(renderer, 17, 0.7)).is_equal([Faction.AI, 500])  # 100 ms into its own fade
+	renderer.free()
+
+
+func test_a_finished_wave_holds_its_tint_until_the_next_snapshot() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+	renderer.snapshot.owners[14] = Faction.NONE
+	handler.handle(_wave([14], Faction.PLAYER, 14), _context(clock))
+
+	clock.advance(2.0)
+	renderer._process(0.0)
+
+	assert_int(renderer.effects.size()).is_equal(1)  # the wave stays: no flash back to the old tint
+	assert_array(_shown(renderer, 14, clock.current())).is_equal([Faction.PLAYER, 1000])
+	renderer.show_state(set_up[3], CatalogFactory.standard())
+	assert_array(renderer.effects).is_empty()
+	renderer.free()
+
