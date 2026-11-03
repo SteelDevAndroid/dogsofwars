@@ -360,7 +360,8 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	hint_label.text = hint
 	hint_label.visible = hint != ""
 	notice_label.text = notice
-	notice_label.visible = notice != ""  # an empty line is height the map loses	turn_label.text = model.turn_text
+	notice_label.visible = notice != ""  # an empty line is height the map loses
+	turn_label.text = model.turn_text
 	energy_label.text = model.energy_text
 	fragments_label.text = model.fragments_text
 	score_label.text = model.score_text
