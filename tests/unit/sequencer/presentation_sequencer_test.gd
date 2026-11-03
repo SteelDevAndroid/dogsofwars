@@ -299,3 +299,35 @@ func test_reduced_motion_never_delays_an_attack_or_a_batch_without_colour_change
 	assert_array(recorder.log).contains(["a:AttackResolvedEvent"])
 	sequencer.free()
 
+
+## Review 2026-11-03: a tap during an animation ends the batch at once, every step still played.
+func test_finishing_a_batch_plays_its_steps_at_once_and_lowers_the_attack_lock() -> void:
+	var recorder := _recorder("a", {"AttackResolvedEvent": 250, "UnitHitEvent": 350})
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	_queue.push(EventBatch.new(1, [AttackResolvedEvent.new(0, 1, 2, 3, 4), UnitHitEvent.new(1, 2, 3, 4, 4)]))
+	sequencer.advance()
+	assert_bool(_gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_true()
+
+	sequencer.finish_batch()
+
+	assert_array(recorder.log.slice(0, 3)).is_equal(["a:AttackResolvedEvent", "a:UnitHitEvent", "a:batch_end"])
+	assert_bool(sequencer.is_idle()).is_true()
+	assert_bool(_gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER)).is_false()
+	sequencer.free()
+
+
+func test_finishing_waits_for_a_reduced_motion_slot_and_does_nothing_when_idle() -> void:
+	var recorder := _recorder("a")
+	var sequencer := _sequencer([recorder])
+	recorder.gate = _gate
+	sequencer.reduced_motion = true
+	sequencer.finish_batch()  # idle: nothing to finish
+	_queue.push(_recolor(1))
+	_queue.push(_recolor(2))
+	sequencer.advance()  # the first batch ends, the second waits for its slot
+
+	sequencer.finish_batch()
+
+	assert_int(_batch_ends(recorder)).is_equal(1)  # the slot guards against flashes, whoever asks
+	sequencer.free()

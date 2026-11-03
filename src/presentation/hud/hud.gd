@@ -18,6 +18,12 @@ signal research_closed
 signal zoom_in_pressed
 signal zoom_out_pressed
 signal recenter_pressed
+signal undo_pressed
+## An alert chip was tapped: the camera goes to `tile` (a tile the player knows).
+signal chip_pressed(tile: int)
+## The toast was tapped while it points at a tile (the enemy-turn summary).
+signal toast_pressed
+signal score_pressed
 
 var turn_label := Label.new()
 var energy_label := Label.new()
@@ -53,12 +59,19 @@ var research_panel := ResearchPanel.new()
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
 var recenter_button := Button.new()
-var camera_box := VBoxContainer.new()
+## "Annuler le déplacement": shown after a move of the player, greyed with its reason when the
+## move revealed something (GDD 23 rule 15).
+var undo_button := Button.new()
+## Vertical over the map in landscape, a row in the context panel in portrait (it would hide
+## the last column of the map there, which the camera cannot scroll from under it).
+var camera_box := BoxContainer.new()
+var score_box := VBoxContainer.new()
 var top_panel: PanelContainer
 var bottom_panel: PanelContainer
 ## The rows that stack when the rail is narrow (landscape).
 var bar := BoxContainer.new()
 var _toast_until := 0.0
+var _toast_tile := -1
 var second := BoxContainer.new()
 
 
@@ -94,8 +107,13 @@ func _init() -> void:
 	score_label.clip_text = true
 	score_label.add_theme_font_size_override("font_size", 15)
 	score_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var score_box := VBoxContainer.new()
 	score_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	score_box.mouse_filter = Control.MOUSE_FILTER_STOP  # a tap explains the score
+	score_box.tooltip_text = HudModel.SCORE_HELP
+	score_box.accessibility_name = "Score"
+	score_box.gui_input.connect(func(event: InputEvent) -> void:
+		if _is_release(event):
+			score_pressed.emit())
 	score_box.add_theme_constant_override("separation", 2)
 	score_box.add_child(score_label)
 	score_bar.show_percentage = false
@@ -103,12 +121,9 @@ func _init() -> void:
 	score_bar.min_value = 0
 	score_bar.max_value = 100
 	score_bar.value = 50
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color("1FA38F")
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color("C49BEA")
-	score_bar.add_theme_stylebox_override("fill", fill)
-	score_bar.add_theme_stylebox_override("background", back)
+	score_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	score_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_colorblind(false)
 	score_box.add_child(score_bar)
 	second.add_child(score_box)
 	second.add_child(research_button)
@@ -151,6 +166,12 @@ func _init() -> void:
 	bottom.add_child(actions)
 	bottom.add_child(extra_row)
 	bottom.add_child(reason_label)
+	undo_button.text = "Annuler le déplacement"
+	UiIcons.put(undo_button, "retour")
+	undo_button.custom_minimum_size = Vector2(0, 48)
+	undo_button.visible = false
+	undo_button.pressed.connect(func() -> void: undo_pressed.emit())
+	bottom.add_child(undo_button)
 	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint_label.modulate = Color(1, 1, 1, 0.8)
 	bottom.add_child(hint_label)
@@ -183,7 +204,11 @@ func _init() -> void:
 	toast_label.custom_minimum_size = Vector2(200, 0)
 	toast_panel = backdrop(toast_label)
 	toast_panel.visible = false
-	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE  # STOP while it points at a tile
+	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_panel.gui_input.connect(func(event: InputEvent) -> void:
+		if _toast_tile >= 0 and _is_release(event):
+			toast_pressed.emit())
 	add_child(toast_panel)
 	add_child(fragment_panel)
 	add_child(research_panel)
@@ -210,6 +235,10 @@ func apply_layout(layout: HudLayout) -> void:
 	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else maxf(layout.panel_zone.size.x - 24.0, 0.0)
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
+	camera_box.vertical = not layout.camera_in_panel
+	# in portrait the buttons sit at the top right of the panel, beside the title: the first row is as tall as they are
+	unit_title.custom_minimum_size = Vector2(0, HudLayout.BUTTON if layout.camera_in_panel else 0.0)
+	unit_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_place(camera_box, layout.camera_buttons)
 	toast_panel.position = layout.map_area.position + Vector2(8, 8)
 	toast_panel.size = Vector2(layout.map_area.size.x - 16.0, 0.0)
@@ -224,15 +253,39 @@ static func _place(control: Control, rect: Rect2) -> void:
 ## A panel with an opaque dark background around `content`: the HUD bars and panels never
 ## let the map show through their text.
 ## A refusal, told for `duration` seconds from `now` of the presentation clock.
-func show_toast(text: String, now: float, duration: float = 2.0) -> void:
+## With a `tile` (>= 0), a tap on it emits `toast_pressed` (the camera goes there).
+func show_toast(text: String, now: float, duration: float = 2.0, tile: int = -1) -> void:
 	toast_label.text = text
 	toast_panel.visible = text != ""
 	_toast_until = now + duration
+	_toast_tile = tile
+	toast_panel.mouse_filter = Control.MOUSE_FILTER_STOP if tile >= 0 else Control.MOUSE_FILTER_IGNORE
+
+
+## The tile the toast points at, -1 for none.
+func toast_tile() -> int:
+	return _toast_tile if toast_panel.visible else -1
+
+
+## The score gauge in the tints of the sides, colour-blind palette included.
+func set_colorblind(on: bool) -> void:
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = TilePalette.owner(Faction.PLAYER, on)
+	var back := StyleBoxFlat.new()
+	back.bg_color = TilePalette.owner(Faction.AI, on)
+	score_bar.add_theme_stylebox_override("fill", fill)
+	score_bar.add_theme_stylebox_override("background", back)
+
+
+static func _is_release(event: InputEvent) -> bool:
+	return (event is InputEventMouseButton and not event.pressed and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT) \
+			or (event is InputEventScreenTouch and not event.pressed)
 
 
 func tick_toast(now: float) -> void:
 	if toast_panel.visible and now >= _toast_until:
 		toast_panel.visible = false
+		toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 static func _pill(text: String) -> PanelContainer:
@@ -253,24 +306,22 @@ static func _pill(text: String) -> PanelContainer:
 
 
 ## An icon (white SVG, tinted by the label's colour) beside a value; the whole box is named for the accessibility tree.
-## An alert chip: its icon, then its words (the icon says the kind, the words say what).
-static func _chip(icon_name: String, text: String) -> HBoxContainer:
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	var icon := TextureRect.new()
-	icon.texture = UiIcons.texture(icon_name)
-	icon.custom_minimum_size = Vector2(UiIcons.SIZE, UiIcons.SIZE)
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(icon)
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", 14)  # a chip is a note: the rail holds "Ruine repérée" beside its icon
-	label.tooltip_text = text
-	box.add_child(label)
-	return box
+## An alert chip: its icon, then its words (the icon says the kind, the words say what). A tap
+## takes the camera to `tile`, the place it speaks of (-1: nothing to show).
+func _chip(icon_name: String, text: String, tile: int) -> Button:
+	var chip := Button.new()
+	chip.flat = true
+	chip.text = text
+	chip.icon = UiIcons.texture(icon_name)
+	chip.expand_icon = true
+	chip.add_theme_constant_override("icon_max_width", UiIcons.SIZE)
+	chip.add_theme_font_size_override("font_size", 14)  # a chip is a note: the rail holds "Ruine repérée" beside its icon
+	chip.custom_minimum_size = Vector2(0, HudLayout.BUTTON)  # a touch target, not just a label
+	chip.tooltip_text = text
+	chip.accessibility_name = text
+	chip.disabled = tile < 0
+	chip.pressed.connect(func() -> void: chip_pressed.emit(tile))
+	return chip
 
 
 static func _stat(icon_name: String, label: Label, name: String) -> HBoxContainer:
@@ -309,7 +360,7 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	hint_label.text = hint
 	hint_label.visible = hint != ""
 	notice_label.text = notice
-	turn_label.text = model.turn_text
+	notice_label.visible = notice != ""  # an empty line is height the map loses	turn_label.text = model.turn_text
 	energy_label.text = model.energy_text
 	fragments_label.text = model.fragments_text
 	score_label.text = model.score_text
@@ -320,15 +371,15 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	for child in alert_row.get_children():
 		alert_row.remove_child(child)
 		child.queue_free()
-	var chips: Array = []  # [icon, text]
+	var chips: Array = []  # [icon, text, tile]
 	if model.threat_chip != "":
-		chips.append(["menace", model.threat_chip])
-	for loss in model.loss_chips:
-		chips.append(["perte", loss])
+		chips.append(["menace", model.threat_chip, model.threat_tile])
+	for k in model.loss_chips.size():
+		chips.append(["perte", model.loss_chips[k], model.loss_tiles[k] if k < model.loss_tiles.size() else -1])
 	if model.ruin_chip != "":
-		chips.append(["ruine", model.ruin_chip])
+		chips.append(["ruine", model.ruin_chip, model.ruin_tile])
 	for chip in chips.slice(0, 2):  # two chips at most, the rest folded into a counter (section 3.2)
-		alert_row.add_child(_chip(chip[0], chip[1]))
+		alert_row.add_child(_chip(chip[0], chip[1], chip[2]))
 	if chips.size() > 2:
 		var more := Label.new()
 		more.text = "+%d" % (chips.size() - 2)
@@ -353,7 +404,9 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 	unit_lines.visible = unit_lines.text != ""
 	speed_button.visible = model.enemy_turn  # the speed only matters while the enemy plays
 	journal_label.text = "\n".join(model.journal) if model.enemy_turn else ""
+	journal_label.visible = journal_label.text != ""
 	preview_label.text = model.preview_text
+	preview_label.visible = preview_label.text != ""
 	attack_button.visible = model.can_attack
 	confirm_button.visible = model.confirming
 	cancel_button.visible = model.targeting or model.confirming
@@ -371,7 +424,11 @@ func show_model(model: HudModel, notice: String = "", hint: String = "") -> void
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(func() -> void: action_pressed.emit(action.id))
 		extra_row.add_child(button)
-	reason_label.text = model.reason_text
+	reason_label.text = model.reason_text if model.reason_text != "" else model.undo_reason
+	reason_label.visible = reason_label.text != ""
+	undo_button.visible = model.undo_visible
+	undo_button.disabled = not model.undo_enabled
+	undo_button.tooltip_text = model.undo_reason
 	research_button.disabled = model.enemy_turn
 	research_panel.visible = model.research_open
 	if model.research_open:

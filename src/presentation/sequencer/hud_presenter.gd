@@ -19,11 +19,17 @@ var _fragments: FragmentPool
 var _wave_tiles := 0
 ## What the player saw of the enemy phase, told as a line when their turn begins.
 var summary := ""
+## Where the summary points, -1 for nowhere: the first drone lost, else the first node taken,
+## else the first threat announced (tiles of events the fog let through).
+var summary_tile := -1
 var _enemy_played := false
 var _lost := 0
 var _kills := 0
 var _nodes_taken := 0
 var _threats := 0
+var _lost_tile := -1
+var _taken_tile := -1
+var _threat_tile := -1
 
 
 func _init(hud: Hud, gate: CommandGate, sequencer: PresentationSequencer, params: PresentationParams, fragments: FragmentPool = null) -> void:
@@ -41,22 +47,34 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 		_kills = 0
 		_nodes_taken = 0
 		_threats = 0
+		_lost_tile = -1
+		_taken_tile = -1
+		_threat_tile = -1
 	if event is UnitDestroyedEvent:
 		if event.faction == Faction.PLAYER:
 			_lost += 1
+			if _lost_tile < 0:
+				_lost_tile = (event as UnitDestroyedEvent).tile
 		else:
 			_kills += 1
 	elif event is NodeCapturedEvent and event.faction == Faction.AI:
 		_nodes_taken += 1
+		if _taken_tile < 0:
+			_taken_tile = (event as NodeCapturedEvent).tile
 	elif event is IntentionAnnouncedEvent:
 		_threats += 1
+		if _threat_tile < 0:
+			_threat_tile = (event as IntentionAnnouncedEvent).target_tile
 	if event is TurnStartedEvent and (event as TurnStartedEvent).turn_faction == Faction.PLAYER:
 		journal.clear()
 		notice = ""
 		summary = enemy_phase_line(_lost, _kills, _nodes_taken, _threats) if _enemy_played else ""
+		summary_tile = -1
+		if summary != "":
+			summary_tile = _lost_tile if _lost_tile >= 0 else (_taken_tile if _taken_tile >= 0 else _threat_tile)
 		_enemy_played = false
 		if summary != "":
-			_hud.show_toast(summary, context.t0, SUMMARY_SECONDS)
+			_hud.show_toast(summary, context.t0, SUMMARY_SECONDS, summary_tile)
 		return PresentationHold.new(0)
 	if event is TileOwnersChangedEvent:
 		_wave_tiles += (event as TileOwnersChangedEvent).changed_tiles.size()

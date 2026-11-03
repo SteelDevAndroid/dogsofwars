@@ -88,15 +88,27 @@ func test_landscape_keeps_out_of_the_notch() -> void:
 	assert_float(layout.map_area.end.x).is_equal(600.0)
 
 
-func test_the_camera_buttons_sit_at_the_bottom_right_of_the_map() -> void:
-	for screen in [PORTRAIT, LANDSCAPE]:
-		var layout := HudLayout.compute(screen, Rect2(Vector2.ZERO, screen), 130.0, 300.0)
+func test_in_landscape_the_camera_buttons_sit_at_the_bottom_right_of_the_map() -> void:
+	var layout := HudLayout.compute(LANDSCAPE, Rect2(Vector2.ZERO, LANDSCAPE), 130.0, 300.0)
 
-		assert_float(layout.camera_buttons.size.x).is_equal(48.0)
-		assert_float(layout.camera_buttons.size.y).is_equal(3.0 * 48.0 + 2.0 * 8.0)
-		assert_float(layout.camera_buttons.end.x).is_equal(layout.map_area.end.x - 8.0)
-		assert_float(layout.camera_buttons.end.y).is_equal(layout.map_area.end.y - 8.0)
-		assert_bool(layout.map_area.encloses(layout.camera_buttons)).is_true()
+	assert_bool(layout.camera_in_panel).is_false()
+	assert_float(layout.camera_buttons.size.x).is_equal(48.0)
+	assert_float(layout.camera_buttons.size.y).is_equal(3.0 * 48.0 + 2.0 * 8.0)
+	assert_float(layout.camera_buttons.end.x).is_equal(layout.map_area.end.x - 8.0)
+	assert_float(layout.camera_buttons.end.y).is_equal(layout.map_area.end.y - 8.0)
+	assert_bool(layout.map_area.encloses(layout.camera_buttons)).is_true()
+
+
+## Review 2026-11-03: over the map they hid its last column, which the camera cannot scroll from
+## under them when the map fits the width.
+func test_in_portrait_the_camera_buttons_are_a_row_in_the_panel_off_the_map() -> void:
+	var layout := HudLayout.compute(PORTRAIT, Rect2(Vector2.ZERO, PORTRAIT), 130.0, 300.0)
+
+	assert_bool(layout.camera_in_panel).is_true()
+	assert_vector(layout.camera_buttons.size).is_equal(Vector2(3.0 * 48.0 + 2.0 * 8.0, 48.0))
+	assert_bool(layout.panel_zone.encloses(layout.camera_buttons)).is_true()
+	assert_bool(layout.map_area.intersects(layout.camera_buttons)).is_false()
+	assert_float(layout.camera_buttons.end.x).is_equal(layout.panel_zone.end.x - 8.0)
 
 
 func test_the_text_scale_counts_even_when_the_dpi_is_unknown() -> void:

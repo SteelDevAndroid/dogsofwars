@@ -62,7 +62,7 @@ func test_at_most_two_alert_chips_show_and_the_rest_is_counted() -> void:
 	hud.show_model(model)
 	await await_idle_frame()
 
-	var texts := hud.alert_row.get_children().map(func(chip: Node) -> String: return (chip as Label).text if chip is Label else (chip.get_child(1) as Label).text)
+	var texts := hud.alert_row.get_children().map(func(chip: Node) -> String: return (chip as Label).text if chip is Label else (chip as Button).text)
 	assert_array(texts).is_equal(["Menace", "Drone perdu", "+1"])
 	model.threat_chip = ""
 	model.loss_chips.clear()
@@ -127,8 +127,11 @@ func test_the_layout_places_the_zones_and_switches_the_rows_between_portrait_and
 	assert_vector(hud.top_panel.position).is_equal(Vector2(0, 0))
 	assert_vector(hud.top_panel.size).is_equal(Vector2(390, 130))
 	assert_vector(hud.camera_box.position).is_equal(portrait.camera_buttons.position)
+	assert_bool(hud.camera_box.vertical).is_false()  # a row in the panel, beside the title
+	assert_float(hud.unit_title.custom_minimum_size.y).is_equal(HudLayout.BUTTON)
 	assert_bool(hud.bar.vertical).is_false()
 	hud.apply_layout(landscape)
+	assert_bool(hud.camera_box.vertical).is_true()  # floating over the map, as before
 
 	assert_vector(hud.top_panel.size).is_equal(Vector2(140, 390))
 	assert_vector(hud.bottom_panel.position).is_equal(Vector2(620, 0))
@@ -326,4 +329,89 @@ func test_the_actions_of_the_panel_show_their_icons() -> void:
 	assert_object(icons[0]).is_same(UiIcons.texture("noeud"))
 	assert_object(icons[1]).is_same(UiIcons.texture("reveil"))
 	assert_object(icons[2]).is_null()
+	hud.free()
+
+
+func test_a_chip_takes_the_camera_to_its_tile_and_a_chip_without_one_is_inert() -> void:
+	var hud := _hud()
+	var model := _model()
+	model.threat_chip = "Menace"
+	model.threat_tile = 27
+	model.ruin_chip = "Ruine repérée"
+	var tiles: Array[int] = []
+	hud.chip_pressed.connect(func(tile: int) -> void: tiles.append(tile))
+
+	hud.show_model(model)
+	var chips := hud.alert_row.get_children()
+	(chips[0] as Button).pressed.emit()
+
+	assert_array(tiles).is_equal([27])
+	assert_bool((chips[0] as Button).disabled).is_false()
+	assert_bool((chips[1] as Button).disabled).is_true()  # the ruin chip of this model has no tile
+	assert_float((chips[0] as Button).custom_minimum_size.y).is_equal(HudLayout.BUTTON)
+	hud.free()
+
+
+func test_the_toast_is_tappable_only_while_it_points_at_a_tile() -> void:
+	var hud := _hud()
+	hud.show_toast("Refus", 1.0)
+	assert_int(hud.toast_panel.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(hud.toast_tile()).is_equal(-1)
+
+	hud.show_toast("Tour ennemi : 1 drone perdu", 1.0, 4.0, 33)
+
+	assert_int(hud.toast_panel.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_int(hud.toast_tile()).is_equal(33)
+	hud.tick_toast(5.0)
+	assert_int(hud.toast_tile()).is_equal(-1)
+	assert_int(hud.toast_panel.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	hud.free()
+
+
+func test_the_undo_button_follows_the_model() -> void:
+	var hud := _hud()
+	var model := _model()
+	hud.show_model(model)
+	assert_bool(hud.undo_button.visible).is_false()
+	var pressed := [0]
+	hud.undo_pressed.connect(func() -> void: pressed[0] += 1)
+
+	model.undo_visible = true
+	model.undo_enabled = true
+	hud.show_model(model)
+	hud.undo_button.pressed.emit()
+	assert_array([hud.undo_button.visible, hud.undo_button.disabled, pressed[0]]).is_equal([true, false, 1])
+	model.undo_enabled = false
+	model.undo_reason = "Impossible d'annuler : le déplacement a révélé la carte ou lu une ruine"
+	hud.show_model(model)
+
+	assert_bool(hud.undo_button.disabled).is_true()
+	assert_str(hud.reason_label.text).is_equal(model.undo_reason)
+	hud.free()
+
+
+func test_empty_lines_of_the_panel_take_no_room() -> void:
+	var hud := _hud()
+	hud.show_model(_model())
+
+	for label in [hud.journal_label, hud.preview_label, hud.reason_label, hud.notice_label]:
+		assert_bool(label.visible).is_false()
+	hud.free()
+
+
+func test_the_score_explains_itself_and_takes_the_colour_blind_tints() -> void:
+	var hud := _hud()
+	var pressed := [0]
+	hud.score_pressed.connect(func() -> void: pressed[0] += 1)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+
+	hud.score_box.gui_input.emit(release)
+	hud.set_colorblind(true)
+
+	assert_int(pressed[0]).is_equal(1)
+	assert_str(hud.score_box.tooltip_text).is_equal(HudModel.SCORE_HELP)
+	assert_object((hud.score_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color).is_equal(TilePalette.PLAYER_ALT)
+	assert_object((hud.score_bar.get_theme_stylebox("background") as StyleBoxFlat).bg_color).is_equal(TilePalette.ENEMY_ALT)
 	hud.free()

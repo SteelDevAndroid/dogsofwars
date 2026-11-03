@@ -60,6 +60,8 @@ var _pulsed_unit := -1
 ## The sound effects, set by the app (null in a bare screen: silent).
 var sounds: SoundBank
 var _pacing: PacingGate
+
+const SCORE_HELP_SECONDS := 4.0
 var _queue: EventQueue
 
 
@@ -84,6 +86,10 @@ func _ready() -> void:
 	hud.research_pressed.connect(toggle_research)
 	hud.research_closed.connect(toggle_research)
 	hud.research_row_pressed.connect(do_action)
+	hud.undo_pressed.connect(undo_move)
+	hud.chip_pressed.connect(focus_tile)
+	hud.toast_pressed.connect(func() -> void: focus_tile(hud.toast_tile()))
+	hud.score_pressed.connect(func() -> void: hud.show_toast(HudModel.SCORE_HELP, clock.current(), SCORE_HELP_SECONDS))
 	input_surface.pointer.connect(_on_pointer)
 	_pacing = SequencerPacingGate.new(sequencer)
 	sequencer.clock = source
@@ -119,6 +125,7 @@ func apply_settings(settings: Dictionary) -> void:
 	sequencer.reduced_motion = settings[GameSettings.REDUCED_MOTION] == 1
 	set_speed(settings[GameSettings.ENEMY_SPEED])
 	renderer.colorblind = settings[GameSettings.COLORBLIND] == 1
+	hud.set_colorblind(renderer.colorblind)
 	renderer.still = sequencer.reduced_motion
 	show_range = settings[GameSettings.SHOW_RANGE] == 1
 	mirrored = settings[GameSettings.LEFT_PANEL] == 1
@@ -189,8 +196,34 @@ func refresh(show_new_state: bool = false) -> void:
 
 ## A tap on the map: on a unit of the player, select it; on a tile it can reach, move it;
 ## while choosing a target, on a unit it can strike, show the preview, then strike.
+## During an animation a tap on the map ends it at once (skip_animation), nothing is selected.
 func on_tap(position: Vector2) -> void:
+	if session != null and not sequencer.is_idle():
+		skip_animation()
+		return
 	on_tap_tile(camera.screen_to_tile(position) if camera != null else renderer.layout.tile_at(position))
+
+
+## The batch being shown finishes at once: its effects are dropped and the sequencer plays its
+## remaining steps with no wait (PresentationSequencer.finish_batch). The game state is already final.
+func skip_animation() -> void:
+	renderer.clear_effects()
+	sequencer.finish_batch()
+
+
+## "Annuler le déplacement": the player's last move is taken back, if the pipeline allows it.
+func undo_move() -> void:
+	if session == null or not sequencer.is_idle() or session.gate.is_locked(Faction.PLAYER, Command.EMITTER_PLAYER):
+		return
+	select_unit(-1)
+	_submit(UndoMoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER))
+
+
+## A chip or the enemy-turn summary was tapped: the camera goes to the tile it speaks of.
+func focus_tile(tile: int) -> void:
+	if session == null or camera == null or tile < 0:
+		return
+	camera.start_recenter(tile, clock.current(), 0.0 if sequencer.reduced_motion else session.catalog.presentation.value("recenter_ms") / 1000.0)
 
 
 func on_tap_tile(tile: int) -> void:
@@ -398,6 +431,7 @@ func _hud_actions() -> Dictionary:
 		"preview_text": preview_text if mode == Mode.CONFIRMING else "", "extras": extras, "panel": panel,
 		"research_open": research_open,
 		"research": ContextActions.research_rows(session.state, session.catalog, session.pipeline) if research_open else [],
+		"undo": session.pipeline.check(UndoMoveCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER)),
 	}
 
 

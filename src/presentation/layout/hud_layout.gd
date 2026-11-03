@@ -13,6 +13,8 @@ const PANEL_WIDTH := 224.0
 const MIN_MAP_SHARE := 0.30
 const BUTTON := 48.0
 const BUTTON_GAP := 8.0
+## The top padding of the context panel (Hud.backdrop): the camera row lines up with its first row.
+const PANEL_MARGIN := 4.0
 
 var landscape := false
 ## The part of the screen in use.
@@ -22,8 +24,11 @@ var top_zone := Rect2()
 ## Bottom context panel (portrait) or right panel (landscape).
 var panel_zone := Rect2()
 var map_area := Rect2()
-## The +, − and recentre buttons, floating at the bottom right of the map.
+## The +, − and recentre buttons: floating at the bottom right of the map in landscape; in
+## portrait a row at the top right of the context panel, so they never cover the map (its last
+## column could not be scrolled from under them when the map fits the width).
 var camera_buttons := Rect2()
+var camera_in_panel := false
 
 
 ## `top_height` and `bottom_height`: what the portrait bars need (their minimum sizes).
@@ -46,7 +51,10 @@ static func compute(screen: Vector2, safe_area: Rect2, top_height: float, bottom
 		layout.top_zone = Rect2(safe_area.position, Vector2(safe_area.size.x, top))
 		layout.panel_zone = Rect2(Vector2(safe_area.position.x, safe_area.end.y - (bars - top)), Vector2(safe_area.size.x, bars - top))
 		layout.map_area = Rect2(safe_area.position.x, layout.top_zone.end.y, safe_area.size.x, layout.panel_zone.position.y - layout.top_zone.end.y)
-	var width := BUTTON
-	var height := 3.0 * BUTTON + 2.0 * BUTTON_GAP
-	layout.camera_buttons = Rect2(layout.map_area.end - Vector2(width, height) - Vector2(BUTTON_GAP, BUTTON_GAP), Vector2(width, height))
+	var length := 3.0 * BUTTON + 2.0 * BUTTON_GAP
+	if layout.landscape:
+		layout.camera_buttons = Rect2(layout.map_area.end - Vector2(BUTTON, length) - Vector2(BUTTON_GAP, BUTTON_GAP), Vector2(BUTTON, length))
+	else:
+		layout.camera_in_panel = true
+		layout.camera_buttons = Rect2(Vector2(layout.panel_zone.end.x - length - BUTTON_GAP, layout.panel_zone.position.y + PANEL_MARGIN), Vector2(length, BUTTON))
 	return layout

@@ -1277,3 +1277,84 @@ func test_without_a_sound_bank_the_screen_is_silent_and_works() -> void:
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
+
+
+## Review 2026-11-03: a tap on the map during an animation ends it, and selects nothing.
+func test_a_tap_during_an_animation_finishes_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[0]
+	screen.on_tap_tile(destination)
+	screen.sequencer.advance()  # the slide starts
+	assert_bool(screen.sequencer.is_idle()).is_false()
+
+	screen.on_tap(screen.camera.area.get_center())
+
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_array(screen.renderer.effects).is_empty()
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_undo_button_follows_the_pipeline_after_a_move() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	var start := state.view().unit_tile(scout)
+	assert_bool(screen.hud.undo_button.visible).is_false()
+	screen.on_tap_tile(start)
+	screen.on_tap_tile(screen.reachable[0])
+	_settle(screen)
+
+	var permitted := started[2].pipeline.check(UndoMoveCommand.new()).permitted
+	assert_bool(screen.hud.undo_button.visible).is_true()
+	assert_bool(screen.hud.undo_button.disabled).is_equal(not permitted)
+	if permitted:
+		screen.hud.undo_button.pressed.emit()
+		assert_int(state.view().unit_tile(scout)).is_equal(start)
+	else:
+		assert_str(screen.hud.reason_label.text).contains("Impossible d'annuler")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_chip_or_the_summary_takes_the_camera_to_its_tile() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.sequencer.reduced_motion = true  # the camera jumps: no animation to wait for
+	for k in 4:
+		screen.zoom_by(1.25)  # the map larger than its area: the camera has room to move
+	var before := screen.camera.center
+
+	screen.hud.chip_pressed.emit(state.tile_count() - 1)  # the far corner
+
+	assert_bool(screen.camera.center != before).is_true()
+	var moved := screen.camera.center
+	screen.focus_tile(-1)  # nowhere: nothing moves
+	assert_vector(screen.camera.center).is_equal(moved)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_the_score_explains_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.score_pressed.emit()
+
+	assert_str(screen.hud.toast_label.text).is_equal(HudModel.SCORE_HELP)
+	assert_bool(screen.hud.toast_panel.visible).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
