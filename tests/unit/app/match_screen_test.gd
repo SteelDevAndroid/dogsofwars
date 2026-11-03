@@ -1314,7 +1314,8 @@ func test_the_undo_button_follows_the_pipeline_after_a_move() -> void:
 	screen.on_tap_tile(screen.reachable[0])
 	_settle(screen)
 
-	var permitted := started[2].pipeline.check(UndoMoveCommand.new()).permitted
+	var session: GameSession = started[2]
+	var permitted: bool = session.pipeline.check(UndoMoveCommand.new()).permitted
 	assert_bool(screen.hud.undo_button.visible).is_true()
 	assert_bool(screen.hud.undo_button.disabled).is_equal(not permitted)
 	if permitted:
