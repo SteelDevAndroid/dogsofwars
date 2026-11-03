@@ -241,3 +241,16 @@ func test_a_diagonal_beyond_the_map_edge_is_not_the_next_row() -> void:
 	assert_int(renderer.fog_corners(3)).is_equal(0)  # tile 3 meets tile 6 by a side, and its other diagonals are off the map or seen
 	assert_int(renderer.fog_sides(3)).is_equal(TileRenderer.SIDE_DOWN)
 	renderer.free()
+
+
+func test_the_range_cut_by_the_edge_and_the_marks_of_idle_units_draw_without_error() -> void:
+	var renderer := _renderer()
+	renderer.snapshot.player_turn = true
+
+	renderer.set_selection(26, PackedInt32Array([27, 28]))
+	renderer.set_clip_rect(Rect2(0, 118, 100, 100))  # some range tiles cut by the edge: fill, no frame
+	await await_idle_frame()
+
+	var idle := renderer.snapshot.units.filter(func(unit: Array) -> bool: return unit[2] == Faction.PLAYER and not unit[7] and not unit[8])
+	assert_int(idle.size()).is_greater(0)
+	renderer.free()

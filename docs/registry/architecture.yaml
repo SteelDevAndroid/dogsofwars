@@ -523,14 +523,14 @@ api_decisions:
 
   - purpose: audio_cues
     status: active
-    api: "SoundBank (Node, un pour l'application, construit par Bootstrap) : huit AudioStreamPlayer, bus Effects et Interface, volume 0..100 par bus, un même repère au plus une fois par image ; SoundHandler, dernier PresentationHandler du séquenceur, tenue 0 ms, muet en affichage direct"
+    api: "SoundBank (Node, un pour l'application, construit par Bootstrap) : huit AudioStreamPlayer, bus Effects et Interface, volume 0..100 par bus, un même repère au plus une fois par image ; SoundHandler, dernier PresentationHandler du séquenceur, tenue 0 ms, muet en affichage direct ; Haptics (RefCounted, appel du téléphone injectable) : refus, attaque et capture vibrent, au plus une fois par image, réglage vibration"
     not: "un AudioStreamPlayer créé par son, des signaux des systèmes vers l'audio, un son pendant un affichage direct, un son qui fait attendre le séquenceur"
     adr: docs/architecture/adr-0013-audio.md
     reason: "Le son suit les événements déjà filtrés par la vue du joueur et ne révèle rien ; voix bornées ; repères remplaçables à nom égal"
     referenced_by:
       - docs/architecture/adr-0013-audio.md
     added: 2026-11-03
-    revised: ""
+    revised: 2026-11-03
 
 
 # Example:

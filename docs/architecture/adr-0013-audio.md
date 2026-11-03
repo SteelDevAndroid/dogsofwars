@@ -53,6 +53,8 @@ La PR #16 a ajouté quatorze effets synthétiques et leur lecture, mais les déc
 
 **4. Composition.** `Bootstrap` possède la banque (un enfant, pour toute l'application), lui applique les réglages `volume_effects` et `volume_ui` du profil (défaut 80, pas de 10), fait taper tout bouton de l'application (`node_added`) et passe la banque à `MatchScreen`, qui ajoute le `SoundHandler`. L'écran de fin joue la victoire ou la défaite (rien pour un abandon).
 
+**4 bis. Vibrations (2026-11-03).** `Haptics` (`RefCounted`, `src/presentation/audio/`) double trois repères par une vibration courte d'Android (`Input.vibrate_handheld`) : refus 30 ms, attaque 40 ms, capture 60 ms. `SoundHandler` la déclenche avec le son (jamais en affichage direct), `MatchScreen` avec la bannière de refus. Au plus une vibration par image. Réglage `vibration` du profil (défaut 1), appliqué par `Bootstrap` ; permission `VIBRATE` dans le préréglage d'export. Une vibration suit la même règle que le son : jamais seule porteuse d'une information.
+
 **5. Accessibilité.** Chaque son a un jumeau visuel : menace (puce et marqueur), réveil (l'unité éveillée), capture (le changement de couleur), fragment (le panneau), refus (la bannière), destruction (le glyphe de débris), sélection (l'anneau), fin de tour ennemi (le résumé). Un nouveau repère **doit** nommer le sien.
 
 ### Key Interfaces

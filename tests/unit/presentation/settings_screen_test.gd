@@ -48,10 +48,12 @@ func test_each_control_announces_its_key_and_value() -> void:
 	screen.hints_check.button_pressed = false
 	screen.effects_slider.value = 30
 	screen.ui_slider.value = 0
+	screen.vibration_check.button_pressed = false
 
 	assert_array(seen).is_equal([
 		[GameSettings.TEXT_SCALE, 125], [GameSettings.ENEMY_SPEED, 1], [GameSettings.REDUCED_MOTION, 1],
-		[GameSettings.SHOW_RANGE, 0], [GameSettings.COLORBLIND, 1], [GameSettings.LEFT_PANEL, 1], [GameSettings.LEFT_PANEL, 0], [GameSettings.HINTS, 0], [GameSettings.VOLUME_EFFECTS, 30], [GameSettings.VOLUME_UI, 0]])
+		[GameSettings.SHOW_RANGE, 0], [GameSettings.COLORBLIND, 1], [GameSettings.LEFT_PANEL, 1], [GameSettings.LEFT_PANEL, 0], [GameSettings.HINTS, 0], [GameSettings.VOLUME_EFFECTS, 30], [GameSettings.VOLUME_UI, 0],
+		[GameSettings.VIBRATION, 0]])
 	screen.free()
 
 

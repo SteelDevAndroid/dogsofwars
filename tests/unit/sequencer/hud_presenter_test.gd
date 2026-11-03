@@ -123,6 +123,8 @@ func test_the_enemy_phase_is_summed_up_when_the_players_turn_begins() -> void:
 	presenter.handle(_turn(Faction.PLAYER, 2), context)
 
 	assert_str(presenter.summary).is_equal("Tour ennemi : 2 drones perdus · 1 Gardien détruit · 1 nœud pris par l'ennemi · 1 menace annoncée")
+	assert_int(presenter.summary_tile).is_equal(5)  # the first drone lost
+	assert_int(hud.toast_tile()).is_equal(5)  # a tap on the summary takes the camera there
 	assert_bool(hud.toast_panel.visible).is_true()
 	assert_str(hud.toast_label.text).is_equal(presenter.summary)
 	hud.tick_toast(2.0 + HudPresenter.SUMMARY_SECONDS)
@@ -143,6 +145,7 @@ func test_a_quiet_enemy_phase_is_said_so_and_the_first_turn_says_nothing() -> vo
 	presenter.handle(_turn(Faction.PLAYER, 2), context)
 
 	assert_str(presenter.summary).is_equal("Tour ennemi : rien à signaler")
+	assert_int(presenter.summary_tile).is_equal(-1)  # nothing to show
 	_free(set_up)
 
 

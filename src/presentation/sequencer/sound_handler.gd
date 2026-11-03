@@ -1,21 +1,28 @@
 # The audio presenter of the sequencer (ADR-0002 §5): an event the player may see is heard.
-# A direct display (a load, a resynchronisation) is silent. No hold: a sound never makes the
+# A direct display (a load, a resynchronisation) is silent. Attacks and captures also vibrate
+# (Haptics), under the same rule. No hold: a sound never makes the
 # player wait.
 class_name SoundHandler
 extends PresentationHandler
 
 var _bank: SoundBank
+var _haptics: Haptics
 
 
-func _init(bank: SoundBank) -> void:
+## Either may be null (no sound, no vibration).
+func _init(bank: SoundBank, haptics: Haptics = null) -> void:
 	_bank = bank
+	_haptics = haptics
 
 
 func handle(event: PresentationEvent, context: SequenceContext) -> PresentationHold:
 	if not context.direct:
 		var cue := cue_of(event)
 		if cue != &"":
-			_bank.play(cue)
+			if _bank != null:
+				_bank.play(cue)
+			if _haptics != null:
+				_haptics.pulse(cue)
 	return PresentationHold.new(0)
 
 

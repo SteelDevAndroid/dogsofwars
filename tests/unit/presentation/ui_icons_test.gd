@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 
 
-func test_the_eighteen_icons_exist_are_white_svg_on_a_24_grid_and_are_all_different() -> void:
-	assert_int(UiIcons.NAMES.size()).is_equal(18)
+func test_the_twenty_one_icons_exist_are_white_svg_on_a_24_grid_and_are_all_different() -> void:
+	assert_int(UiIcons.NAMES.size()).is_equal(21)
 	var sources := {}
 	for icon_name: String in UiIcons.NAMES:
 		var path := UiIcons.DIR % icon_name
@@ -14,7 +14,7 @@ func test_the_eighteen_icons_exist_are_white_svg_on_a_24_grid_and_are_all_differ
 		var texture := UiIcons.texture(icon_name)
 		assert_object(texture).override_failure_message(icon_name).is_not_null()
 		assert_int(texture.get_width()).override_failure_message("%s imported at 4x" % icon_name).is_equal(96)
-	assert_int(sources.size()).is_equal(18)  # no two icons are the same drawing
+	assert_int(sources.size()).is_equal(21)  # no two icons are the same drawing
 
 
 func test_an_icon_goes_on_a_button_at_the_shown_size() -> void:

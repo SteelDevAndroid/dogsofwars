@@ -39,6 +39,10 @@ var _idle_announced := true
 ## Presentation time before which no batch that changes the colours may start (reduced motion).
 var _slot_end := -1.0
 var _batch_mergeable := false
+## The batch waits for its reduced-motion slot (its first step is that pause).
+var _slot_wait := false
+## The player asked for the end of the batch (finish_batch): the steps left play at once.
+var _finishing := false
 
 
 func _init() -> void:
@@ -90,7 +94,8 @@ func advance() -> void:
 			continue
 		_steps = SequenceOrder.steps(batch, params)
 		_batch_mergeable = SequenceOrder.has_mergeable(batch)
-		if reduced_motion and _batch_mergeable and now < _slot_end:
+		_slot_wait = reduced_motion and _batch_mergeable and now < _slot_end
+		if _slot_wait:
 			_steps.push_front(PresentationPause.new(ceili((_slot_end - now) * 1000.0)))
 		_step = 0
 		_playing = true
@@ -102,6 +107,20 @@ func advance() -> void:
 		_dispatch(_steps[0], now)
 
 
+## The player tapped the map during an animation: the steps left in the batch are played at once,
+## in their order, as a direct display (no slide, no wave, no wait, no sound), and the batch ends
+## with its locks; the next batch plays normally. The state is already final, so nothing of the
+## game changes. A batch still waiting for its reduced-motion slot keeps waiting: the slot guards
+## against flashes, whoever asks.
+func finish_batch() -> void:
+	if not _playing or (_slot_wait and _step == 0):
+		return
+	_finishing = true
+	_attack_lock_until = -1.0
+	_deadline = clock.current()
+	advance()
+
+
 ## Resynchronisation or load (ADR-0002 §7): empty the queue, cancel, lower the player locks
 ## except the fragment panel when it is open, show the state directly.
 func resync() -> void:
@@ -110,6 +129,8 @@ func resync() -> void:
 	_steps.clear()
 	_attack_locked = false
 	_batch_mergeable = false
+	_finishing = false
+	_slot_wait = false
 	gate.clear_player_locks(FRAGMENT_PANEL if panel_open else &"")
 	for handler in handlers:
 		handler.rebuild_from_state(state)
@@ -120,22 +141,26 @@ func resync() -> void:
 func _dispatch(event: PresentationEvent, now: float) -> void:
 	var hold_ms := 0
 	if event is PresentationPause:
-		hold_ms = (event as PresentationPause).duration_ms
+		hold_ms = 0 if _finishing else (event as PresentationPause).duration_ms
 	else:
 		if event is AttackResolvedEvent:
 			gate.lock(ATTACK_RESOLUTION)
 			_attack_locked = true
 			_attack_lock_until = now + params.value("attack_lock_ms") / 1000.0
-		var context := SequenceContext.new(now, clock, false, reduced_motion)
+		var context := SequenceContext.new(now, clock, _finishing, reduced_motion)
 		gate.enter_dispatch()
 		for handler in handlers:
 			hold_ms = maxi(hold_ms, handler.handle(event, context).duration_ms)
 		gate.exit_dispatch()
+		if _finishing:
+			hold_ms = 0
 	_deadline = now + hold_ms / 1000.0
 
 
 func _end_batch() -> void:
 	_playing = false
+	_finishing = false
+	_slot_wait = false
 	_steps.clear()
 	_step = 0
 	if _attack_locked:

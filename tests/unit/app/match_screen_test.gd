@@ -220,6 +220,7 @@ func test_the_end_turn_button_hands_the_turn_to_the_ai_and_back() -> void:
 	var screen: MatchScreen = started[1]
 	var state: GameState = started[2].state
 
+	screen.hud.end_turn_button.pressed.emit()  # units have not played: the first press asks
 	screen.hud.end_turn_button.pressed.emit()
 	for step in 600:
 		if not screen.ai_runner.is_running():
@@ -1274,6 +1275,141 @@ func test_without_a_sound_bank_the_screen_is_silent_and_works() -> void:
 
 	assert_object(screen.sounds).is_null()
 	assert_bool(screen.sequencer.handlers.any(func(h: PresentationHandler) -> bool: return h is SoundHandler)).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+## Review 2026-11-03: a tap on the map during an animation ends it, and selects nothing.
+func test_a_tap_during_an_animation_finishes_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	screen.on_tap_tile(state.tile_index(2, 1))
+	var destination := screen.reachable[0]
+	screen.on_tap_tile(destination)
+	screen.sequencer.advance()  # the slide starts
+	assert_bool(screen.sequencer.is_idle()).is_false()
+
+	screen.on_tap(screen.camera.area.get_center())
+
+	assert_bool(screen.sequencer.is_idle()).is_true()
+	assert_array(screen.renderer.effects).is_empty()
+	assert_int(screen.selected_unit).is_equal(-1)
+	assert_int(state.view().unit_tile(scout)).is_equal(destination)
+	assert_bool(screen.hud.end_turn_button.disabled).is_false()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_the_undo_button_follows_the_pipeline_after_a_move() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var scout := state.view().unit_at(state.tile_index(2, 1))
+	var start := state.view().unit_tile(scout)
+	assert_bool(screen.hud.undo_button.visible).is_false()
+	screen.on_tap_tile(start)
+	screen.on_tap_tile(screen.reachable[0])
+	_settle(screen)
+
+	var session: GameSession = started[2]
+	var permitted: bool = session.pipeline.check(UndoMoveCommand.new()).permitted
+	assert_bool(screen.hud.undo_button.visible).is_true()
+	assert_bool(screen.hud.undo_button.disabled).is_equal(not permitted)
+	if permitted:
+		screen.hud.undo_button.pressed.emit()
+		assert_int(state.view().unit_tile(scout)).is_equal(start)
+	else:
+		assert_str(screen.hud.reason_label.text).contains("Impossible d'annuler")
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_chip_or_the_summary_takes_the_camera_to_its_tile() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	screen.sequencer.reduced_motion = true  # the camera jumps: no animation to wait for
+	for k in 4:
+		screen.zoom_by(1.25)  # the map larger than its area: the camera has room to move
+	var before := screen.camera.center
+
+	screen.hud.chip_pressed.emit(state.tile_count() - 1)  # the far corner
+
+	assert_bool(screen.camera.center != before).is_true()
+	var moved := screen.camera.center
+	screen.focus_tile(-1)  # nowhere: nothing moves
+	assert_vector(screen.camera.center).is_equal(moved)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_the_score_explains_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.score_pressed.emit()
+
+	assert_str(screen.hud.toast_label.text).is_equal(HudModel.SCORE_HELP)
+	assert_bool(screen.hud.toast_panel.visible).is_true()
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_a_tile_without_anything_of_the_players_shows_its_sheet_and_a_second_closes_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var far := state.tile_count() - 1
+	var expected: Dictionary = HudModel.tile_panel(state, FactionView.new(state, Faction.PLAYER), started[2].catalog, far)
+
+	screen.on_tap_tile(far)
+
+	assert_str(screen.hud.unit_title.text).is_equal(expected["title"])
+	assert_int(screen.renderer.selected_tile).is_equal(far)
+	screen.on_tap_tile(far)
+	assert_str(screen.hud.unit_title.text).is_equal("")
+	assert_int(screen.renderer.selected_tile).is_equal(-1)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_ending_the_turn_with_idle_units_asks_once_then_ends_it() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+	var state: GameState = started[2].state
+	var idle := HudModel.count_idle_units(FactionView.new(state, Faction.PLAYER))
+	assert_int(idle).is_greater(0)  # a new game: nobody has played
+
+	screen.hud.end_turn_pressed.emit()
+
+	assert_int(state.header.value(HeaderSlice.PHASE)).is_equal(HeaderSlice.PHASE_PLAYER)
+	assert_str(screen.hud.toast_label.text).is_equal(MatchScreen.end_turn_question(idle))
+	assert_str(screen.hud.end_turn_button.text).is_equal("Confirmer la fin du tour")
+	screen.on_tap_tile(state.tile_count() - 1)  # a tap on the map withdraws the question
+	assert_str(screen.hud.end_turn_button.text).is_equal("Fin du tour")
+	screen.hud.end_turn_pressed.emit()
+	screen.hud.end_turn_pressed.emit()
+	assert_int(state.header.value(HeaderSlice.PHASE)).is_not_equal(HeaderSlice.PHASE_PLAYER)
+	screen.shutdown()
+	started[0].dispose()
+	await await_idle_frame()
+
+
+func test_a_tap_on_the_stats_explains_them() -> void:
+	var started := _started()
+	var screen: MatchScreen = started[1]
+
+	screen.hud.stats_pressed.emit()
+
+	assert_str(screen.hud.toast_label.text).is_equal(HudModel.STATS_HELP)
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()

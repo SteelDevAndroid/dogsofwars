@@ -18,6 +18,7 @@ var show_range_check := CheckButton.new()
 var colorblind_check := CheckButton.new()
 var left_panel_check := CheckButton.new()
 var hints_check := CheckButton.new()
+var vibration_check := CheckButton.new()
 var palette_swatch := PaletteSwatch.new()
 var effects_slider := HSlider.new()
 var ui_slider := HSlider.new()
@@ -65,6 +66,7 @@ func _init() -> void:
 	_flag(box, hints_check, "Conseils des premiers tours", GameSettings.HINTS)
 	_volume(box, "Effets sonores", effects_slider, GameSettings.VOLUME_EFFECTS)
 	_volume(box, "Sons de l'interface", ui_slider, GameSettings.VOLUME_UI)
+	_flag(box, vibration_check, "Vibrations (refus, attaque, capture)", GameSettings.VIBRATION)
 	back_button.text = "Retour"
 	UiIcons.put(back_button, "retour")
 	back_button.custom_minimum_size = Vector2(0, 50)
@@ -84,6 +86,7 @@ func configure(settings: Dictionary) -> void:
 	hints_check.button_pressed = settings[GameSettings.HINTS] == 1
 	effects_slider.value = settings[GameSettings.VOLUME_EFFECTS]
 	ui_slider.value = settings[GameSettings.VOLUME_UI]
+	vibration_check.button_pressed = settings[GameSettings.VIBRATION] == 1
 	_loading = false
 
 

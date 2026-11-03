@@ -21,6 +21,8 @@ var ruins: Array = []
 var units: Array = []
 ## Rows [intention id, target kind, target tile, author tile or -1, motive].
 var threats: Array = []
+## The player's phase: the units that have not played carry a marker.
+var player_turn := false
 
 
 static func take(state: GameState, catalog: DataCatalog) -> TileSnapshot:
@@ -44,6 +46,7 @@ static func take(state: GameState, catalog: DataCatalog) -> TileSnapshot:
 		snapshot.units.append([unit_id, view.unit_tile(unit_id), view.unit_faction(unit_id), type, view.unit_hp(unit_id),
 				catalog.units.hp(type), view.unit_asleep(unit_id), view.unit_moved(unit_id), view.unit_acted(unit_id)])
 	snapshot.threats = IntentionMarkers.visible_to_player(state)
+	snapshot.player_turn = state.header.value(HeaderSlice.PHASE) == HeaderSlice.PHASE_PLAYER
 	return snapshot
 
 

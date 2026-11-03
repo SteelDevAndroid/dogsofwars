@@ -44,6 +44,8 @@ const VARIANTS := 3
 const UNIT_KEYS := ["eclaireur", "assaut", "rempart", "ouvrier", "sentinelle", "chasseur", "bastion"]
 const RUIN_FILES := ["ruin_arche_brisee_01", "ruin_arche_brisee_02", "ruin_dome_brise_01"]
 const NODE_LEVELS := 3
+## The fill of a tile in the move range (over the terrain, under the units).
+const REACH_FILL := 0.22
 ## How much of the side's colour a grey sprite takes (its shading stays).
 const TINT_STRENGTH := 0.55
 const TERRAIN_NAMES := {TerrainGrid.PLAIN: "plaine", TerrainGrid.FOREST: "foret", TerrainGrid.MOUNTAIN: "montagne", TerrainGrid.WATER: "eau"}
@@ -186,9 +188,24 @@ func _draw() -> void:
 	for tile in targets:
 		_draw_clipped(_fx["cible_crochets"], layout.rect_of(tile), Color(TilePalette.THREAT, 1.0 if tile == chosen_target else 0.8))
 	for tile in highlighted:
-		_draw_clipped(_fx["portee_point"], layout.rect_of(tile), Color(TilePalette.SELECTION, 0.9))
+		_draw_reach(tile)
 	if selected_tile >= 0:
 		_draw_clipped(_fx["selection"], layout.rect_of(selected_tile), TilePalette.SELECTION)
+
+
+## A tile of the move range: a light fill and a frame, so it reads on any terrain (the dot alone
+## was lost on dark tiles), then the dot. The frame is drawn only when the whole tile shows: cut,
+## it would draw a line along the edge of the map.
+func _draw_reach(tile: int) -> void:
+	var full := layout.rect_of(tile)
+	var rect := full.intersection(clip_area)
+	if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+		return
+	draw_rect(rect, Color(TilePalette.SELECTION, REACH_FILL))
+	if clip_area.encloses(full):
+		var inset := maxf(1.0, layout.tile_size / 32.0)
+		draw_rect(full.grow(-inset), Color(TilePalette.SELECTION, 0.85), false, inset)
+	_draw_clipped(_fx["portee_point"], full, Color(TilePalette.SELECTION, 0.9))
 
 
 ## The tiles that show, at least in part, inside the map area.
@@ -355,10 +372,23 @@ func _draw_unit(unit: Array) -> void:
 	_draw_clipped(sprite, rect, Color.WHITE)
 	if unit[6]:  # asleep: a bar across the body
 		draw_line(c + Vector2(-layout.tile_size * 0.3, 0), c + Vector2(layout.tile_size * 0.3, 0), TilePalette.OUTLINE, 2.0)
+	if snapshot.player_turn and unit[2] == Faction.PLAYER and not unit[7] and not unit[8]:
+		_draw_idle_mark(rect)
 	if unit[4] < unit[5]:
 		var bar := Rect2(rect.position + Vector2(layout.tile_size * 0.1, layout.tile_size * 0.86), Vector2(layout.tile_size * 0.8, 3.0))
 		draw_rect(bar, TilePalette.OUTLINE)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(unit[4]) / unit[5], bar.size.y)), TilePalette.owner(Faction.PLAYER, colorblind))
+
+
+## A unit of the player that has neither moved nor acted this turn: a dot at the top right
+## (a shape, not only a colour: a light disc with a dark ring).
+func _draw_idle_mark(rect: Rect2) -> void:
+	var center := rect.position + Vector2(rect.size.x * 0.84, rect.size.y * 0.16)
+	var radius := maxf(3.0, layout.tile_size * 0.08)
+	if not clip_area.has_point(center):
+		return
+	draw_circle(center, radius + 1.0, TilePalette.OUTLINE)
+	draw_circle(center, radius, TilePalette.SELECTION)
 
 
 ## The sprite of a unit type for a side: grey with the colour of the side in it; a dormant

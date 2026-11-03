@@ -19,6 +19,7 @@ const TEXTS := {
 	Refusal.COMMANDS_LOCKED: "Patientez",
 	Refusal.NOT_YOUR_TURN: "Pas votre tour",
 	Refusal.MATCH_OVER: "Partie terminée",
+	Refusal.MOVE_REVEALED: "Impossible d'annuler : le déplacement a révélé la carte ou lu une ruine",
 }
 
 

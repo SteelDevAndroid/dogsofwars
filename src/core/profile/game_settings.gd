@@ -13,9 +13,11 @@ const LEFT_PANEL := &"left_panel"
 const HINTS := &"hints"
 const VOLUME_EFFECTS := &"volume_effects"
 const VOLUME_UI := &"volume_ui"
+const VIBRATION := &"vibration"
 
 ## key -> [default, min, max]. TEXT_SCALE is a percentage; ENEMY_SPEED is 0 normal, 1 fast,
-## 2 instant; the others are flags (HINTS: the short advice of the first turns); the two volumes are percentages (0 mutes).
+## 2 instant; the others are flags (HINTS: the short advice of the first turns; VIBRATION: the
+## short vibrations of Android); the two volumes are percentages (0 mutes).
 const TABLE := {
 	TEXT_SCALE: [100, 100, 150],
 	COLORBLIND: [0, 0, 1],
@@ -26,6 +28,7 @@ const TABLE := {
 	HINTS: [1, 0, 1],
 	VOLUME_EFFECTS: [80, 0, 100],
 	VOLUME_UI: [80, 0, 100],
+	VIBRATION: [1, 0, 1],
 }
 
 
