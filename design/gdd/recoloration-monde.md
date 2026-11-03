@@ -309,14 +309,14 @@ la recoloration ne change jamais mécaniquement. Les durées sont des valeurs de
 | `T_TOTAL_MAX` | 1 000 ms | 600 à 1 200 | Onde gênante | Réduit `T_ANNEAU_eff` | F4 |
 | `T_REV` | 150 ms | 100 à 250 | Révélation traînante | Apparition sèche | F4 |
 | `T_CRENEAU_RÉDUIT` | 334 ms | 334 à 500 | Retard visible | Plus de 3 flashs/s | E6 |
-| `TABLE_TEINTES` | art bible §4 | données | — | — | F2 |
+| `TABLE_TEINTES` | art bible §4 | constantes de `TilePalette` (code, pas données : ce sont des couleurs de l'art bible, pas un réglage ; ADR-0012) | — | — | F2 |
 
 Aucun réglage n'agit sur la logique : tous sont de présentation, validés en développement par le chargement des données.
 
 ## Visual/Audio Requirements
 
 - **Visuel.** Saturation binaire : gris `#4E5862` ou teinte pleine de la faction ; jamais de demi-teinte stable. Territoire adverse en `#C49BEA` (art bible §4). Hors de vue, la tuile garde sa dernière teinte connue, assombrie par le brouillard (5, 17).
-- **Rendu (avis du technical-artist, à confirmer par prototype).** Donnée par instance (vec4) : indice affiché, indice précédent, état de brouillard, instant de début de fondu ; l'onde est calculée dans le shader à partir de cet instant et d'un temps de jeu global ; la table de teintes est un tableau uniforme. Environ 16 octets par tuile, 4 Ko pour 256 tuiles. Non vérifié dans la source : données personnalisées de MultiMesh, uniformes globaux, rendu Mobile, version de Godot installée. Un ADR sur le rendu des tuiles et le prototype de rendu (art bible §8) sont requis.
+- **Rendu** : décidé par ADR-0012 (dessin immédiat sur un instantané, un effet `WAVE` par anneau, fondu binaire `WaveFade`) ; l'avis initial du technical-artist (donnée par instance dans un shader) est le repli d'ADR-0001, remplacé.
 - **Audio (facultatif, 20).** Une seule texture sonore par onde, durée liée à `durée_onde`, **même texture et même poids pour un gain et pour une perte du joueur** : pas de montée résolutive ni de cadence de victoire, le son accompagne l'onde sans la juger (à valider par l'audio-director) ; aucune information de jeu n'est portée par le son seul.
 
 ## Game Feel

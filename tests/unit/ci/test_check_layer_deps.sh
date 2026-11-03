@@ -60,6 +60,14 @@ printf '[autoload]\nGame="*res://src/app/game.gd"\n' >> "$t/project.godot"
 expect "autoload section is refused" 1 "$t"
 rm -rf "$t"
 
+t=$(mktemp -d); mk "$t"; mkdir -p "$t/src/presentation/tiles"
+printf 'class_name TileSnapshot\nstatic func take(state: GameState) -> TileSnapshot:\n\treturn null\n' > "$t/src/presentation/tiles/tile_snapshot.gd"
+printf 'class_name TileRenderer\nfunc show_state(state: GameState, catalog: DataCatalog) -> void:\n\tpass\n' > "$t/src/presentation/tiles/tile_renderer.gd"
+expect "the snapshot and show_state may name GameState" 0 "$t"
+printf 'func peek(state: GameState) -> int:\n\treturn 0\n' >> "$t/src/presentation/tiles/tile_renderer.gd"
+expect "the tile drawing reading GameState is refused" 1 "$t"
+rm -rf "$t"
+
 t=$(mktemp -d)
 expect "no code root" 0 "$t"
 rm -rf "$t"

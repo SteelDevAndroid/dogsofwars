@@ -6,6 +6,8 @@
 # forbidden patterns `core_references_presentation` and
 # `autoload_or_service_locator`.
 #
+# In <src>/presentation/tiles/*.gd: GameState outside tile_snapshot.gd and the signature of
+# show_state (ADR-0012, the renderer reads the snapshot only).
 # In <src>/core/**/*.gd (comment lines ignored), reported:
 #   - a path to <src>/presentation/ or <src>/app/ (preload, load, any string);
 #   - a class_name declared under <src>/presentation/ or <src>/app/;
@@ -53,5 +55,16 @@ for cls in $outer_classes; do
         [ -n "$hit" ] && report "$hit: uses $cls, declared outside Core (ADR-0008 §7)"
     done < <(code_lines "(^|[^A-Za-z0-9_])${cls}([^A-Za-z0-9_]|$)")
 done
+
+# ADR-0012, registry pattern renderer_reads_real_state: the tile drawing reads the TileSnapshot
+# only. GameState may appear in tile_snapshot.gd (TileSnapshot.take) and in the signature of
+# TileRenderer.show_state, nowhere else under <src>/presentation/tiles/.
+TILES="$SRC/presentation/tiles"
+if [ -d "$TILES" ]; then
+    while IFS= read -r hit; do
+        [ -n "$hit" ] && report "$hit: tile drawing reads GameState outside TileSnapshot.take (ADR-0012)"
+    done < <(grep -rnE --include='*.gd' '(^|[^A-Za-z0-9_])GameState([^A-Za-z0-9_]|$)' "$TILES" 2>/dev/null \
+        | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | grep -v '/tile_snapshot\.gd:' | grep -vE ':[0-9]+:func show_state\(')
+fi
 
 exit "$found"

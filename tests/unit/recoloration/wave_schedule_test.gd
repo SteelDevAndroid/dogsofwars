@@ -67,6 +67,8 @@ func test_the_ring_delay_shrinks_so_that_no_wave_outlasts_the_total() -> void:
 
 	assert_int(WaveSchedule.ring_ms(params)).is_equal(150)  # min(200, (1000 - 400) div 4)
 	assert_int(WaveSchedule.plan(WIDTH, _square(0, 6), 0, params).duration_ms).is_equal(1000)
+	assert_str(params.ring_trace()).contains("shortened to 150 ms")  # AC-RC10: the loading says so
+	assert_str(_params().ring_trace()).is_empty()  # 3 x 200 + 400 = 1000: nothing to shorten
 
 
 func test_no_source_or_no_tile_means_no_wave() -> void:

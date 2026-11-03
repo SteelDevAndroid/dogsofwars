@@ -32,7 +32,7 @@ Tous les ADR renvoient à `assets/data/…` (durées, poids de l'IA, tables de t
 | Field | Value |
 |-------|-------|
 | **Depends On** | None |
-| **Enables** | ADR-0008 (le catalogue est construit à la racine de composition), ADR-0005 (`AiParams`), ADR-0002 (durées, `Q_max`), ADR-0001 (`TABLE_TEINTES`), ADR-0007 (rayons de vue), ADR-0011 (fixtures) |
+| **Enables** | ADR-0008 (le catalogue est construit à la racine de composition), ADR-0005 (`AiParams`), ADR-0002 (durées, `Q_max`), ADR-0012 (durées des effets et de l'onde), ADR-0007 (rayons de vue), ADR-0011 (fixtures) |
 | **Blocks** | Toutes les stories qui lisent une valeur de réglage |
 | **Ordering Note** | Foundation : à accepter tôt, avec ADR-0003 ; aucune dépendance entrante |
 
@@ -54,13 +54,13 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
 
 ## Decision
 
-**1. Un fichier JSON par domaine, UTF-8.** `assets/data/<domaine>.json` : `units`, `ai`, `brouillard`, `energie`, `noeuds`, `combat`, `protocoles`, `fragments`, `recoloration`, `presentation` (durées, `Q_max`, `ATTACK_LOCK_MS`), `teintes`, `hud`, `controles`, `sauvegarde`, plus `cartes/<nom>.json` pour les fichiers de carte (GDD 2). Chaque fichier commence par `"schema_version": <entier>`. Les textes affichés (fragments, libellés) sont adressés par **identifiant stable** et relèvent de la localisation, hors de ce périmètre.
+**1. Un fichier JSON par domaine, UTF-8.** `assets/data/<domaine>.json` : `units`, `ai`, `brouillard`, `energie`, `noeuds`, `combat`, `protocoles`, `fragments`, `recoloration`, `presentation` (durées, `Q_max`, `ATTACK_LOCK_MS`), `hud`, `controles`, `sauvegarde`, plus `cartes/<nom>.json` pour les fichiers de carte (GDD 2). Chaque fichier commence par `"schema_version": <entier>`. Les textes affichés (fragments, libellés) sont adressés par **identifiant stable** et relèvent de la localisation, hors de ce périmètre.
 
 **2. Entiers seulement.** Toute valeur est un entier ou une chaîne ; **aucun nombre fractionnaire** dans les données, y compris les réglages de contrôles et de caméra. Les rapports sont exprimés en centièmes, millièmes ou millionièmes avec un suffixe de nom (`_pct`, `_milli`, `_micro`) : le GDD 4 passe à `TAP_SLOP_MILLI` = 500, `ZOOM_STEP_MILLI` = 1260 (2^(1/3)), `ZOOM_MAX_MILLI`, `FOCUS_CLEARANCE_MILLI` = 500, `ZOOM_EPS_MICRO` = 1000 (**GDD SYNC** : renommer ces réglages dans le GDD 4) ; les durées en millisecondes (`_ms`), les couleurs en chaînes `"#RRGGBB"` converties en entier au chargement. Le validateur lit le `float` rendu par le moteur et exige `value == floor(value)` et `|value| ≤ 2³¹ − 1` ; sinon erreur (« 2,5 » refusé, jamais arrondi). Cas vérifiés : `2.0` est accepté comme l'entier 2 ; `-0` donne 0 ; `1e999` donne `inf` avec un avertissement du moteur, attrapé par la borne. Les règles de jeu n'effectuent donc aucun calcul flottant sur une donnée.
 
 **3. Schéma déclaré en code, strict.** Chaque domaine a un `DataSchema` (constante GDScript : champ → type, minimum, maximum, énumération de noms, éléments de tableau). Le validateur **refuse** : une clé inconnue, une clé manquante (pas de défaut caché), un type faux, une valeur hors bornes, une référence croisée orpheline (prérequis de protocole inexistant, type d'unité inconnu, identifiant de fragment dupliqué ou non croissant, budget de l'IA dont le produit `N_IA × APPELS_PAR_UNITÉ_MAX × plafond d'appel` dépasse le plafond du tour pour une carte livrée, ADR-0005 §4). Il rend **toutes** les erreurs, pas la première, avec le nom du fichier et le chemin du champ.
 
-**4. `DataCatalog`, immuable, typé.** `DataCatalog.load_all(source: DataSource) -> DataCatalogResult` lit tous les fichiers par un port étroit `DataSource` (réel : `FileAccess` sur `res://assets/data/` ; test : dictionnaire en mémoire), valide, puis construit des objets `RefCounted` typés en lecture seule (le chemin de production utilise `JSON.new().parse`, qui rend un code et un message, et **jamais** `JSON.parse_string`, qui imprime une erreur et rend `null` ; la ligne d'erreur peut valoir 0, ne pas l'afficher telle quelle) (`UnitTypes`, `AiParams`, `PresentationParams`, `TeintesTable`, `FragmentPools`…). Aucun `Dictionary` brut ne sort du catalogue : les règles lisent des champs typés. Le catalogue est construit **une fois au démarrage**, avant toute partie, par la racine de composition (ADR-0008), puis **injecté** ; il n'y a ni autoload ni accès statique global.
+**4. `DataCatalog`, immuable, typé.** `DataCatalog.load_all(source: DataSource) -> DataCatalogResult` lit tous les fichiers par un port étroit `DataSource` (réel : `FileAccess` sur `res://assets/data/` ; test : dictionnaire en mémoire), valide, puis construit des objets `RefCounted` typés en lecture seule (le chemin de production utilise `JSON.new().parse`, qui rend un code et un message, et **jamais** `JSON.parse_string`, qui imprime une erreur et rend `null` ; la ligne d'erreur peut valoir 0, ne pas l'afficher telle quelle) (`UnitTypes`, `AiParams`, `PresentationParams`, `FragmentPools`…). Aucun `Dictionary` brut ne sort du catalogue : les règles lisent des champs typés. Le catalogue est construit **une fois au démarrage**, avant toute partie, par la racine de composition (ADR-0008), puis **injecté** ; il n'y a ni autoload ni accès statique global.
 
 **5. Échec franc.** Une erreur de chargement en développement affiche toutes les erreurs et arrête le démarrage ; en version distribuée les données sont livrées avec l'application, donc une erreur est un bogue de build : écran d'erreur « données invalides » avec le code, **jamais** de repli sur des valeurs par défaut. La CI valide tous les fichiers (test headless) avant tout merge.
 
@@ -82,7 +82,7 @@ Les standards du projet exigent des valeurs de jeu pilotées par les données (�
         ▼
  DataSchema (par domaine) ── valide : types, entiers, bornes, clés, références ──► toutes les erreurs ou ──┐
                                                                                                          ▼
-                                       DataCatalog (immuable, typé) : units, ai, presentation, teintes, …  + content_hash
+                                       DataCatalog (immuable, typé) : units, ai, presentation, …  + content_hash
                                              │ construit une fois par Bootstrap (ADR-0008), injecté
                                              ▼
                           règles, pipeline, IA, séquenceur, rendu, HUD (lecture seule)
@@ -103,7 +103,6 @@ var content_hash: String
 var units: UnitTypes
 var ai: AiParams
 var presentation: PresentationParams               # durées, Q_max, ATTACK_LOCK_MS, T_CRENEAU_RÉDUIT
-var teintes: TeintesTable
 # … un champ typé par domaine
 
 class_name DataCatalogResult extends RefCounted
@@ -171,7 +170,7 @@ var errors: Array[DataError]                       # fichier, chemin du champ, m
 | ia-ennemie.md (9) | Poids de F1, `K_DEST`, `LEASH`, `EVALS_MAX` en données (`assets/data/ai.*`) | `AiParams` typé |
 | unites-drones.md (6), brouillard-vision.md (5) | Rayons de vue et statistiques dans `assets/data/units.*` | `UnitTypes` |
 | commandes-evenements.md (23), hud-systeme.md (17) | Durées de séquence, `Q_max`, `ATTACK_LOCK_MS` en données | `PresentationParams` |
-| recoloration-monde.md (15) | `TABLE_TEINTES[mode][faction]` en données | `TeintesTable` |
+| recoloration-monde.md (15) | `TABLE_TEINTES[mode][faction]` | **Pas en données** : les teintes de camp sont des constantes de l'art bible dans `TilePalette` (palette normale et daltonienne), ce ne sont pas des réglages d'équilibrage (revue du 2026-11-03, N4 ; ADR-0012) |
 | arbre-protocoles.md (12), ruines-fragments.md (13) | Arbre, calendrier de l'IA, pools de fragments en données | Domaines `protocoles`, `fragments` |
 | controles-tactiles-camera.md (4) | Tuning Knobs fractionnaires (anciens `TAP_SLOP_FACTOR`, `ZOOM_STEP_FACTOR`, `ZOOM_EPS`…, renommés `_MILLI` / `_MICRO` dans le GDD 4) | Suffixes `_milli`, `_micro`, domaine `controles` |
 | sauvegarde-automatique.md (16) | Règle 17bis : changer une valeur d'équilibrage ne change pas le schéma | Section 7 |

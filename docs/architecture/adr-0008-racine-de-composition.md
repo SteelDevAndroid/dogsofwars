@@ -44,7 +44,7 @@ Sans racine de composition, chaque système construirait ses dépendances (donc 
 ### Constraints
 - GDScript, Godot 4.7.2, Android d'abord.
 - Pas de singleton ni d'autoload (ADR-0002) ; le Core ne référence jamais la Presentation.
-- `process_priority` : `PresentationClock` −20, `TileTimeSource` −10, `PresentationSequencer` 0, `TileRenderer` 10, `AiRunner` 20 (liste d'ADR-0002, source unique).
+- `process_priority` : `PresentationClock` −20, `PresentationSequencer` 0, `TileRenderer` 10, `AiRunner` 20 (liste d'ADR-0002, source unique).
 - Une seule partie à la fois (GDD 16, règle 12) ; l'état d'une partie est rechargeable à tout moment (ÉTAT_CHARGÉ).
 - Les tests doivent construire la même partie avec des doublures (fichiers en mémoire, puits enregistreur, cadence toujours prête).
 
@@ -92,7 +92,7 @@ Sans racine de composition, chaque système construirait ses dépendances (donc 
    │        RuleTable ► Gate/Undo/Log ► SaveCoordinator + ProfilePort ► CommandPipeline ► TurnSystem + AiPlanner
    │        ▼
    └─ MatchScreen (Node, une par partie)
-         ├─ PresentationClock −20 ─ TileTimeSource −10 ─ PresentationSequencer 0 ─ TileRenderer 10 ─ AiRunner 20
+         ├─ PresentationClock −20 ─ PresentationSequencer 0 ─ TileRenderer 10 ─ AiRunner 20
          ├─ World (Node2D, transform de la caméra) ⊃ TileRenderer, marqueurs, surcouches   ├─ InputSurface (ADR-0010)   └─ HudLayer (CanvasLayer)
          match_screen.bind(session) : gate ► séquenceur ; pipeline ► InputSurface, AiRunner ; AiRunnerPort ► système des tours
          fin : AiRunner.cancel() ► process off ► shutdown() ► queue_free() ► tree_exited ► Bootstrap.session = null
@@ -297,34 +297,8 @@ Palette daltonienne : joueur #3A8EE6, ennemi #F0DC6E, non revendiqué #5F6266 (b
 
 ## Sons (2026-11-02)
 
-**Les sons** : quatorze effets en WAV mono 22 050 Hz de 16 bits (332 Ko en tout, `assets/audio/`), **synthétisés par `tools/audio/make_sounds.py`** (sinus, bruit, enveloppes, bibliothèque standard seulement, résultat identique à chaque exécution) : originaux, donc sans licence extérieure (CC0, à confirmer par le propriétaire du projet). Ils servent de repères : l'audio-director ou un sound designer les remplacera à nom égal. Aucune musique.
+Déplacé dans **ADR-0013 « Audio »** (revue du 2026-11-03, N1). Pour la composition : `Bootstrap` construit la `SoundBank` (un enfant, pour toute l'application), l'applique aux volumes du profil et la passe à `MatchScreen`, qui ajoute le `SoundHandler` en dernier dans la liste des gestionnaires du séquenceur.
 
-**Architecture** : `SoundBank` (`src/presentation/audio/`) tient un jeu de huit lecteurs et deux bus créés au besoin, **Effects** (ce qui se passe sur la carte : déplacement, attaque, destruction, menace, réveil, capture, fragment, tour, victoire, défaite) et **Interface** (tape de bouton, retour, sélection, refus), chacun avec un volume en pour cent (0 coupe le bus). `SoundHandler` est le présentateur audio du séquenceur (ADR-0002 §5) : il joue le son de l'événement que le joueur peut voir, jamais pendant un affichage direct (chargement, resynchronisation), sans jamais faire attendre. `Bootstrap` possède la banque, la règle sur les volumes des réglages et fait taper tout bouton de l'application (`node_added`) ; l'écran de fin joue victoire ou défaite (rien pour un abandon). Deux réglages : `volume_effects` et `volume_ui` (défaut 80, curseurs par pas de 10 dans l'écran des réglages).
+## Art livré (2026-11-02)
 
-**Accessibilité** : aucun son ne porte une information seul. Menace : puce et marqueur ; réveil : l'unité éveillée ; capture : le changement de couleur ; fragment : le panneau ; refus : la bannière ; destruction : le glyphe de débris ; sélection : l'anneau ; fin de tour ennemi : le résumé.
-
-**Écarts à confirmer** : (1) les sons sont des repères synthétiques, pas une direction sonore ; (2) pas de musique, donc pas de réglage « musique » (le GDD 22 en prévoit un) ; (3) le même son de tape pour tous les boutons ; (4) pas de réglage système « ne pas déranger » ni de focus audio Android ; (5) rien n'a été écouté sur un appareil : le niveau, la durée et l'agrément restent à juger.
-
-## Textures de terrain (2026-11-02)
-
-**Livraison reçue** : `dogs_of_gods_terrains_chapitre4.zip`, rangée dans `assets/art/terrain/` (13 tuiles de 256 × 256 px : plaine, forêt, montagne et eau en trois variantes, un brouillard opaque ; trois lisières transparentes ; 186 Ko). Contrôles refaits : opacité, raccord de chaque tuile sur elle-même, **bords identiques entre variantes**, tailles ; le contrôle automatique de l'artiste affichait « ECHEC » pour l'opacité alors que sa validation finale et le nôtre disent l'inverse (alpha minimal 255).
-
-**Rendu** : `TileRenderer` dessine ces images à la place des aplats : une variante par tuile (`variant_of`, fixe pour la tuile, indépendante du zoom : les bords étant identiques, deux voisines peuvent différer), assombries à 55 % hors de vue ; le brouillard est la tuile fournie ; aux limites du brouillard, une tuile découverte reçoit la lisière `bord` pour chaque côté touché, `angle_int` pour deux côtés d'un coin, `angle_ext` pour un coin dont seule la diagonale est du brouillard (tournées par quarts de tour ; `fog_sides` et `fog_corners` sont des fonctions pures testées). Import sans perte avec mipmaps, filtre `LINEAR_WITH_MIPMAPS` (256 px dessinés à 24 à 64 pt). Les teintes de propriétaire, motifs de faction et marqueurs restent par-dessus, dessinés par le jeu. `TilePalette.terrain` et ses couleurs, devenus inutiles, sont retirés ; le grain procédural de la passe précédente est remplacé par les textures. `check-export-pack` vérifie que les 16 images sont importées dans le pack.
-
-**Écarts à confirmer** : (1) les motifs de bord de la livraison dessinent une grille visible (chaque tuile de forêt, de montagne ou d'eau paraît encadrée) alors que le cahier des charges demandait aucune grille : à discuter avec l'art-director (`assets/art/terrain/LISEZMOI.txt`) ; (2) la forêt et la plaine ont des valeurs proches (moyennes de gris 96 et 88) : elles se distinguent par la forme, à confirmer au test en gris sur appareil ; (3) la mémoire (hors de vue) est un simple assombrissement.
-
-## Éléments posés sur la carte (2026-11-02)
-
-**Livraison reçue** : `dogs_of_gods_elements_carte_chapitre5.zip`, rangée dans `assets/art/{nodes,ruins,units,fx}/` (trois nœuds, trois ruines de 256 × 384 px, sept unités, six effets, dix masques : 524 Ko avec les terrains). Contrôles refaits : tailles, marges (36 px au moins), effets blancs, ruines ocre, masques noir et blanc. **Les masques de faction recouvrent exactement la silhouette** (pixel à pixel, les dix) : ils n'ajoutent rien à l'alpha, donc le jeu ne les charge pas et l'export les exclut (`*_mask.png`).
-
-**Rendu** : `TileRenderer` dessine ces images à la place des polygones et losanges provisoires. Unité : le sprite du type (la correspondance type → nom vient de l'ordre du catalogue, vérifié par un test), teinté à 55 % de la couleur du camp dans sa silhouette (`blend_rect_mask`, une texture par type et par couleur, faite une fois, palette daltonienne comprise), contour de 1 pt (sombre pour la meute, violet pour les Gardiens) obtenu en redessinant la silhouette décalée, drone endormi laissé gris avec sa barre, jauge de PV inchangée. Nœud : le sprite du niveau, gris tant que personne ne le tient, teinté ensuite. Ruine : sprite et halo posés sur la tuile et dépassant d'une demi-tuile, la ruine lue est assombrie. Effets : cadre de sélection, crochets de cible, point de portée, marqueur de menace et glyphe de débris (l'unité détruite s'affaisse puis laisse ses débris) ; l'anneau de sélection, la traînée de déplacement, la flèche du premier tour et la vague de recoloration restent dessinés par le jeu.
-
-**Écarts à confirmer** : (1) le mélange à 55 % est un choix de rendu, non validé par l'art-director ; il assombrit un peu les camps (la meute et les Gardiens restent distincts par la forme et la teinte, à confirmer sur appareil et en palette daltonienne) ; (2) pas d'animation de réveil (optionnelle dans la fiche) ; (3) une orientation par unité : le jeu ne les fait pas pivoter pour l'instant ; (4) les unités et nœuds à mi-case en bordure de zone sont coupés avec la case (rognage de la carte), les ruines dépassent d'une demi-tuile et sont coupées avec la zone ; (5) la lueur de ruine est teintée ocre par le jeu.
-
-## Éléments de l'interface (2026-11-02)
-
-**Livraison reçue** : `dogs_of_gods_interface_chapitre6.zip` : 18 icônes SVG et le panneau `ui_panneau.png` (96 × 96, marges de 24 px), rangés dans `assets/art/ui/` (les trois icônes provisoires du jeu, tour, énergie et ruine, sont remplacées à nom égal). Pas de police : le cahier des charges n'en désignait aucune, le jeu garde celle de Godot. Contrôles refaits (grille 24, trait 2, extrémités carrées, blanc, dix-huit dessins distincts). La planche de contrôle de l'artiste montre le même « + » partout : sans effet sur les fichiers.
-
-**Rendu** : `UiIcons` (`src/presentation/hud/`) donne la texture d'une icône par son nom ; import à 4 fois (`svg/scale=4`, 96 px) avec mipmaps. Icônes : boutons de la barre du haut, du panneau et de la caméra (les trois boutons de caméra n'ont plus que leur icône, nom accessible conservé), actions de contexte (capturer, réveiller, monter de niveau), puces d'alerte (menace, perte, ruine), menus (chronique, réglages, retour). Dans le rail du paysage, pause et recherche n'ont que leur icône (la largeur du rail est de 140 pt), avec info-bulle et nom accessible. Le panneau à neuf zones (`MenuLayout.framed_panel`) encadre les cartes de « Comment jouer » et les entrées de la chronique.
-
-**Écarts à confirmer** : (1) les polices restent à choisir (famille, licence, trois graisses au plus, chiffres tabulaires) ; (2) l'icône de ruine est faite de lignes droites et les loupes de zoom ont un cercle : écart à la règle « l'humain courbe, la machine droite » de la bible d'art ; (3) l'icône « tour » n'est pas un sablier (c'est un signe étoilé) : à vérifier que le sens se lit ; (4) pas d'icône pour « Comment jouer », « Continuer » ni « Nouvelle partie ».
+Les notes d'intégration des textures de terrain, des éléments de carte et de l'interface sont dans `design/art/integration-2026-11-02.md` (revue du 2026-11-03, N1) : elles décrivent l'art et son rendu (ADR-0012), pas la composition.

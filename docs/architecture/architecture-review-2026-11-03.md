@@ -70,3 +70,22 @@ Garder les deux, c'est garder du code mort et deux GDD contradictoires.
 - Le rendu de la recoloration suit maintenant le GDD 15 de bout en bout (source effective, anneaux, fondu binaire), en fonctions pures testées sur leurs exemples chiffrés, et sans jamais révéler la position d'un nœud caché.
 - Chaque écart est daté et noté dans l'ADR qui le porte. La revue n'a trouvé aucun écart silencieux entre le code et les décisions.
 - Les replis de performance sont ordonnés et écrits avant la mesure : la mesure ne déclenchera pas de discussion d'architecture, seulement un choix déjà préparé.
+
+---
+
+## 6. Suivi (2026-11-03)
+
+| Point | État |
+|---|---|
+| D1, D2, D3 | **Ouverts**, décision de l'utilisateur et du game-designer, mesure sur appareil |
+| N1 | Fait : ADR-0013 « Audio » (bus, jeu de lecteurs, `SoundHandler`, accessibilité) ; registre : API `audio_cues`, motif `sound_as_only_signal`. ADR-0008 garde un renvoi et la composition ; les notes d'art sont déplacées dans `design/art/integration-2026-11-02.md`. Les notes d'équilibrage, de deuxième carte et de résumé restent dans ADR-0008 en attendant D3 |
+| N2 | Fait : `TileTimeSource` retiré des listes d'ADR-0002 et d'ADR-0008 (−10 libre) |
+| N3 | Fait : ordre caméra, tuiles, HUD, son dans ADR-0002 (§5, diagramme, Écarts 7) et au registre (`presentation_handler`) |
+| N4 | Fait : ADR-0009 et GDD 15 disent que les teintes sont des constantes de `TilePalette` (art bible), pas des données |
+| N5 | Fait : la note de rendu du GDD 15 renvoie à ADR-0012 |
+| N6 | Fait : `handle_merged` retiré de `PresentationHandler`, d'ADR-0002 et du registre |
+| Plages des données d'onde | Fait : `PresentationParams.SCHEMA` suit les plages du GDD 15 (`recolor_ms` 200 à 400, `wave_ring_ms` 150 à 200, `wave_total_max_ms` 600 à 1 200) ; `ring_trace()` écrit la trace d'AC-RC10 au chargement (`push_warning`), testée |
+| Sons à la vitesse Instantanée | Fait : un même repère démarre au plus une fois par image (`SoundBank.play`), testé |
+| Horloge système dans le Core | Fait : motif `system_clock_in_game_rule` au registre, avec l'exception des compteurs de mesure |
+| `renderer_reads_real_state` en CI | Fait : règle dans `check-layer-deps.sh` et deux cas dans son auto-test |
+

@@ -19,6 +19,7 @@ const CUES := [&"ui_tap", &"ui_back", &"select", &"refusal", &"move", &"attack",
 var played: Array[StringName] = []
 
 var _streams := {}
+var _frame_of_cue := {}  # cue -> process frame it last started in: one start per cue and per frame
 var _players: Array[AudioStreamPlayer] = []
 var _volume := {EFFECTS_BUS: 100, INTERFACE_BUS: 100}
 
@@ -64,6 +65,12 @@ func play(cue: StringName) -> void:
 		played.pop_front()
 	if not _streams.has(cue) or _volume[bus_of(cue)] == 0 or _players.is_empty():
 		return
+	# At the instant enemy speed a whole phase plays in a few frames: the same cue started
+	# twice in one frame is one sound, and it does not cut the others off.
+	var frame := Engine.get_process_frames()
+	if _frame_of_cue.get(cue, -1) == frame:
+		return
+	_frame_of_cue[cue] = frame
 	var player := _free_player()
 	player.bus = bus_of(cue)
 	player.stream = _streams[cue]
