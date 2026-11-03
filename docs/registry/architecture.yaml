@@ -318,16 +318,18 @@ interfaces:
     pattern: direct_call
     producer: presentation-sequencer
     consumers:
+      - camera-handler
       - tile-renderer-handler
       - hud-presenter
-      - audio-presenter
+      - sound-handler
     adr: docs/architecture/adr-0002-evenements-de-presentation.md
-    signal_signature: "handle(event, ctx) -> PresentationHold ; handle_merged(events, ctx) -> PresentationHold ; on_idle(view: StateView) ; rebuild_from_state(view: StateView)"
+    signal_signature: "handle(event, ctx) -> PresentationHold ; on_batch_end(state) ; on_idle(view: StateView) ; rebuild_from_state(view: StateView) ; ordre fixe : caméra, tuiles, HUD, son"
     referenced_by:
       - docs/architecture/adr-0002-evenements-de-presentation.md
+      - docs/architecture/adr-0013-audio.md
       - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
-    revised: ""
+    revised: 2026-11-03   # ancien : handle_merged dans le contrat (jamais appelé, retiré, revue N6) ; consommateurs tile-renderer-handler, hud-presenter, audio-presenter
 
 
 # Example:
@@ -519,6 +521,17 @@ api_decisions:
     added: 2026-11-03
     revised: ""
 
+  - purpose: audio_cues
+    status: active
+    api: "SoundBank (Node, un pour l'application, construit par Bootstrap) : huit AudioStreamPlayer, bus Effects et Interface, volume 0..100 par bus, un même repère au plus une fois par image ; SoundHandler, dernier PresentationHandler du séquenceur, tenue 0 ms, muet en affichage direct"
+    not: "un AudioStreamPlayer créé par son, des signaux des systèmes vers l'audio, un son pendant un affichage direct, un son qui fait attendre le séquenceur"
+    adr: docs/architecture/adr-0013-audio.md
+    reason: "Le son suit les événements déjà filtrés par la vue du joueur et ne révèle rien ; voix bornées ; repères remplaçables à nom égal"
+    referenced_by:
+      - docs/architecture/adr-0013-audio.md
+    added: 2026-11-03
+    revised: ""
+
 
 # Example:
 #
@@ -626,7 +639,7 @@ forbidden_patterns:
   - pattern: renderer_reads_real_state
     status: active
     description: "TileRenderer ne lit GameState que dans TileSnapshot.take (FactionView du joueur, VisionService, IntentionMarkers.visible_to_player) ; il dessine uniquement l'instantané."
-    why: "La frontière anti-fuite (ADR-0007) est tenue par le type de l'entrée : le rendu ne peut pas afficher une information cachée."
+    why: "La frontière anti-fuite (ADR-0007) est tenue par le type de l'entrée : le rendu ne peut pas afficher une information cachée. Contrôlé en CI par tools/ci/check-layer-deps.sh (GameState refusé sous src/presentation/tiles/ hors de tile_snapshot.gd et de la signature de show_state)."
     adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-11-03
 
@@ -820,3 +833,18 @@ forbidden_patterns:
     why: "GDD 4, règles 8 et 10 : test de la Player Fantasy et pilier 4."
     adr: docs/architecture/adr-0010-entrees-tactiles-et-camera.md
     added: 2026-10-31
+
+  - pattern: sound_as_only_signal
+    status: active
+    description: "Aucun son ne porte une information seul : chaque repère a un jumeau visuel (puce, marqueur, bannière, panneau, glyphe)."
+    why: "Exigence d'accessibilité (design/accessibility-requirements.md) ; un joueur sans son doit tout savoir."
+    adr: docs/architecture/adr-0013-audio.md
+    added: 2026-11-03
+
+  - pattern: system_clock_in_game_rule
+    status: active
+    description: "Aucune règle de jeu ni décision de l'IA ne lit l'horloge système. Seule exception : les compteurs de mesure AiRunner.last_advance_usec / worst_advance_usec et SaveCoordinator.last_write_usec / worst_write_usec (Time.get_ticks_usec), que rien ne relit pour décider."
+    why: "Déterminisme et reprise (GDD 9 : aucune horloge système dans la logique de 9 ; ADR-0005 §4, budget en comptage) ; les compteurs servent au spike de mesure sur appareil (ADR-0005, A3)."
+    adr: docs/architecture/adr-0005-ia-ennemie.md
+    added: 2026-11-03
+

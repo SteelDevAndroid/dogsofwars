@@ -82,3 +82,20 @@ func test_the_events_have_their_cues_and_a_direct_display_is_silent() -> void:
 	assert_array(bank.played).is_equal([&"move"])  # the direct one said nothing
 	assert_int(handler.handle(UnitMovedEvent.new(0, 5, 14, 17, 17), SequenceContext.new(0.0, clock)).duration_ms).is_equal(0)
 	bank.free()
+
+
+## The instant enemy speed plays a whole phase in a few frames: the same cue twice in one frame
+## starts one sound and takes one player, another cue still sounds (review 2026-11-03).
+func test_a_cue_starts_once_per_frame() -> void:
+	var bank := _bank()
+	var loaded := func() -> int: return bank.get_children().filter(func(p: Node) -> bool: return (p as AudioStreamPlayer).stream != null).size()
+
+	bank.play(&"attack")
+	bank.play(&"attack")
+	assert_int(loaded.call()).is_equal(1)
+	bank.play(&"move")
+
+	assert_int(loaded.call()).is_equal(2)
+	assert_array(bank.played).is_equal([&"attack", &"attack", &"move"])  # every cue asked is still recorded
+	bank.free()
+

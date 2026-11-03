@@ -120,7 +120,7 @@ func set_clip_rect(rect: Rect2) -> void
 ```
 
 ### Implementation Guidelines
-- Le renderer **ne doit jamais** lire `GameState` hors de `TileSnapshot.take`, ni écrire un état de jeu.
+- Le renderer **ne doit jamais** lire `GameState` hors de `TileSnapshot.take`, ni écrire un état de jeu (contrôlé en CI par `tools/ci/check-layer-deps.sh`, revue du 2026-11-03).
 - `TileSnapshot.take` **ne doit** lire que par `FactionView(JOUEUR)`, `VisionService` et les deux lectures filtrées de la Decision 2 ; une nouvelle donnée affichée **doit** entrer dans l'instantané avec un test de non-fuite.
 - Un effet **doit** rester une donnée pure ; son minutage **doit** dépendre de la seule horloge injectée.
 - Il **ne faut pas** créer un nœud, un matériau ou un shader par tuile, ni utiliser `TIME`, `Tween` ou `create_timer` pour animer la carte.
