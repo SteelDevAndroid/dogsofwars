@@ -54,7 +54,8 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 
 
 ## The colour wave (GDD 15): one effect per ring, each starting `min(k, K_MAX) x T_ANNEAU_eff`
-## after the step and fading for T_FONDU; the hold is the length of the whole wave. With no
+## after the step and fading for T_FONDU (F5: the old tint to grey, then the new one; no mix);
+## the hold is the length of the whole wave. With no
 ## effective source (the player sees none of the tiles), in reduced motion and in a direct
 ## display the colours change at once, with the next snapshot.
 func _recolor(changed: TileOwnersChangedEvent, context: SequenceContext) -> PresentationHold:
@@ -66,6 +67,11 @@ func _recolor(changed: TileOwnersChangedEvent, context: SequenceContext) -> Pres
 		var wave := TileEffect.new(TileEffect.Kind.WAVE, context.t0 + step[0] / 1000.0, _params.value("recolor_ms") / 1000.0)
 		wave.tiles = step[1]
 		wave.color = color
+		wave.to_owner = changed.new_owner
+		for tile in wave.tiles:  # each tile leaves the tint it shows now, a fade in progress included (rule 15)
+			var shown := _renderer.shown_state(tile, context.t0)
+			wave.from_owner.append(shown.x)
+			wave.from_s.append(shown.y)
 		_renderer.add_effect(wave)
 	return PresentationHold.new(plan.duration_ms)
 

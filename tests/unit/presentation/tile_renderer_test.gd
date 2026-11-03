@@ -24,6 +24,27 @@ func test_the_renderer_draws_a_new_game_without_error() -> void:
 	renderer.free()
 
 
+func test_the_renderer_draws_a_map_with_waves_under_way() -> void:
+	var renderer := _renderer()
+	var clock := FakeClock.new()
+	renderer.clock = clock
+	var wave := TileEffect.new(TileEffect.Kind.WAVE, 0.0, 0.4)
+	wave.tiles = PackedInt32Array([14, 15])
+	wave.from_owner = PackedInt32Array([Faction.PLAYER, Faction.NONE])
+	wave.from_s = PackedInt32Array([1000, 0])
+	wave.to_owner = Faction.AI
+	renderer.add_effect(wave)
+
+	for time in [0.0, 0.1, 0.2, 0.3, 0.5]:
+		clock.advance(time - clock.current())
+		renderer.queue_redraw()
+		await await_idle_frame()
+
+	assert_array([renderer.shown_state(14, 0.5).x, renderer.shown_state(14, 0.5).y]).is_equal([Faction.AI, 1000])
+	assert_array([renderer.shown_state(15, 0.2).x, renderer.shown_state(15, 0.2).y]).is_equal([Faction.AI, 500])
+	renderer.free()
+
+
 func test_a_renderer_without_a_snapshot_draws_nothing() -> void:
 	var renderer := TileRenderer.new()
 	add_child(renderer)

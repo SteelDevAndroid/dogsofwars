@@ -67,6 +67,10 @@ ADR-0001, accepté le 2026-10-30, décrivait un rendu en MultiMesh à deux vec4 
 
 **4 bis. L'onde de recoloration par anneaux (GDD 15, règles 11 à 13, F3, F4, F7).** `WaveSource` (Core, `src/core/vision/`) estampille chaque `TileOwnersChangedEvent` de la **source effective** que le joueur peut connaître : la tuile de la source (nœud capturé ou monté, ruine lue) si le joueur la voit après la commande, sinon la tuile changée visible la plus proche (Chebyshev, puis index le plus bas), sinon aucune (-1) ; l'événement ne porte jamais la tuile d'un nœud caché. `WaveSchedule` (Presentation, fonction pure) en tire un `WavePlan` : l'anneau k d'une tuile est sa distance de Chebyshev à la source, il démarre à `min(k, K_MAX) × T_ANNEAU_eff` avec `T_ANNEAU_eff = min(T_ANNEAU, (T_TOTAL_MAX − T_FONDU) div K_MAX)`, chaque tuile se fond en `T_FONDU` (`recolor_ms`), et la durée de l'onde est `min(K_MAX, k_max) × T_ANNEAU_eff + T_FONDU`. À l'intérieur d'un anneau, l'ordre croissant d'index ne donne aucun décalage. `TileRendererHandler` crée un `WAVE` par anneau non vide, démarré à `t0 + début`, et rend la durée de l'onde comme tenue. Sans source (le joueur ne voit aucune tuile changée), en animations réduites et en affichage direct, les couleurs changent d'un coup avec l'instantané suivant : aucun effet, tenue de 0.
 
+**4 ter. Le fondu binaire et la réécriture (GDD 15, règles 14 et 15, F5).** Une tuile n'est jamais un mélange de deux teintes : c'est **une** teinte à une saturation de 0 (gris) à 1000. `WaveFade.shown(from_owner, from_s, to_owner, u, D)` (fonction pure en entiers) donne la teinte et la saturation `u` ms après le début du fondu : gris → teinte monte sur D ; teinte → gris descend sur D ; teinte → autre teinte descend sur H1 puis monte sur H2 (la tuile est grise au milieu). Chaque `WAVE` porte, par tuile, la teinte et la saturation **montrées à l'écriture** (`from_owner`, `from_s`) et la teinte visée (`to_owner`) ; `TileRenderer.shown_state(tile, now)` rend ce que la tuile montre (le fondu en cours de l'onde qui la couvre, sinon son propriétaire dans l'instantané) et `_draw_tile` dessine ce seul état. Une onde écrite pendant un fondu part donc de la saturation **déjà affichée** (descente en `(H1 × s) div 1000` ms puis montée en H2 pour une autre teinte, montée en `(D × (1000 − s)) div 1000` pour la même teinte, descente en `(D × s) div 1000` vers le gris) : pas de saut. Une onde terminée **garde sa teinte** jusqu'à l'instantané suivant (`show_state` la remplace) : sans cela les tuiles des premiers anneaux retomberaient à l'ancienne teinte tant que les anneaux suivants jouent.
+
+**Limite de portée.** Le séquenceur joue un événement après l'autre et attend la fin de chaque onde (ADR-0002, HUD règles 10 à 13) : deux ondes ne se recouvrent donc jamais sur une tuile, et le chemin de réécriture ne se déclenche pas en jeu aujourd'hui. Le GDD 15 (règle 15, E1) suppose au contraire des ondes de commandes successives « en parallèle ». Le comportement est en place et testé (écritures qui se recouvrent), mais ce désaccord entre le GDD 15 et le GDD 17 reste à trancher.
+
 **5. Politique de redessin.** `queue_redraw()` est appelé sur un changement d'instantané, de sélection, de cibles, de portée, de mise en page ou de rectangle de découpe. Un redessin **à chaque image** n'a lieu que tant qu'un effet est actif ou que la flèche d'aide des premiers tours oscille hors animations réduites. Au repos, aucun redessin et aucun travail par image (`_process` ne fait que tester deux conditions).
 
 **6. Animations réduites et palette.** En animations réduites (`still`, `SequenceContext.reduced`), les glissements et les ondes durent 0 ms ; les étapes d'attaque gardent leurs durées (chiffres 800 ms, trait 250 ms) et le séquenceur espace les changements de couleur d'un créneau de temps réel (ADR-0002, Écarts). La palette daltonienne est un drapeau du renderer (`colorblind`) qui change seulement la table des teintes de `TilePalette` ; il n'écrit aucun état de partie. La couleur n'est jamais le seul signal : un chevron marque le camp du joueur, une barre le camp ennemi.
@@ -99,6 +103,7 @@ func progress(now: float) -> float                                         # 0 a
 func is_over(now: float) -> bool
 
 class_name WaveSource extends RefCounted                                  # Core : source effective (F7) ; stamp(events, source, state)
+class_name WaveFade extends RefCounted                                    # pure : shown(from_owner, from_s, to_owner, u_ms, fade_ms) -> Vector2i (teinte, saturation 0..1000)
 class_name WaveSchedule extends RefCounted                                # pure : plan(columns, tiles, source, params) -> WavePlan (steps, duration_ms)
 
 class_name TileRenderer extends Node2D
@@ -108,6 +113,7 @@ var still: bool                              # animations réduites : aucune osc
 func show_state(state: GameState, catalog: DataCatalog) -> void   # reprend l'instantané
 func add_effect(effect: TileEffect) -> void
 func clear_effects() -> void                                       # resynchronisation
+func shown_state(tile: int, now: float) -> Vector2i                # (teinte, saturation) montrées : fondu en cours ou instantané
 func set_selection(tile: int, reachable: PackedInt32Array) -> void
 func set_targets(tiles: PackedInt32Array, chosen: int) -> void
 func set_clip_rect(rect: Rect2) -> void
@@ -151,7 +157,7 @@ func set_clip_rect(rect: Rect2) -> void
 
 ### Negative
 - Un redessin complet de la carte (terrain, lisières, propriétaires, nœuds, unités) à chaque image d'effet : de l'ordre de plusieurs centaines à environ 1 500 commandes de dessin sur une carte pleine (estimation, non mesurée).
-- Le fondu binaire et la réécriture en cours d'onde du GDD 15 (F5) ne sont pas faits (voir Écarts ci-dessous) ; les anneaux le sont, en fonctions pures testées.
+- La réécriture en cours d'onde est en place mais jamais déclenchée par le séquenceur actuel (un événement après l'autre) ; une onde terminée reste dans la liste des effets jusqu'à l'instantané suivant.
 - Les teintes de `TilePalette` sont des constantes du code, pas un fichier de données (ADR-0009 prévoyait `TABLE_TEINTES`).
 - La première teinte d'une texture coûte une copie d'image : repérée par la vérification 3.
 
@@ -162,12 +168,10 @@ func set_clip_rect(rect: Rect2) -> void
 - **Écart au GDD 15** (ci-dessous) non tranché : l'onde ne reproduit pas le GDD.
 
 ## Écarts au GDD 15 (recoloration du monde), à décider
-Les anneaux et la source effective sont **faits** (Decision 4 bis : F3, F4, F7 ; tests dans `tests/unit/recoloration/` et `tile_renderer_handler_test.gd`, critères AC-RC8 à AC-RC13). Le rendu livré ne reproduit pas encore les règles 14 et 15 (F5) du GDD 15, ni la transition de brouillard :
-- **Fondu binaire** (règle 14) : la recoloration est une teinte de camp dont l'opacité monte à 0,30 sur la tuile (`WAVE`), pas un fondu gris ↔ teinte, et f → g ne passe pas par le gris.
-- **Écriture pendant une onde** (règle 15) : deux ondes se jouent en parallèle sur la même tuile, sans animation depuis la valeur affichée.
+Les anneaux, la source effective, le fondu binaire et la réécriture sont **faits** (Decisions 4 bis et 4 ter : F3, F4, F5, F7 ; tests dans `tests/unit/recoloration/`, `tile_renderer_handler_test.gd` et `tile_renderer_test.gd`). Restent :
 - **Autres écarts mineurs** : la révélation de brouillard (`TilesRevealedEvent`, `T_REV` = 150 ms) n'est pas animée ; les tuiles de révélation et d'onde ne sont pas distinguées dans un même événement (AC-RC14) ; réduire `T_ANNEAU_eff` à la lecture des données n'écrit pas la trace demandée par AC-RC10.
 
-Il reste à choisir, par le game-designer : **simplifier le GDD 15** (règles 14 et 15 : une teinte qui apparaît, sans fondu par le gris ni réécriture) ou **construire F5** (saturation par tuile, réécriture depuis la valeur affichée) dans le rendu.
+À trancher par le game-designer : l'**onde en parallèle** du GDD 15 (règle 15, E1) contre le **lot après lot** du GDD 17 et d'ADR-0002 (voir Limite de portée, Decision 4 ter).
 
 ## GDD Requirements Addressed
 
@@ -175,7 +179,7 @@ Il reste à choisir, par le game-designer : **simplifier le GDD 15** (règles 14
 |------------|-------------|--------------------------|
 | recoloration-monde.md (15) | Règles 16 et 20, E10 : animations réduites, palette daltonienne sans écrire d'état | `still`, durées à 0, drapeau `colorblind` qui ne change que `TilePalette` |
 | recoloration-monde.md (15) | Règles 11 à 13, F3, F4, F7 : source, anneaux, rythme, plafond | `WaveSource` (Core), `WaveSchedule`, un `WAVE` par anneau |
-| recoloration-monde.md (15) | Règles 14 et 15 : fondu binaire, écriture pendant une onde | **Non couvert** : voir Écarts |
+| recoloration-monde.md (15) | Règles 14 et 15, F5 : fondu binaire, écriture pendant une onde | `WaveFade`, états `from_owner` / `from_s` des `WAVE`, `TileRenderer.shown_state` ; chemin de réécriture dormant en jeu (Decision 4 ter) |
 | brouillard-vision.md (5) | INCONNUE aplatie, EXPLORÉE assombrie, VISIBLE ; aucune fuite | `TileSnapshot` sur `FactionView` et `fog_level` ; texture de brouillard, assombrissement `MEMORY_DIM`, lisières orientées |
 | carte-tuiles-terrain.md (2) | Carte 12×12 à 16×16, tuiles carrées | `TileLayout` et `visible_tiles()` |
 | hud-systeme.md (17) | Règles 2, 10, 16, 17 : le HUD ne lit pas l'état pendant la file, reconstruction sans onde | Instantané repris à la fin d'un lot ; `rebuild_from_state` efface les effets |
