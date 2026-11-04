@@ -1,0 +1,101 @@
+[
+  {
+    "path": "illus/chronique_briefing.webp",
+    "dimensions": [
+      2560,
+      2560
+    ],
+    "mode": "RGB",
+    "bytes": 351080
+  },
+  {
+    "path": "illus/chronique_introduction.webp",
+    "dimensions": [
+      2560,
+      2560
+    ],
+    "mode": "RGB",
+    "bytes": 372108
+  },
+  {
+    "path": "illus/chronique_revelation.webp",
+    "dimensions": [
+      2560,
+      2560
+    ],
+    "mode": "RGB",
+    "bytes": 356028
+  },
+  {
+    "path": "illus/splash_paysage.png",
+    "dimensions": [
+      2560,
+      1440
+    ],
+    "mode": "RGB",
+    "bytes": 2712217
+  },
+  {
+    "path": "illus/splash_portrait.png",
+    "dimensions": [
+      1440,
+      2560
+    ],
+    "mode": "RGB",
+    "bytes": 2076613
+  },
+  {
+    "path": "icons/ic_launcher_background.png",
+    "dimensions": [
+      432,
+      432
+    ],
+    "mode": "RGBA",
+    "bytes": 8634
+  },
+  {
+    "path": "icons/ic_launcher_foreground.png",
+    "dimensions": [
+      432,
+      432
+    ],
+    "mode": "RGBA",
+    "bytes": 4287
+  },
+  {
+    "path": "icons/ic_launcher_monochrome.png",
+    "dimensions": [
+      432,
+      432
+    ],
+    "mode": "RGBA",
+    "bytes": 2991
+  },
+  {
+    "path": "icons/icon_classique_192.png",
+    "dimensions": [
+      192,
+      192
+    ],
+    "mode": "RGB",
+    "bytes": 19101
+  },
+  {
+    "path": "store/graphique_presentation_1024x500.png",
+    "dimensions": [
+      1024,
+      500
+    ],
+    "mode": "RGB",
+    "bytes": 630307
+  },
+  {
+    "path": "store/icon_play_store_512.png",
+    "dimensions": [
+      512,
+      512
+    ],
+    "mode": "RGB",
+    "bytes": 69982
+  }
+]

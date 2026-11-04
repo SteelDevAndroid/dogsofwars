@@ -15,6 +15,8 @@
 
 Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presentation/map3d/low_poly.gd`) avec des formes simples. Elles suffisent à jouer et à juger la direction. Un artiste les **remplace à nom égal** par des modèles `.glb`, sans toucher au reste du jeu.
 
+**Livré à ce jour** (`assets/art/3d/`) : les 12 modèles de terrain (sources dans `design/art/sources/terrain-3d/`), puis les 3 nœuds, les 3 ruines (2 arches, 1 dôme) et les 7 unités (sources dans `design/art/sources/elements-3d/`). Il manque les 7 unités endormies (facultatives : le jeu assombrit et enfonce le modèle éveillé) et la niche de commande à l'arrière des unités de la meute (pas modélisée : la caméra ne tourne pas).
+
 **Comment le jeu les charge** (`ModelLibrary`, 2026-11-04) : si `assets/art/3d/<nom>.glb` existe, le jeu prend le premier maillage du modèle ; sinon il garde la forme du code. On peut donc livrer les modèles un par un, dans n'importe quel ordre. Godot importe les `.glb` déposés dans ce dossier ; un `.glb` non importé est aussi lu, avec `GLTFDocument`.
 
 | Catégorie | Pièces | Construit dans le code | Livré par un artiste |
@@ -48,7 +50,9 @@ Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presen
 | Origine | Au **centre de la tuile**, le **dessus du terrain à Y = 0** (voir les hauteurs, section 4) |
 | Axes | **+Y en haut, +Z vers la caméra** (le bas de l'écran), +X à droite. L'avant d'une unité (son œil, sa lame) regarde **+Z** ; le jeu tourne les Gardiens de 180° |
 | Faces | Faces **plates** (pas de lissage), aplats, **aucune texture**, aucun matériau autre que la couleur de sommet |
-| Couleur | **Couleurs de sommet** (attribut `COLOR_0`), en **valeurs de gris** pour tout ce qui change de camp. Teintes fixes permises seulement pour les ruines (ocre `#C8955A`) |
+| Couleur | **Couleurs de sommet** (attribut `COLOR_0`), en **valeurs de gris** pour tout ce qui change de camp. Teintes fixes permises seulement pour les ruines (ocre `#C8955A`). Les nombres écrits sont **ceux de la palette** (le jeu lit `#7A848E` comme 0,478 · 0,518 · 0,557) : le jeu les convertit lui-même en valeurs linéaires. Ne pas les convertir à l'export |
+| Sens des faces | **Dessus et faces vues : sens trigonométrique vu de l'extérieur** (la règle de glTF 2.0). Un modèle dont les faces sont à l'envers s'affiche vide (le jeu ne dessine pas l'intérieur) : le test `delivered_models_test` le détecte |
+| Normales | Facultatives : le jeu calcule des normales plates si le fichier n'en porte pas |
 | Masque de camp | Dans l'**alpha** de la couleur de sommet : **1 = prend la teinte du camp**, 0 = garde son gris. La silhouette ne change jamais d'un camp à l'autre |
 | Triangles | **Unité : 150 à 400.** Tuile de terrain : au plus 300. Nœud, ruine : au plus 200. Un seul niveau de détail |
 | Faces cachées | L'arrière et le dessous peuvent être omis : ils ne sont jamais vus |
@@ -127,31 +131,42 @@ Chaque type existe en **3 variantes** (`_01`, `_02`, `_03`). Le jeu choisit la v
 Sans changement. L'interface reste en 2D par-dessus la carte.
 
 - **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale de 20 pt.
-  - 21 icônes sont en place dans `assets/art/ui/`. Ce sont des versions provisoires dessinées par l'équipe technique, à remplacer à nom égal.
+  - 21 icônes sont en place dans `assets/art/ui/` (`ui_icon_<nom>.svg`). Depuis le 2026-11-04 ce sont celles de l'artiste (sources et générateur dans `design/art/sources/interface/`), qui ont remplacé les versions provisoires de l'équipe technique. Le test `ui_icons_test` les vérifie : 21 fichiers, `viewBox` 24 × 24, trait de 2, extrémités carrées, blanc, toutes différentes, importées à 96 px.
+  - L'artiste a nommé ses fichiers `ui_<nom>.svg` ; le jeu attend `ui_icon_<nom>.svg`, et `montee_niveau` pour la montée de niveau. À lui demander pour la prochaine livraison.
   - La liste : tour, énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour, mouvement, défense, vue.
-- **Polices** : `.ttf` ou `.otf` avec leur licence, au plus 3 graisses, accents français complets, chiffres tabulaires.
-- **Panneau papier du fragment** : un 9-patch `ui_panneau.png`, 96 × 96 px, marges de 24 px (déjà livré).
+- **Polices** : `.ttf` ou `.otf` avec leur licence, au plus 3 graisses, accents français complets, chiffres tabulaires. Non livrées : l'artiste suggère IBM Plex Sans (SIL OFL 1.1), mais l'art bible (section 7) retient Space Grotesk, JetBrains Mono et Spectral, et le jeu embarque aujourd'hui Inter. Décision d'art à prendre ; rien n'est changé.
+- **Panneau papier du fragment** : un 9-patch `ui_panneau.png`, 96 × 96 px, marges de 24 px. Celui du jeu est un cadre sombre (cartes des menus). L'artiste en propose un autre, **papier crème** (`design/art/sources/interface/ui_panneau_papier.png`), qui n'est pas installé : à la place du cadre sombre il rendrait les cartes des menus illisibles (texte clair sur crème). Il convient au panneau du fragment, aujourd'hui un simple aplat crème dessiné par le jeu : à brancher si l'art-director le veut.
 
 ## 7. Hors carte : illustrations, icône, magasin
 
-Sans changement. Les illustrations restent peintes : c'est le registre de la mémoire (art bible 1).
+Livré le 2026-11-04 (propositions : voir « Limites » ci-dessous). Sources, script et image de départ dans `design/art/sources/hors-carte/`.
 
-| Ressource | Spécification |
-|---|---|
-| **Écran titre / splash** | image maîtresse portrait **1 440 × 2 560 px**, `.webp` ou `.png` sRGB, sujet et titre dans le carré central de 1 080 × 1 080, sans la phrase « Touchez pour jouer » ; recadrage paysage 2 560 × 1 440 |
-| **Illustrations de chronique et de carte** | maîtresse carrée **2 560 × 2 560**, sujet dans le carré central de 1 440 × 1 440 ; `.webp`. Même caméra de trois-quarts et même composition que la carte en jeu (art bible 6) |
-| **Icône du lanceur (Android)** | premier plan 432 × 432 px transparent, sujet dans le disque central de 288 px ; arrière-plan 432 × 432 px opaque ; monochrome 432 × 432 px |
-| **Icône classique** | 192 × 192 px, PNG |
-| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, moins de 1 Mo |
-| **Graphique de présentation** | 1 024 × 500 px, PNG ou JPEG sans transparence |
-| **Captures d'écran** | 2 à 8, en 9:16 ou 16:9 (suggestion : 1 080 × 1 920), sans cadre de téléphone, **prises sur le Pixel 8** |
+| Ressource | Spécification | État |
+|---|---|---|
+| **Écran titre / splash** | portrait **1 440 × 2 560 px**, sans la phrase « Touchez pour jouer » (le jeu l'écrit) ; paysage 2 560 × 1 440 | **Installé** : `assets/ui/splash.png` (portrait, aussi l'image de démarrage du moteur) et `assets/ui/splash_landscape.png`. Le titre « DOGS OF GODS » est peint dans l'image |
+| **Illustrations de chronique** | carrées **2 560 × 2 560**, `.webp` | **Rangées, pas branchées** : trois (`introduction`, `briefing`, `revelation`) dans `design/art/illustrations/`. Aucun écran ne les montre encore ; installées, elles pèseraient environ 26 Mo de mémoire graphique chacune |
+| **Icône du lanceur (Android)** | premier plan 432 × 432 transparent, fond 432 × 432 opaque, monochrome 432 × 432 | **Installés** (`assets/ui/icon_adaptive_*_432.png`) ; le monochrome (icônes thématiques d'Android 13) est ajouté au préréglage d'export |
+| **Icône classique** | 192 × 192 px, PNG, coins arrondis transparents | **Installée** (`assets/ui/icon_192.png`), mais **sans coins arrondis** (carrée, opaque) |
+| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, moins de 1 Mo | **Installée** (`assets/ui/icon_512.png`, aussi l'icône du projet) |
+| **Graphique de présentation** | 1 024 × 500 px, sans transparence | Rangé dans `design/art/store/` (fiche du Play Store, pas dans le jeu) |
+| **Captures d'écran** | 2 à 8, 9:16 ou 16:9, sans cadre de téléphone, prises sur le Pixel 8 | **Pas livrées** : à enregistrer depuis le jeu sur le téléphone |
+
+**Comment le jeu les montre.** L'écran titre prend l'image portrait ou paysage selon l'orientation de l'écran et écrit lui-même « Touchez pour jouer » dessus. Les menus (principal, fin de partie) gardent **le haut de l'image seulement** (58 % en portrait, 50 % en paysage) : le titre peint est plus bas, et les boutons seraient posés dessus.
+
+**Limites signalées par l'artiste.** Les illustrations sont des découpes d'une composition générée de 1 536 × 1 024, recadrées et suréchantillonnées : les dimensions sont bonnes, pas le détail. À retoucher ou repeindre à l'échelle avant une livraison finale.
+
+**Écarts relevés à l'intégration** (rien n'est modifié, décisions d'art) :
+- L'**identité de l'icône change** : l'ancienne (visage, loup « D.o.G », robots) devient un écusson gris avec un losange rouge.
+- Le **fond de l'icône adaptative** porte un anneau décoratif de 330 px de diamètre ; la zone sûre fait 288 px : sur un masque circulaire l'anneau est coupé.
+- Les illustrations, bleu ardoise avec une marque rouge sur le visage, ne reprennent pas la palette chaude que l'art bible (section 1) réserve à la mémoire.
+- Les illustrations viennent d'une génération d'image : à valider côté droits avant la publication.
 
 ## 8. Contrôle à la réception
 
 À faire dans le jeu, avec sa caméra, avant d'accepter un modèle :
 
 1. Nom, format `.glb`, échelle, origine et axes conformes : le modèle posé sur une tuile ne déborde pas du carré et son avant regarde la caméra.
-2. **Budget de triangles** respecté. Le test `tests/unit/map3d/map_view_3d_test.gd` vérifie les formes du code ; `model_library_test.gd` vérifie qu'un `.glb` se charge avec son masque. Un test des budgets sur les modèles livrés reste à ajouter quand le premier arrivera.
+2. **Contrôles automatiques** (`tests/unit/map3d/delivered_models_test.gd`, sur chaque `.glb` de `assets/art/3d/`) : le nom est connu du jeu ; le modèle tient dans sa tuile ; le budget de triangles (terrain au plus 300, unité de 150 à 400) ; pour un terrain, les faces regardent vers le haut, la hauteur est celle de la section 4 et la dalle fait 0,98 de large et 0,22 d'épaisseur. `model_library_test.gd` vérifie le chargement, le masque de camp, les normales et les couleurs. `map_view_3d_test.gd` vérifie les formes du code.
 3. **Galerie** : `tools/preview/map3d_preview.gd -- gallery` montre côte à côte tous les terrains, les 7 unités, les nœuds et les ruines. Les silhouettes doivent se reconnaître à 31 pt, et les quatre types de la meute se distinguer côte à côte.
 4. **Test en gris** : sur une capture désaturée, chaque élément se détache de ses voisins par la valeur et la forme, y compris sur une case teintée par un camp.
 5. **En partie** : le mode `match` du même outil donne le vrai écran (portrait et paysage). Une crête ne doit pas cacher une unité sur la case derrière.

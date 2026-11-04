@@ -20,9 +20,26 @@ func _initialize() -> void:
 	if mode == "gallery":
 		await _gallery(catalog, out)
 		return
+	if mode == "title" or mode == "menu":
+		root.content_scale_factor = 2.0
+		var screen: Control = TitleScreen.new() if mode == "title" else MainMenu.new()
+		root.add_child(screen)
+		if mode == "menu":
+			(screen as MainMenu).configure(true, 120)
+		for i in 6:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(out)
+		print("saved ", out)
+		quit()
+		return
+	if mode == "maps":
+		root.content_scale_factor = 2.0
+		await _maps_screen(out)
+		return
 	if mode == "match":
 		root.content_scale_factor = 2.0  # what UiScale sets on a 320 dpi screen
-		await _match(out, rounds)
+		await _match(out, rounds, args[4] if args.size() > 4 else "")
 		return
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_size = Vector2i(points)
@@ -115,14 +132,36 @@ func _gallery(catalog: DataCatalog, out: String) -> void:
 	quit()
 
 
+## The map choice screen, as the app builds it from the shipped files.
+func _maps_screen(out: String) -> void:
+	var catalog := CatalogFactory.standard()
+	var maps: Array[MapDefinition] = []
+	for file in Bootstrap.MAP_FILES:
+		var errors: Array[DataError] = []
+		maps.append(MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/" + file), file, catalog, errors))
+	var screen := MapChoiceScreen.new()
+	root.add_child(screen)
+	screen.configure(maps)
+	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out)
+	print("saved ", out)
+	quit()
+
+
 ## The real match screen (3D) on a new game of the shipped map: its first unit selected, then
 ## `step` frames of presentation after a move (0: none), to see a slide or a wave under way.
-func _match(out: String, step: int) -> void:
+func _match(out: String, step: int, map_id: String = "") -> void:
 	var t := TestSessionFactory.new()
 	var screen: MatchScreen = load("res://src/app/match_screen.tscn").instantiate()
 	root.add_child(screen)
 	await process_frame  # the scene is ready (its @onready nodes)
-	var session := SessionFactory.new_game(t.app, t.map(), SEED, screen.ports(t.sink), screen.runner_port())
+	var map := t.map()
+	if map_id != "":
+		var errors: Array[DataError] = []
+		map = MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/%s.json" % map_id), map_id, t.app.catalog, errors)
+	var session := SessionFactory.new_game(t.app, map, SEED, screen.ports(t.sink), screen.runner_port())
 	screen.bind(session)
 	for i in 10:
 		await process_frame

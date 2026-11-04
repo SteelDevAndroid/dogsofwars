@@ -1,6 +1,6 @@
 Dogs of Gods — Chapitre 6 : Interface
 
-Icônes SVG : 18 fichiers, viewBox 24x24, trait 2, extrémités carrées, blanc uniquement.
+Icônes SVG : 21 fichiers (remplacés le 2026-11-04 par la livraison de l'artiste ; sources dans design/art/sources/interface/), viewBox 24x24, trait 2, extrémités carrées, blanc uniquement.
 Direction visuelle : géométrique, industrielle, sobre, cohérente avec les ressources des chapitres 4 et 5.
 Le jeu dessine les boutons et panneaux ; ui_panneau.png est fourni comme 9-patch optionnel 96x96, marges de 24 px.
 Polices : non incluses. La spécification exige une police réelle sous licence, 3 graisses max, accents français complets et chiffres tabulaires ; aucune famille n'est désignée dans asset-specs.md.

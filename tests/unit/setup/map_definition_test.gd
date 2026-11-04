@@ -170,4 +170,19 @@ func test_every_shipped_map_is_valid_and_symmetric_with_its_own_size() -> void:
 		assert_array(errors).override_failure_message("%s: %s" % [file, errors]).is_empty()
 		assert_object(map).is_not_null()
 		sizes[file] = Vector2i(map.width, map.height)
-	assert_dict(sizes).is_equal({"plaine.json": Vector2i(12, 12), "marais.json": Vector2i(14, 14)})
+	var full := Vector2i(MapDefinition.MAX_SIZE, MapDefinition.MAX_SIZE)
+	assert_dict(sizes).is_equal({"plaine.json": Vector2i(12, 12), "marais.json": Vector2i(14, 14), "cretes.json": full,
+			"foret.json": full, "archipel.json": full, "mesas.json": full, "landes.json": full})
+
+
+func test_a_map_needs_a_title_and_a_summary_for_the_choice_screen() -> void:
+	var document := _document()
+	assert_str(document["title"]).is_not_empty()
+	document["title"] = "  "
+	assert_bool(_with_message(document, "title and summary")).is_true()
+	document = _document()
+	document["summary"] = ""
+	assert_bool(_with_message(document, "title and summary")).is_true()
+	document = _document()
+	document.erase("title")
+	assert_bool(_errors_of(document).is_empty()).is_false()  # the schema is strict: a missing key is refused

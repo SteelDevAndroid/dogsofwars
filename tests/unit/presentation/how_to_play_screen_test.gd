@@ -42,3 +42,26 @@ func test_the_menu_screens_share_the_navy() -> void:
 		add_child(screen)
 		assert_object((screen.get_child(0) as ColorRect).color).is_equal(MenuLayout.NAVY)
 		screen.free()
+
+
+func test_the_menus_and_the_title_pick_the_artwork_of_their_orientation_and_the_menus_keep_it_above_its_title() -> void:
+	var portrait := MenuLayout.artwork(false, false)
+	var landscape := MenuLayout.artwork(true, false)
+	assert_vector(Vector2(portrait.get_size())).is_equal(Vector2(1440, 2560))
+	assert_vector(Vector2(landscape.get_size())).is_equal(Vector2(2560, 1440))
+
+	var kept := MenuLayout.artwork(false, true) as AtlasTexture
+	assert_object(kept.atlas).is_same(portrait)
+	assert_float(kept.region.size.y).is_equal_approx(2560.0 * MenuLayout.ABOVE_TITLE_PORTRAIT, 0.5)
+
+	var screen := Control.new()
+	screen.size = Vector2(390, 844)
+	add_child(screen)
+	var picture := MenuLayout.artwork_picture(screen, false)
+	picture.size = Vector2(390, 844)
+	assert_object(picture.texture).is_same(portrait)
+	picture.size = Vector2(844, 390)  # the phone is turned
+	assert_object(picture.texture).is_same(landscape)
+	picture.size = Vector2(390, 844)
+	assert_object(picture.texture).is_same(portrait)
+	screen.free()

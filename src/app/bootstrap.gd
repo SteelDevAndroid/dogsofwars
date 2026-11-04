@@ -6,8 +6,10 @@
 class_name Bootstrap
 extends Node
 
-## The maps of the game: a new game takes the one its seed points at (the same seed, the same map).
-const MAP_FILES := ["maps/plaine.json", "maps/marais.json"]
+## The maps of the game, in the order of the choice screen. A new game plays the one the player
+## chose; "Au hasard" takes the one its seed points at (the same seed, the same map).
+const MAP_FILES := ["maps/plaine.json", "maps/marais.json", "maps/cretes.json", "maps/foret.json", "maps/archipel.json",
+		"maps/mesas.json", "maps/landes.json"]
 
 var data_source: DataSource
 var file_store: FileStore
@@ -86,7 +88,7 @@ func show_menu(notice: String = "") -> void:
 	var best := profile.best_score(Faction.PLAYER, SubmitScoreEffect.DIFFICULTY_STANDARD)
 	menu.configure(app.save_store.has_match(), best, notice)
 	menu.continue_requested.connect(continue_match)
-	menu.new_game_requested.connect(start_new_game)
+	menu.new_game_requested.connect(show_map_choice)
 	menu.settings_requested.connect(show_settings)
 	menu.chronicle_requested.connect(show_chronicle)
 	menu.how_to_play_requested.connect(show_how_to_play)
@@ -94,10 +96,30 @@ func show_menu(notice: String = "") -> void:
 	_show(menu)
 
 
-func start_new_game() -> void:
+## The choice of the map, in place of the menu; "Retour" goes back to the menu.
+func show_map_choice() -> void:
+	var errors: Array[DataError] = []
+	var maps: Array[MapDefinition] = []
+	for file: String in MAP_FILES:
+		var map := MapDefinition.parse(data_source.read_text(file), file, app.catalog, errors)
+		if map != null:
+			maps.append(map)
+	if not errors.is_empty():
+		_show_data_errors(errors)  # a map that fails its checks is refused, never offered
+		return
+	var choice := MapChoiceScreen.new()
+	choice.configure(maps)
+	choice.map_chosen.connect(start_new_game)
+	choice.random_requested.connect(func() -> void: start_new_game())
+	choice.back_requested.connect(func() -> void: show_menu())
+	_show(choice)
+
+
+## A new game on the map of index `map_index` in MAP_FILES; -1 draws it from the seed.
+func start_new_game(map_index: int = -1) -> void:
 	var errors: Array[DataError] = []
 	var seed_value := forced_seed if forced_seed >= 0 else randi()
-	var map_file: String = MAP_FILES[seed_value % MAP_FILES.size()]
+	var map_file: String = MAP_FILES[map_index if map_index >= 0 and map_index < MAP_FILES.size() else seed_value % MAP_FILES.size()]
 	var map := MapDefinition.parse(data_source.read_text(map_file), map_file, app.catalog, errors)
 	if map == null:
 		_show_data_errors(errors)

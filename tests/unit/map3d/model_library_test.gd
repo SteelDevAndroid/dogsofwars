@@ -3,18 +3,23 @@ extends GdUnitTestSuite
 const DIR := "user://model_library_test"
 
 
-## A small model: a white base whose top takes the side's tint (alpha 1) and a grey body (alpha 0).
+## A small model with no normals, as a tool that does not write them exports it: a base of two
+## triangles (alpha 1: takes the side's tint) and a grey peak (alpha 0). Colours are written as
+## hex-coded numbers (0.5), the game reads them as sRGB.
 static func _model_mesh() -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var points := [Vector3(-0.3, 0, -0.3), Vector3(0.3, 0, -0.3), Vector3(0.3, 0, 0.3),
+	var points := PackedVector3Array([Vector3(-0.3, 0, -0.3), Vector3(0.3, 0, -0.3), Vector3(0.3, 0, 0.3),
 			Vector3(-0.3, 0, -0.3), Vector3(0.3, 0, 0.3), Vector3(-0.3, 0, 0.3),
-			Vector3(-0.1, 0, 0), Vector3(0.1, 0, 0), Vector3(0, 0.4, 0)]
+			Vector3(-0.1, 0, 0), Vector3(0.1, 0, 0), Vector3(0, 0.4, 0)])
+	var colors := PackedColorArray()
 	for i in points.size():
-		st.set_color(Color(0.8, 0.8, 0.8, 1.0 if i < 6 else 0.0))
-		st.add_vertex(points[i])
-	st.generate_normals()
-	return st.commit()
+		colors.append(Color(0.5, 0.5, 0.5, 1.0 if i < 6 else 0.0))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = points
+	arrays[Mesh.ARRAY_COLOR] = colors
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 ## Writes `name`.glb into the test folder with GLTFDocument, as an artist's export would be.
@@ -37,8 +42,8 @@ static func _triangles(mesh: Mesh) -> int:
 	var count := 0
 	for surface in mesh.get_surface_count():
 		var arrays := mesh.surface_get_arrays(surface)
-		var indices := arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
-		count += (indices.size() if indices != null and indices.size() > 0 else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+		var corners: int = (arrays[Mesh.ARRAY_INDEX] as Variant).size() if arrays[Mesh.ARRAY_INDEX] != null else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+		count += corners / 3
 	return count
 
 
@@ -61,7 +66,7 @@ func test_a_glb_is_read_with_its_faction_mask_in_the_vertex_alpha() -> void:
 	var mesh := models.mesh("unit_assaut")
 
 	assert_object(mesh).is_not_null()
-	assert_int(_triangles(mesh)).is_equal(3)
+	assert_int(_triangles(mesh)).is_equal(3)  # 9 corners
 	var colors := mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR] as PackedColorArray
 	var alphas := {}
 	for color in colors:
@@ -109,3 +114,34 @@ func test_the_map_uses_a_delivered_model_with_its_mask_and_the_codes_shape_elsew
 	if ModelLibrary.terrain_name(TerrainGrid.PLAIN, TileRenderer.variant_of(1)) != plain:
 		assert_object(view.tiles[1].mesh).is_not_same(view.models.mesh(plain))  # another variant: the code's shape
 	view.free()
+
+
+func test_a_model_is_made_ready_flat_normals_linear_colours_one_vertex_per_corner() -> void:
+	_write_glb("unit_assaut")
+	var mesh := ModelLibrary.new(DIR).mesh("unit_assaut")
+
+	var arrays := mesh.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+
+	assert_int(points.size()).is_equal(9)
+	assert_int(normals.size()).is_equal(9)
+	assert_float(colors[0].r).is_equal_approx(Color(0.5, 0.5, 0.5).srgb_to_linear().r, 0.01)  # about 0.21, not 0.5 (8-bit in the file)
+	assert_float(colors[0].a).is_equal(1.0)
+	for i in 6:  # the flat base faces up, the same normal at its three corners of a face
+		assert_float(normals[i].y).is_greater(0.99)
+	assert_bool(normals[6].is_equal_approx(normals[7]) and normals[7].is_equal_approx(normals[8])).is_true()
+
+
+func test_a_mesh_that_has_normals_keeps_them() -> void:
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(0, 0, 1)])
+	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.LEFT, Vector3.LEFT, Vector3.LEFT])
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+
+	var ready := ModelLibrary.ready_mesh(mesh)
+
+	assert_vector((ready.surface_get_arrays(0)[Mesh.ARRAY_NORMAL] as PackedVector3Array)[0]).is_equal_approx(Vector3.LEFT, Vector3(0.001, 0.001, 0.001))

@@ -1,6 +1,8 @@
 {
  "schema_version": 1,
  "id": "marais",
+ "title": "Le Marais",
+ "summary": "Un bassin d'eau au centre : il faut le contourner. Plus grand, plus lent : la partie se joue sur la durée.",
  "width": 14,
  "height": 14,
  "terrain": [

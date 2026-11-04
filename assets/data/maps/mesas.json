@@ -1,0 +1,303 @@
+{
+ "schema_version": 1,
+ "id": "mesas",
+ "title": "Les Mesas",
+ "summary": "De grands plateaux de roche, des canyons entre eux. Les routes sont droites, les embuscades aussi.",
+ "width": 16,
+ "height": 16,
+ "terrain": [
+  ".....^^.........",
+  ".....^^.f....^^.",
+  ".......f.....^^.",
+  "...............f",
+  ".....f....^^....",
+  ".^^...f...^^..^^",
+  ".^^.......f...^^",
+  "..........f.....",
+  ".....f..........",
+  "^^...f.......^^.",
+  "^^..^^...f...^^.",
+  "....^^....f.....",
+  "f...............",
+  ".^^.....f.......",
+  ".^^....f.^^.....",
+  ".........^^....."
+ ],
+ "symmetry": "rotation180",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 2,
+   "y": 2
+  },
+  {
+   "faction": "gardiens",
+   "x": 13,
+   "y": 13
+  }
+ ],
+ "nodes": [
+  {
+   "x": 9,
+   "y": 2,
+   "level": 1
+  },
+  {
+   "x": 6,
+   "y": 13,
+   "level": 1
+  },
+  {
+   "x": 4,
+   "y": 6,
+   "level": 1
+  },
+  {
+   "x": 11,
+   "y": 9,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 4,
+   "level": 1
+  },
+  {
+   "x": 2,
+   "y": 11,
+   "level": 1
+  },
+  {
+   "x": 0,
+   "y": 7,
+   "level": 1
+  },
+  {
+   "x": 15,
+   "y": 8,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 3,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 3,
+   "y": 4,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 4,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 10,
+   "y": 10,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 6,
+   "y": 10,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 5,
+   "y": 4,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 8,
+   "y": 5,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 2,
+   "y": 7,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 12,
+   "y": 2,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 10,
+   "y": 11,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": 0
+  },
+  {
+   "x": 7,
+   "y": 10,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 1
+  },
+  {
+   "x": 13,
+   "y": 8,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 2
+  },
+  {
+   "x": 3,
+   "y": 13,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 3
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 7,
+     "y": 0
+    },
+    {
+     "x": 5,
+     "y": 3
+    },
+    {
+     "x": 8,
+     "y": 6
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 8,
+     "y": 15
+    },
+    {
+     "x": 10,
+     "y": 12
+    },
+    {
+     "x": 7,
+     "y": 9
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 9,
+     "y": 7
+    },
+    {
+     "x": 12,
+     "y": 1
+    },
+    {
+     "x": 10,
+     "y": 3
+    }
+   ]
+  }
+ ]
+}

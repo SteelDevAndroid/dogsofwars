@@ -21,6 +21,8 @@ jobs:
         run: bash tools/ci/check-layer-deps.sh src project.godot
       - name: No duplicated key in data files
         run: python3 tools/ci/check-json-duplicate-keys.py assets/data
+      - name: The 16 x 16 maps are what their generator writes
+        run: python3 tools/maps/make_maps.py --check
 
   gdunit4:
     runs-on: ubuntu-latest
