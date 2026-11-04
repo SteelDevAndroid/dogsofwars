@@ -1,0 +1,14 @@
+Modèles 3D de la carte (glTF binaire, .glb), livrés par un artiste.
+
+Un fichier remplace, à nom égal, la forme construite dans le code (src/presentation/map3d/low_poly.gd).
+Un fichier absent : le jeu garde la forme du code. Les modèles peuvent donc arriver un par un.
+
+Noms, échelle, axes, hauteurs, couleurs de sommet, masque de camp dans l'alpha et budgets de
+triangles : design/art/asset-specs.md.
+
+  terrain_plaine_01..03.glb   terrain_foret_01..03.glb   terrain_montagne_01..03.glb   terrain_eau_01..03.glb
+  node_niveau_1..3.glb
+  ruin_arche_brisee_01.glb   ruin_arche_brisee_02.glb   ruin_dome_brise_01.glb
+  unit_eclaireur.glb   unit_assaut.glb   unit_rempart.glb   unit_ouvrier.glb
+  unit_sentinelle.glb   unit_chasseur.glb   unit_bastion.glb
+  unit_<type>_endormi.glb (facultatif : sinon le modèle éveillé, gris et enfoncé)

@@ -40,6 +40,8 @@ var units: Array[MeshInstance3D] = []
 ## The model shown in the match, and the logical camera (centre, zoom, area) it frames from.
 var renderer: TileRenderer
 var map_camera: MapCamera
+## The artist's models; a piece without one keeps its shape built in code.
+var models := ModelLibrary.new()
 
 var _content := Node3D.new()
 var _fx_root := Node3D.new()
@@ -102,12 +104,21 @@ func show_snapshot(p_snapshot: TileSnapshot) -> void:
 		if snapshot.fog_at(node[0]) != VisionService.FOG_UNDISCOVERED:
 			var level: int = node[2]
 			var color: Color = TilePalette.owner(node[1], colorblind) if node[1] != Faction.NONE else LowPoly.FOREST
-			_place(_mesh("node|%d|%s" % [level, color.to_html()], func() -> ArrayMesh: return LowPoly.node(level, color)), node[0], 0.0,
-					snapshot.fog_at(node[0]) == VisionService.FOG_EXPLORED)
+			var remembered: bool = snapshot.fog_at(node[0]) == VisionService.FOG_EXPLORED
+			var model := models.mesh(ModelLibrary.node_name(level))
+			if model != null:
+				var piece := _place(model, node[0], 0.0, false)
+				piece.material_override = _masked(node[1], remembered)
+			else:
+				_place(_mesh("node|%d|%s" % [level, color.to_html()], func() -> ArrayMesh: return LowPoly.node(level, color)), node[0], 0.0, remembered)
 	for ruin: Array in snapshot.ruins:  # seen above the fog by their glow (art bible 6)
 		var read: bool = ruin[1]
-		var variant := TileRenderer.variant_of(ruin[0]) % 2
-		_place(_mesh("ruin|%s|%d" % [read, variant], func() -> ArrayMesh: return LowPoly.ruin(read, variant)), ruin[0], 0.0, false)
+		var model := models.mesh(ModelLibrary.ruin_name(TileRenderer.variant_of(ruin[0])))
+		if model != null:  # read: dimmed by the shader, not a second model
+			_place(model, ruin[0], 0.0, read)
+		else:
+			var variant := TileRenderer.variant_of(ruin[0]) % 2
+			_place(_mesh("ruin|%s|%d" % [read, variant], func() -> ArrayMesh: return LowPoly.ruin(read, variant)), ruin[0], 0.0, false)
 		if not read:
 			var glow := OmniLight3D.new()
 			glow.light_color = TilePalette.RUIN
@@ -271,7 +282,8 @@ func _add_tile(tile: int) -> void:
 	else:
 		var kind: int = snapshot.terrain[tile]
 		var variant := TileRenderer.variant_of(tile)
-		instance = _place(_mesh("terrain|%d|%d" % [kind, variant], func() -> ArrayMesh: return LowPoly.terrain(kind, variant)), tile, 0.0, false)
+		var model := models.mesh(ModelLibrary.terrain_name(kind, variant))
+		instance = _place(model if model != null else _mesh("terrain|%d|%d" % [kind, variant], func() -> ArrayMesh: return LowPoly.terrain(kind, variant)), tile, 0.0, false)
 		var owner: int = snapshot.owners[tile]
 		var material := ShaderMaterial.new()
 		material.shader = TERRAIN_SHADER
@@ -319,8 +331,14 @@ func _add_unit(unit: Array) -> void:
 	var asleep: bool = unit[6] or unit[2] == Faction.NONE
 	var guardian: bool = info[1]
 	var key := "unit|%s|%s|%s|%s" % [info[0], color.to_html(), guardian, asleep]
-	var instance := _place(_mesh(key, func() -> ArrayMesh: return LowPoly.unit(info[0], color, guardian, asleep)), unit[1], _top(unit[1]), false)
-	var material := ShaderMaterial.new()
+	var model := models.mesh(ModelLibrary.unit_name(info[0], true)) if asleep else null
+	var sunk := false
+	if model == null:
+		model = models.mesh(ModelLibrary.unit_name(info[0], false))
+		sunk = asleep and model != null  # no model asleep: the awake one, grey and sunk (art bible 5)
+	var instance := _place(model if model != null else _mesh(key, func() -> ArrayMesh: return LowPoly.unit(info[0], color, guardian, asleep)),
+			unit[1], _top(unit[1]) - (0.03 if sunk else 0.0), false)
+	var material := ShaderMaterial.new() if model == null else _masked(Faction.NONE if asleep else unit[2], asleep)
 	material.shader = TERRAIN_SHADER
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE_SHADER
@@ -438,7 +456,8 @@ func _effect_node(effect: TileEffect) -> Node3D:
 		TileEffect.Kind.GHOST:
 			var ghost := MeshInstance3D.new()
 			var info: Array = _unit_types.get(effect.unit_type, ["assaut", false])
-			ghost.mesh = _mesh("ghost|%s|%s" % info, func() -> ArrayMesh: return LowPoly.unit(info[0], LowPoly.ASLEEP, info[1], true))
+			var model := models.mesh(ModelLibrary.unit_name(info[0], false))
+			ghost.mesh = model if model != null else _mesh("ghost|%s|%s" % info, func() -> ArrayMesh: return LowPoly.unit(info[0], LowPoly.ASLEEP, info[1], true))
 			var material := ShaderMaterial.new()
 			material.shader = TERRAIN_SHADER
 			ghost.material_override = material
@@ -500,7 +519,7 @@ func _top(tile: int) -> float:
 	return 0.0
 
 
-func _place(mesh: ArrayMesh, tile: int, height: float, dim: bool) -> MeshInstance3D:
+func _place(mesh: Mesh, tile: int, height: float, dim: bool) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.position = center_of(tile) + Vector3(0, height, 0)
@@ -521,6 +540,18 @@ func _mesh(key: String, build: Callable) -> ArrayMesh:
 	if not _meshes.has(key):
 		_meshes[key] = build.call()
 	return _meshes[key]
+
+
+## The material of an artist's model: the side's tint where its vertex alpha says so; `dim`
+## for a remembered piece, a read ruin or a dormant drone.
+func _masked(faction: int, dim: bool) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = TERRAIN_SHADER
+	material.set_shader_parameter(&"use_mask", true)
+	material.set_shader_parameter(&"tint", TilePalette.owner(faction, colorblind))
+	material.set_shader_parameter(&"strength", 0.0 if faction == Faction.NONE else 1.0)
+	material.set_shader_parameter(&"memory", 1.0 if dim else 0.0)
+	return material
 
 
 static func _overlay(color: Color, alpha: float) -> ShaderMaterial:
