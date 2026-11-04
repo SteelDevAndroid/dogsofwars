@@ -131,10 +131,11 @@ Chaque type existe en **3 variantes** (`_01`, `_02`, `_03`). Le jeu choisit la v
 Sans changement. L'interface reste en 2D par-dessus la carte.
 
 - **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale de 20 pt.
-  - 21 icônes sont en place dans `assets/art/ui/`. Ce sont des versions provisoires dessinées par l'équipe technique, à remplacer à nom égal.
+  - 21 icônes sont en place dans `assets/art/ui/` (`ui_icon_<nom>.svg`). Depuis le 2026-11-04 ce sont celles de l'artiste (sources et générateur dans `design/art/sources/interface/`), qui ont remplacé les versions provisoires de l'équipe technique. Le test `ui_icons_test` les vérifie : 21 fichiers, `viewBox` 24 × 24, trait de 2, extrémités carrées, blanc, toutes différentes, importées à 96 px.
+  - L'artiste a nommé ses fichiers `ui_<nom>.svg` ; le jeu attend `ui_icon_<nom>.svg`, et `montee_niveau` pour la montée de niveau. À lui demander pour la prochaine livraison.
   - La liste : tour, énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour, mouvement, défense, vue.
-- **Polices** : `.ttf` ou `.otf` avec leur licence, au plus 3 graisses, accents français complets, chiffres tabulaires.
-- **Panneau papier du fragment** : un 9-patch `ui_panneau.png`, 96 × 96 px, marges de 24 px (déjà livré).
+- **Polices** : `.ttf` ou `.otf` avec leur licence, au plus 3 graisses, accents français complets, chiffres tabulaires. Non livrées : l'artiste suggère IBM Plex Sans (SIL OFL 1.1), mais l'art bible (section 7) retient Space Grotesk, JetBrains Mono et Spectral, et le jeu embarque aujourd'hui Inter. Décision d'art à prendre ; rien n'est changé.
+- **Panneau papier du fragment** : un 9-patch `ui_panneau.png`, 96 × 96 px, marges de 24 px. Celui du jeu est un cadre sombre (cartes des menus). L'artiste en propose un autre, **papier crème** (`design/art/sources/interface/ui_panneau_papier.png`), qui n'est pas installé : à la place du cadre sombre il rendrait les cartes des menus illisibles (texte clair sur crème). Il convient au panneau du fragment, aujourd'hui un simple aplat crème dessiné par le jeu : à brancher si l'art-director le veut.
 
 ## 7. Hors carte : illustrations, icône, magasin
 

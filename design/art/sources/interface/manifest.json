@@ -1,0 +1,106 @@
+{
+  "specification": "asset-specs (1).md, section 6",
+  "icons": [
+    {
+      "function": "Tour",
+      "file": "ui_tour.svg"
+    },
+    {
+      "function": "Énergie",
+      "file": "ui_energie.svg"
+    },
+    {
+      "function": "Recherche",
+      "file": "ui_recherche.svg"
+    },
+    {
+      "function": "Ruine",
+      "file": "ui_ruine.svg"
+    },
+    {
+      "function": "Nœud",
+      "file": "ui_noeud.svg"
+    },
+    {
+      "function": "Attaque",
+      "file": "ui_attaque.svg"
+    },
+    {
+      "function": "Réveil",
+      "file": "ui_reveil.svg"
+    },
+    {
+      "function": "Montée de niveau",
+      "file": "ui_montee_de_niveau.svg"
+    },
+    {
+      "function": "Pause",
+      "file": "ui_pause.svg"
+    },
+    {
+      "function": "Zoom +",
+      "file": "ui_zoom_plus.svg"
+    },
+    {
+      "function": "Zoom −",
+      "file": "ui_zoom_moins.svg"
+    },
+    {
+      "function": "Recentrer",
+      "file": "ui_recentrer.svg"
+    },
+    {
+      "function": "Réglages",
+      "file": "ui_reglages.svg"
+    },
+    {
+      "function": "Chronique",
+      "file": "ui_chronique.svg"
+    },
+    {
+      "function": "Menace",
+      "file": "ui_menace.svg"
+    },
+    {
+      "function": "Perte",
+      "file": "ui_perte.svg"
+    },
+    {
+      "function": "Vitesse",
+      "file": "ui_vitesse.svg"
+    },
+    {
+      "function": "Retour",
+      "file": "ui_retour.svg"
+    },
+    {
+      "function": "Mouvement",
+      "file": "ui_mouvement.svg"
+    },
+    {
+      "function": "Défense",
+      "file": "ui_defense.svg"
+    },
+    {
+      "function": "Vue",
+      "file": "ui_vue.svg"
+    }
+  ],
+  "panel": {
+    "file": "ui_panneau.png",
+    "size": [
+      96,
+      96
+    ],
+    "patch_margin": 24
+  },
+  "fonts": {
+    "suggested": "IBM Plex Sans",
+    "weights": [
+      "Regular",
+      "Medium",
+      "SemiBold"
+    ],
+    "included": false
+  }
+}
