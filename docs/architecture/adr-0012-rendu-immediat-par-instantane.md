@@ -1,7 +1,7 @@
 # ADR-0012: Rendu des tuiles — dessin immédiat sur un instantané de la vue du joueur, effets transitoires minutés par l'horloge de présentation
 
 ## Status
-Accepted — remplace ADR-0001 (décision de l'utilisateur, 2026-11-03, sur la revue d'architecture du 2026-11-02, A1)
+Superseded by ADR-0014 pour le **dessin** de la carte (2026-11-04, décision de l'utilisateur). `TileRenderer` reste le modèle de la carte (instantané, effets, ondes, sélection) et ne dessine plus en jeu ; ce qui suit vaut pour ce modèle et pour le dessin 2D gardé en repli (`MatchScreen.set_3d(false)`). Remplaçait ADR-0001 (2026-11-03).
 
 ## Date
 2026-11-03
