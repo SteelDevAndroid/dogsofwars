@@ -25,7 +25,7 @@ La carte passe d'un dessin 2D tuile par tuile à une **scène 3D low-poly** : de
 | **Knowledge Risk** | MEDIUM |
 | **References Consulted** | Aucune référence moteur versionnée ; code et tests cités en Last Verified |
 | **Post-Cutoff APIs Used** | Aucune. `SurfaceTool`, `ArrayMesh`, `Camera3D` orthographique, `DirectionalLight3D`, shaders `spatial` existent depuis 4.0 |
-| **Verification Required** | (1) coût d'une image sur l'appareil de référence (D2), renderer Mobile ; (2) ombres de la lumière directionnelle sur Mobile (qualité, coût) ; (3) lisibilité à 31–36 pt sur écran réel ; (4) taille des maillages et des matériaux en mémoire |
+| **Verification Required** | (1) coût d'une image sur l'appareil de référence (Pixel 8, Android 15+ ; protocole : `mesures-appareil-de-reference.md`), renderer Mobile ; (2) ombres de la lumière directionnelle sur Mobile (qualité, coût) ; (3) lisibilité à 31–36 pt sur écran réel ; (4) taille des maillages et des matériaux en mémoire |
 
 ## ADR Dependencies
 

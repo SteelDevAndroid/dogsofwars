@@ -23,6 +23,8 @@ var renderer := TileRenderer.new()
 ## and no longer draws. False shows the 2D drawing (tests of the drawing, a fallback).
 var map3d := MapView3D.new()
 var use_3d := true
+## One line per turn in the log on the device (D2: Pixel 8, Android 15+).
+var probe := PerfProbe.new()
 var hud := Hud.new()
 ## The unit of the player being looked at, -1 for none.
 var selected_unit := -1
@@ -114,8 +116,11 @@ func _ready() -> void:
 	sequencer.idle_reached.connect(func() -> void: refresh(true))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	hud.fragment_panel.tick(clock.current())
+	if session != null and session.state != null:
+		var save := session.post_commit as SaveCoordinator
+		probe.frame(delta * 1000.0, session.state.turn(), save.last_write_usec if save != null else 0, ai_runner.last_advance_usec)
 	if use_3d and session != null:
 		map3d.sync(_screen_size())
 	hud.tick_toast(clock.current())
@@ -182,6 +187,7 @@ func bind(p_session: GameSession) -> void:
 	for type in session.catalog.units.count():
 		types[type] = [session.catalog.units.key(type), session.catalog.units.side(type) != session.catalog.units.side(0)]
 	map3d.set_unit_types(types)
+	probe.header(RenderingServer.get_video_adapter_name(), RenderingServer.get_current_rendering_method(), OS.get_model_name())
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
 	map3d.map_camera = camera
 	camera.depth_scale = MapView3D.depth_scale() if use_3d else 1.0
