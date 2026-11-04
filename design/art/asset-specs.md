@@ -15,6 +15,8 @@
 
 Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presentation/map3d/low_poly.gd`) avec des formes simples. Elles suffisent à jouer et à juger la direction. Un artiste les **remplace à nom égal** par des modèles `.glb`, sans toucher au reste du jeu.
 
+**Livré à ce jour** : les 12 modèles de terrain (plaine, forêt, montagne, eau, 3 variantes chacun), dans `assets/art/3d/`, sources et générateur dans `design/art/sources/terrain-3d/`. Rien d'autre : nœuds, ruines et unités gardent les formes du code.
+
 **Comment le jeu les charge** (`ModelLibrary`, 2026-11-04) : si `assets/art/3d/<nom>.glb` existe, le jeu prend le premier maillage du modèle ; sinon il garde la forme du code. On peut donc livrer les modèles un par un, dans n'importe quel ordre. Godot importe les `.glb` déposés dans ce dossier ; un `.glb` non importé est aussi lu, avec `GLTFDocument`.
 
 | Catégorie | Pièces | Construit dans le code | Livré par un artiste |
@@ -48,7 +50,9 @@ Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presen
 | Origine | Au **centre de la tuile**, le **dessus du terrain à Y = 0** (voir les hauteurs, section 4) |
 | Axes | **+Y en haut, +Z vers la caméra** (le bas de l'écran), +X à droite. L'avant d'une unité (son œil, sa lame) regarde **+Z** ; le jeu tourne les Gardiens de 180° |
 | Faces | Faces **plates** (pas de lissage), aplats, **aucune texture**, aucun matériau autre que la couleur de sommet |
-| Couleur | **Couleurs de sommet** (attribut `COLOR_0`), en **valeurs de gris** pour tout ce qui change de camp. Teintes fixes permises seulement pour les ruines (ocre `#C8955A`) |
+| Couleur | **Couleurs de sommet** (attribut `COLOR_0`), en **valeurs de gris** pour tout ce qui change de camp. Teintes fixes permises seulement pour les ruines (ocre `#C8955A`). Les nombres écrits sont **ceux de la palette** (le jeu lit `#7A848E` comme 0,478 · 0,518 · 0,557) : le jeu les convertit lui-même en valeurs linéaires. Ne pas les convertir à l'export |
+| Sens des faces | **Dessus et faces vues : sens trigonométrique vu de l'extérieur** (la règle de glTF 2.0). Un modèle dont les faces sont à l'envers s'affiche vide (le jeu ne dessine pas l'intérieur) : le test `delivered_models_test` le détecte |
+| Normales | Facultatives : le jeu calcule des normales plates si le fichier n'en porte pas |
 | Masque de camp | Dans l'**alpha** de la couleur de sommet : **1 = prend la teinte du camp**, 0 = garde son gris. La silhouette ne change jamais d'un camp à l'autre |
 | Triangles | **Unité : 150 à 400.** Tuile de terrain : au plus 300. Nœud, ruine : au plus 200. Un seul niveau de détail |
 | Faces cachées | L'arrière et le dessous peuvent être omis : ils ne sont jamais vus |
@@ -151,7 +155,7 @@ Sans changement. Les illustrations restent peintes : c'est le registre de la mé
 À faire dans le jeu, avec sa caméra, avant d'accepter un modèle :
 
 1. Nom, format `.glb`, échelle, origine et axes conformes : le modèle posé sur une tuile ne déborde pas du carré et son avant regarde la caméra.
-2. **Budget de triangles** respecté. Le test `tests/unit/map3d/map_view_3d_test.gd` vérifie les formes du code ; `model_library_test.gd` vérifie qu'un `.glb` se charge avec son masque. Un test des budgets sur les modèles livrés reste à ajouter quand le premier arrivera.
+2. **Contrôles automatiques** (`tests/unit/map3d/delivered_models_test.gd`, sur chaque `.glb` de `assets/art/3d/`) : le nom est connu du jeu ; le modèle tient dans sa tuile ; le budget de triangles (terrain au plus 300, unité de 150 à 400) ; pour un terrain, les faces regardent vers le haut, la hauteur est celle de la section 4 et la dalle fait 0,98 de large et 0,22 d'épaisseur. `model_library_test.gd` vérifie le chargement, le masque de camp, les normales et les couleurs. `map_view_3d_test.gd` vérifie les formes du code.
 3. **Galerie** : `tools/preview/map3d_preview.gd -- gallery` montre côte à côte tous les terrains, les 7 unités, les nœuds et les ruines. Les silhouettes doivent se reconnaître à 31 pt, et les quatre types de la meute se distinguer côte à côte.
 4. **Test en gris** : sur une capture désaturée, chaque élément se détache de ses voisins par la valeur et la forme, y compris sur une case teintée par un camp.
 5. **En partie** : le mode `match` du même outil donne le vrai écran (portrait et paysage). Une crête ne doit pas cacher une unité sur la case derrière.

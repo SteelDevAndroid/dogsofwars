@@ -65,6 +65,8 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **9. Modèles livrés (2026-11-04).** `ModelLibrary` charge `assets/art/3d/<nom>.glb` (ressource importée, ou glTF brut lu par `GLTFDocument`), garde le premier maillage, et le met en cache par nom ; sans modèle, la forme de `LowPoly` reste. Les noms suivent `design/art/asset-specs.md`. Le shader lit le masque de camp dans l'alpha de la couleur de sommet (`use_mask`) pour les modèles livrés ; unité endormie, ruine lue et pièce de mémoire passent par `memory`.
 
+**10. Premiers modèles livrés (2026-11-04).** Les 12 terrains d'un artiste remplacent les formes du code. Pour les rendre, `ModelLibrary` prépare chaque modèle à son chargement : les couleurs de sommet, écrites comme les codes de la palette, sont converties en linéaire ; les normales manquantes sont calculées, plates ; les triangles sont listés un à un. Le contrôle à la réception a servi : la première livraison avait **toutes les faces à l'envers** (le sens des triangles, inverse de la règle de glTF), donc des tuiles vides à l'écran, alors que l'aperçu de l'artiste, qui ne cache rien, les montrait. Corrigé à la source (le générateur) et dans les fichiers ; `delivered_models_test` refuse désormais un terrain dont les faces regardent vers le bas.
+
 **Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure sur l'appareil de référence le demande (D2).
 
 ## Alternatives Considered
