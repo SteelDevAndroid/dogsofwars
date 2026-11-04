@@ -15,7 +15,7 @@
 
 Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presentation/map3d/low_poly.gd`) avec des formes simples. Elles suffisent à jouer et à juger la direction. Un artiste les **remplace à nom égal** par des modèles `.glb`, sans toucher au reste du jeu.
 
-**Livré à ce jour** (`assets/art/3d/`) : les 12 modèles de terrain (sources dans `design/art/sources/terrain-3d/`), puis les 3 nœuds, les 3 ruines (2 arches, 1 dôme) et les 7 unités (sources dans `design/art/sources/elements-3d/`). Il manque les 7 unités endormies (facultatives : le jeu assombrit et enfonce le modèle éveillé) et la niche de commande à l'arrière des unités de la meute (pas modélisée : la caméra ne tourne pas).
+**Livré à ce jour** (`assets/art/3d/`) : les 12 modèles de terrain (sources dans `design/art/sources/terrain-3d/`), puis les 3 nœuds, les 3 ruines (2 arches, 1 dôme), puis les 7 unités éveillées avec la niche de commande à l'arrière de la meute et les 7 unités endormies (sources dans `design/art/sources/elements-3d/` et `design/art/sources/units-3d/`). Il ne manque plus aucun modèle.
 
 **Comment le jeu les charge** (`ModelLibrary`, 2026-11-04) : si `assets/art/3d/<nom>.glb` existe, le jeu prend le premier maillage du modèle ; sinon il garde la forme du code. On peut donc livrer les modèles un par un, dans n'importe quel ordre. Godot importe les `.glb` déposés dans ce dossier ; un `.glb` non importé est aussi lu, avec `GLTFDocument`.
 

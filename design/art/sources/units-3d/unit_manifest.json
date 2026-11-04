@@ -1,0 +1,268 @@
+[
+  {
+    "file": "unit_eclaireur.glb",
+    "triangles": 364,
+    "vertices": 224,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.432,
+        0.197
+      ]
+    ],
+    "bytes": 8920,
+    "sha256": "02e5f2a7ef2c68aab2a83d2bf6fb90944553f5fc89a5d5d57e4547bdd7fb0fcc"
+  },
+  {
+    "file": "unit_eclaireur_endormi.glb",
+    "triangles": 364,
+    "vertices": 224,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.301,
+        0.197
+      ]
+    ],
+    "bytes": 8916,
+    "sha256": "51711278ddfc12ae8eb13f4698c34a2d343477b3874c768e53b992bb5f0dfbd3"
+  },
+  {
+    "file": "unit_assaut.glb",
+    "triangles": 340,
+    "vertices": 210,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.334,
+        0.226
+      ]
+    ],
+    "bytes": 8408,
+    "sha256": "d8cf4f5fc68b0f36c265f582d83a6a62b42ba695c9334f09409c1eb9b69842a0"
+  },
+  {
+    "file": "unit_assaut_endormi.glb",
+    "triangles": 340,
+    "vertices": 210,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.311,
+        0.226
+      ]
+    ],
+    "bytes": 8408,
+    "sha256": "ce31ac6b0636b4bcfa7d183f1fea1af48d543342d27208ab02f2210e287e76b6"
+  },
+  {
+    "file": "unit_rempart.glb",
+    "triangles": 356,
+    "vertices": 220,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.344,
+        0.197
+      ]
+    ],
+    "bytes": 8760,
+    "sha256": "b7a4f677fdb5eef408533ed8c9c9cc11fed79cffe07c56ccb42f4cbb9a01fe59"
+  },
+  {
+    "file": "unit_rempart_endormi.glb",
+    "triangles": 356,
+    "vertices": 220,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.321,
+        0.197
+      ]
+    ],
+    "bytes": 8760,
+    "sha256": "9d3430dd10b2619b6dbca85364c22d454ac87d8fa0f14e6fcbdf6f83d09b514d"
+  },
+  {
+    "file": "unit_ouvrier.glb",
+    "triangles": 356,
+    "vertices": 220,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.486,
+        0.197
+      ]
+    ],
+    "bytes": 8760,
+    "sha256": "8fd8bb01c5d12575be195a2f667e8ab25fc542916e5dccb7d787c18dd6f3744c"
+  },
+  {
+    "file": "unit_ouvrier_endormi.glb",
+    "triangles": 356,
+    "vertices": 220,
+    "bounds": [
+      [
+        -0.228,
+        0.0,
+        -0.197
+      ],
+      [
+        0.228,
+        0.326,
+        0.197
+      ]
+    ],
+    "bytes": 8760,
+    "sha256": "527dcd73284bdb2ec37ffe9d49ca6fb8009eaac805984678342387f3e20df528"
+  },
+  {
+    "file": "unit_sentinelle.glb",
+    "triangles": 240,
+    "vertices": 144,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.463,
+        0.184
+      ]
+    ],
+    "bytes": 6156,
+    "sha256": "e75fcce7c1a6ac1b56010028a4c3b633e87e39196c6414ad528ce9f3f7e7aba5"
+  },
+  {
+    "file": "unit_sentinelle_endormi.glb",
+    "triangles": 240,
+    "vertices": 144,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.331,
+        0.184
+      ]
+    ],
+    "bytes": 6152,
+    "sha256": "80f2f1e25f4e55b2e3a4b461e4015a42ef3dcdf6817aead7c0556ac59d95cf0a"
+  },
+  {
+    "file": "unit_chasseur.glb",
+    "triangles": 232,
+    "vertices": 140,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.452,
+        0.184
+      ]
+    ],
+    "bytes": 5996,
+    "sha256": "bbfbbe53f6fc64d7fb1b5dea4987512d778f928585e6baa1c99061d15e0203ed"
+  },
+  {
+    "file": "unit_chasseur_endormi.glb",
+    "triangles": 232,
+    "vertices": 140,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.331,
+        0.184
+      ]
+    ],
+    "bytes": 5992,
+    "sha256": "452f8e1309b19a7694e80bdeab3b906f89ec917ec976e52731588a6657ab7ece"
+  },
+  {
+    "file": "unit_bastion.glb",
+    "triangles": 264,
+    "vertices": 160,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.423,
+        0.184
+      ]
+    ],
+    "bytes": 6700,
+    "sha256": "992d8db6b2e89417c48687e2ae12a0481738163afebf3839fc8fb39607e984dd"
+  },
+  {
+    "file": "unit_bastion_endormi.glb",
+    "triangles": 264,
+    "vertices": 160,
+    "bounds": [
+      [
+        -0.184,
+        0.0,
+        -0.184
+      ],
+      [
+        0.184,
+        0.356,
+        0.184
+      ]
+    ],
+    "bytes": 6696,
+    "sha256": "9547bf8729038bccc10a18730dd81933c30c9f57baa32dd569392a55f3145bf6"
+  }
+]
