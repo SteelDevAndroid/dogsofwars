@@ -1,7 +1,7 @@
 # ADR-0014 : Carte en 3D low-poly — tuiles en aplats, caméra orthographique de trois-quarts, même instantané que le rendu 2D
 
 ## Status
-Proposed — maquette construite le 2026-11-04 pour juger le rendu sur captures. **Rien n'est branché dans le jeu** : `MatchScreen` dessine toujours avec `TileRenderer` (ADR-0012). Si la maquette est retenue, cet ADR remplacera ADR-0012 pour le dessin de la carte.
+Accepted — direction confirmée par l'utilisateur le 2026-11-04 sur les captures de la maquette (« beaucoup mieux en 3D »). Remplace ADR-0012 pour le dessin de la carte ; branché dans `MatchScreen` le même jour (Decision 6).
 
 ## Date
 2026-11-04
@@ -55,7 +55,11 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **4. La caméra.** Orthographique, inclinée à 42°, sans rotation autour de la verticale : les colonnes restent droites à l'écran, la grille et les gestes d'ADR-0010 gardent leur sens. Même zoom que la 2D (autant de colonnes dans la zone de carte), centre gardé dans la carte avec une demi-tuile de marge. La case sous le doigt se calcule par la projection orthographique, sans le moteur (testable sans affichage).
 
-**5. Si la maquette est retenue** (travail restant, dans cet ordre) : un `TileRenderer3DHandler` à la place de `TileRendererHandler` (glissements, attaques, onde par `strength`, fondu binaire) ; `MatchScreen` qui crée la vue 3D et prend `tile_at` pour les appuis ; `MultiMeshInstance3D` par terrain si la mesure le demande ; les jauges de PV, les hachures de menace, la pastille des unités en attente et la flèche des premiers tours en 3D ; la lisière du brouillard en fondu d'une demi-tuile ; ADR-0012 passe à Superseded.
+**5. Le modèle reste, le dessin change.** `TileRenderer` garde l'instantané, les effets (glissement, ligne d'attaque, nombres, fantôme, anneau, onde et son fondu binaire), la sélection, les cibles et la flèche des premiers tours, avec leur minutage déjà testé ; `TileRendererHandler` et le séquenceur ne changent pas. Il ne dessine plus (`draw_enabled = false`). `MapView3D.sync` copie ce modèle à chaque image : un nouvel instantané seulement si son contenu change (un appui en crée un à chaque fois), la teinte de chaque case couverte par une onde par `shown_state` (paramètre `strength`), la position des unités qui glissent, un nœud par effet passager.
+
+**6. Branchement (2026-11-04).** `MatchScreen` crée la vue 3D (`use_3d`, vrai par défaut ; `set_3d(false)` remet le dessin 2D). La caméra logique reste `MapCamera` (centre, zoom, zone, recentrage) ; la vue 3D s'y cadre à chaque image. Un appui passe par `tile_under` (la projection orthographique de `MapView3D.tile_at`) ; un défilement vertical est divisé par sin(42°), parce que le sol incliné défile plus vite que l'écran. Jauge de PV blanche au-dessus de l'unité, pastille des unités qui n'ont pas joué, cadres orange-rouge des cibles, flèche des premiers tours qui oscille sauf en animations réduites.
+
+**Reste à faire** : la lisière du brouillard en fondu d'une demi-tuile ; les hachures de menace (le « ! » en tient lieu) ; `MultiMeshInstance3D` par terrain si la mesure le demande ; le serrage de `MapCamera` qui ignore l'inclinaison (la vue 3D recadre elle-même, avec une demi-tuile de marge).
 
 ## Alternatives Considered
 - **Garder la 2D et refaire les textures** : moins de code, mais l'art bible demande la 3D et un artiste 2D pour tout redessiner ; rejeté par la demande de l'utilisateur.
@@ -83,7 +87,7 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 144 tuiles et une vingtaine d'unités : quelques centaines d'objets, des maillages partagés par terrain et variante. Un matériau par tuile dans la maquette ; un `MultiMesh` avec des paramètres par instance si la mesure le demande.
 
 ## Validation Criteria
-- Les captures (`docs/architecture/maquette-3d/`) sont jugées meilleures que la 2D par l'utilisateur.
+- Les captures (`docs/architecture/maquette-3d/`) sont jugées meilleures que la 2D par l'utilisateur : **fait le 2026-11-04**. `jeu-portrait.png` et `jeu-paysage.png` montrent le vrai écran de partie en 3D.
 - Tests : budget de triangles (unité ≤ 400), case jamais vue = dalle de brouillard, unité adverse hors de vue absente, teinte et mémoire par tuile, centre gardé dans la carte, case sous le doigt.
 - Sur l'appareil de référence : 60 images par seconde au repos, 30 au pire pendant une onde.
 

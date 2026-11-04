@@ -2,6 +2,7 @@
 # without bindings (it lends its adapters: the event queue, the pacing gate, the runner
 # port), then bound to the session once SessionFactory has built it. It carries the AI
 # runner (process priority 20, the only Node of the Core), the world with the tile renderer
+# (the model of the map; MapView3D shows it in 3D, ADR-0014)
 # (priority 10), the input surface and the HUD layer. The sequencer and its animations are a
 # later story: until then the screen drains the event queue each frame and redraws at once.
 class_name MatchScreen
@@ -18,6 +19,10 @@ signal speed_changed(speed: int)
 
 var session: GameSession
 var renderer := TileRenderer.new()
+## The map shown in 3D (ADR-0014): it reads `renderer`, which keeps the snapshot and the effects
+## and no longer draws. False shows the 2D drawing (tests of the drawing, a fallback).
+var map3d := MapView3D.new()
+var use_3d := true
 var hud := Hud.new()
 ## The unit of the player being looked at, -1 for none.
 var selected_unit := -1
@@ -78,6 +83,9 @@ func _ready() -> void:
 	world.add_child(renderer)
 	var source := ClockAdapter.new(clock)
 	renderer.clock = source
+	add_child(map3d)
+	map3d.renderer = renderer
+	set_3d(use_3d)
 	hud_layer.add_child(hud)
 	hud.end_turn_pressed.connect(request_end_turn)
 	hud.pause_pressed.connect(func() -> void: pause_requested.emit())
@@ -108,6 +116,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	hud.fragment_panel.tick(clock.current())
+	if use_3d and session != null:
+		map3d.sync(_screen_size())
 	hud.tick_toast(clock.current())
 	if camera != null:
 		if hud.measure() != _needs:  # a container updates its minimum size a frame late
@@ -168,7 +178,12 @@ func bind(p_session: GameSession) -> void:
 	sequencer.params = session.catalog.presentation
 	sequencer.state = session.state
 	presenter = HudPresenter.new(hud, session.gate, sequencer, session.catalog.presentation, session.catalog.fragments)
+	var types := {}
+	for type in session.catalog.units.count():
+		types[type] = [session.catalog.units.key(type), session.catalog.units.side(type) != session.catalog.units.side(0)]
+	map3d.set_unit_types(types)
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
+	map3d.map_camera = camera
 	relayout()
 	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
@@ -209,7 +224,29 @@ func on_tap(position: Vector2) -> void:
 	if session != null and not sequencer.is_idle():
 		skip_animation()
 		return
-	on_tap_tile(camera.screen_to_tile(position) if camera != null else renderer.layout.tile_at(position))
+	on_tap_tile(tile_under(position))
+
+
+## The 3D map, or the 2D drawing (`on`: false).
+func set_3d(on: bool) -> void:
+	use_3d = on
+	renderer.draw_enabled = not on
+	map3d.visible = on
+	renderer.queue_redraw()
+
+
+## The tile under a point of the screen, in the map shown.
+func tile_under(position: Vector2) -> int:
+	if use_3d and map3d.snapshot != null:
+		return map3d.tile_at(position)
+	return camera.screen_to_tile(position) if camera != null else renderer.layout.tile_at(position)
+
+
+## Where a tile shows on the screen, in the map shown (the inverse of tile_under).
+func screen_of_tile(tile: int) -> Vector2:
+	if use_3d and map3d.snapshot != null:
+		return map3d.screen_of(tile)
+	return camera.tile_to_screen(tile)
 
 
 ## The batch being shown finishes at once: its effects are dropped and the sequencer plays its
@@ -483,7 +520,8 @@ func _on_pointer(event: PointerEvent) -> void:
 			Gesture.Kind.TAP:
 				on_tap(gesture.position)
 			Gesture.Kind.SCROLL:
-				camera.scroll(gesture.delta)
+				# in 3D the ground is tilted: a vertical drag covers more rows than pixels / tile
+				camera.scroll(Vector2(gesture.delta.x, gesture.delta.y / sin(deg_to_rad(MapView3D.PITCH_DEGREES))) if use_3d else gesture.delta)
 			Gesture.Kind.PINCH_UPDATE:
 				camera.zoom(gesture.factor, gesture.position)
 

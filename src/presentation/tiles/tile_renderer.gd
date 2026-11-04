@@ -35,6 +35,9 @@ var colorblind := false
 var hint_tile := -1
 ## No movement of the arrow (reduced motion).
 var still := false
+## False when the map is shown in 3D (MapView3D, ADR-0014): this node keeps the snapshot, the
+## effects, the waves and the selection, and draws nothing.
+var draw_enabled := true
 
 var _wave_by_tile := {}  # tile -> [WAVE effect, index of the tile in it]: the latest write wins
 var _was_animating := false
@@ -151,6 +154,11 @@ func shown_state(tile: int, now: float) -> Vector2i:
 	return Vector2i(owner, 0 if owner == Faction.NONE else 1000)
 
 
+## The tiles a colour wave covers now (their tint is shown_state's, not the snapshot's).
+func wave_tiles() -> Array:
+	return _wave_by_tile.keys()
+
+
 func _drop_waves() -> void:
 	_wave_by_tile.clear()
 	effects = effects.filter(func(effect: TileEffect) -> bool: return effect.kind != TileEffect.Kind.WAVE)
@@ -169,7 +177,7 @@ func fit(area: Rect2) -> void:
 
 
 func _draw() -> void:
-	if snapshot == null:
+	if snapshot == null or not draw_enabled:
 		return
 	for tile in visible_tiles():
 		_draw_tile(tile)

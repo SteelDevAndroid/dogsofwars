@@ -64,7 +64,7 @@ static func plain_lift(variant: int) -> float:
 ## The fog: a dark flat slab, the same for every terrain (it tells nothing of what is under).
 static func fog() -> ArrayMesh:
 	var st := _begin()
-	_slab(st, 0.0, DARK, 1.0)
+	_slab(st, 0.0, DARK, 0.96)  # a gap between the slabs: the unknown still reads as tiles
 	return _end(st)
 
 
@@ -143,6 +143,20 @@ static func _unit_parts(st: SurfaceTool, key: String, side_color: Color, guardia
 			for x in [-0.08, 0.0, 0.08]:
 				_box(st, Vector3(x, top + 0.05, 0), Vector3(0.05, 0.1 + absf(x) * 0.6, 0.18), body, shade)
 
+
+
+## The mark of a unit that has not played: a small light disc.
+static func idle_mark() -> ArrayMesh:
+	var st := _begin()
+	_frustum(st, Vector3.ZERO, 0.07, 0.07, 8, 0.0, 0.03, Color.WHITE, Color.WHITE, 0.0)
+	return _end(st)
+
+
+## The arrow of the first turns: a point down.
+static func arrow() -> ArrayMesh:
+	var st := _begin()
+	_frustum(st, Vector3.ZERO, 0.0, 0.16, 4, -0.22, 0.0, Color.WHITE, Color.WHITE, PI / 4.0)
+	return _end(st)
 
 
 ## A flat square of `size` x `size`, `y` above the tile top: the move range and the selection.

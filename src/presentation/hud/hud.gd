@@ -39,7 +39,7 @@ var unit_lines := Label.new()
 ## The unit card: a gauge of hit points (a mark at half) and the four stats as pills.
 var hp_bar := ProgressBar.new()
 var hp_label := Label.new()
-var stats_row := HBoxContainer.new()
+var stats_row := HFlowContainer.new()  # wraps in the narrow landscape panel
 ## A refusal told for a moment under the top bar (the reason also stays greyed in the panel).
 var toast_label := Label.new()
 var toast_panel: PanelContainer
@@ -150,7 +150,8 @@ func _init() -> void:
 	hp_bar.add_theme_stylebox_override("fill", hp_fill)
 	hp_bar.add_theme_stylebox_override("background", hp_back)
 	hp_label.add_theme_font_size_override("font_size", 14)
-	stats_row.add_theme_constant_override("separation", 6)
+	stats_row.add_theme_constant_override("h_separation", 6)
+	stats_row.add_theme_constant_override("v_separation", 6)
 	stats_row.mouse_filter = Control.MOUSE_FILTER_STOP  # a tap tells what the stats mean
 	stats_row.custom_minimum_size = Vector2(0, HudLayout.BUTTON)  # the pills are drawn smaller, centred in it
 	stats_row.tooltip_text = HudModel.STATS_HELP
@@ -175,6 +176,7 @@ func _init() -> void:
 		actions.add_child(button)
 	bottom.add_child(actions)
 	bottom.add_child(extra_row)
+	reason_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # a long reason must not widen the panel off the screen
 	bottom.add_child(reason_label)
 	undo_button.text = "Annuler le déplacement"
 	UiIcons.put(undo_button, "retour")
@@ -244,6 +246,7 @@ func apply_layout(layout: HudLayout) -> void:
 	score_label.custom_minimum_size.x = HudLayout.RAIL_WIDTH - 24.0 if layout.landscape else 0.0
 	# an autowrapping label asks for a huge height until its width is known: give it one
 	hint_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else maxf(layout.panel_zone.size.x - 24.0, 0.0)
+	reason_label.custom_minimum_size.x = HudLayout.PANEL_WIDTH - 24.0 if layout.landscape else maxf(layout.panel_zone.size.x - 24.0, 0.0)
 	_place(top_panel, layout.top_zone)
 	_place(bottom_panel, layout.panel_zone)
 	camera_box.vertical = not layout.camera_in_panel

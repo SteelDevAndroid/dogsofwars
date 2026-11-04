@@ -571,7 +571,7 @@ func test_a_drag_scrolls_a_pinch_zooms_and_a_touch_taps() -> void:
 	var unit_tile := state.view().unit_tile(state.view().unit_at(state.tile_index(2, 1)))
 	screen.camera.ensure_visible(unit_tile)
 	screen._process(0.0)
-	var at := screen.camera.tile_to_screen(unit_tile)
+	var at := screen.screen_of_tile(unit_tile)
 	_finger(screen, 0, PointerEvent.Phase.DOWN, at)
 	_finger(screen, 0, PointerEvent.Phase.UP, at)
 	assert_bool(screen.selected_unit >= 0).is_true()
@@ -1101,7 +1101,8 @@ func test_cycling_the_speed_tells_the_app_so_it_can_remember_it() -> void:
 
 ## What the engine does for a finger on the map: the position it hands over is local to the control.
 func _touch_on_map(screen: MatchScreen, tile: int) -> void:
-	var viewport_position := screen.renderer.layout.center_of(tile)
+	screen._process(0.0)  # the map shown is framed
+	var viewport_position := screen.screen_of_tile(tile)
 	for pressed in [true, false]:
 		var touch := InputEventScreenTouch.new()
 		touch.index = 0

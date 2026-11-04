@@ -20,6 +20,10 @@ func _initialize() -> void:
 	if mode == "gallery":
 		await _gallery(catalog, out)
 		return
+	if mode == "match":
+		root.content_scale_factor = 2.0  # what UiScale sets on a 320 dpi screen
+		await _match(out, rounds)
+		return
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_size = Vector2i(points)
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
@@ -104,6 +108,34 @@ func _gallery(catalog: DataCatalog, out: String) -> void:
 	map.set_selection(9, PackedInt32Array([2, 16]))
 	map.frame_camera(Rect2(Vector2.ZERO, Vector2(root.size)), Vector2(root.size), 7.4, Vector2(3.5, 1.5))
 	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out)
+	print("saved ", out)
+	quit()
+
+
+## The real match screen (3D) on a new game of the shipped map: its first unit selected, then
+## `step` frames of presentation after a move (0: none), to see a slide or a wave under way.
+func _match(out: String, step: int) -> void:
+	var t := TestSessionFactory.new()
+	var screen: MatchScreen = load("res://src/app/match_screen.tscn").instantiate()
+	root.add_child(screen)
+	await process_frame  # the scene is ready (its @onready nodes)
+	var session := SessionFactory.new_game(t.app, t.map(), SEED, screen.ports(t.sink), screen.runner_port())
+	screen.bind(session)
+	for i in 10:
+		await process_frame
+	var view := FactionView.new(session.state, Faction.PLAYER)
+	for id in view.unit_ids():
+		if view.unit_faction(id) == Faction.PLAYER:
+			screen.on_tap_tile(view.unit_tile(id))
+			break
+	if step > 0 and not screen.reachable.is_empty():
+		screen.on_tap_tile(screen.reachable[screen.reachable.size() - 1])
+		for i in step:
+			await process_frame
+	for i in 4:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out)
