@@ -417,6 +417,7 @@ func test_the_title_announces_the_start_only_once() -> void:
 	assert_int(starts[0]).is_equal(1)
 	assert_object(title.get_child(1)).is_instanceof(TextureRect)
 	assert_object((title.get_child(1) as TextureRect).texture).is_not_null()
+	assert_str(title.prompt_label.text).is_equal("Touchez pour jouer")  # the picture carries no caption
 	title.free()
 
 

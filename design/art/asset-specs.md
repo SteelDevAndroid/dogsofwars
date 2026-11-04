@@ -139,17 +139,27 @@ Sans changement. L'interface reste en 2D par-dessus la carte.
 
 ## 7. Hors carte : illustrations, icône, magasin
 
-Sans changement. Les illustrations restent peintes : c'est le registre de la mémoire (art bible 1).
+Livré le 2026-11-04 (propositions : voir « Limites » ci-dessous). Sources, script et image de départ dans `design/art/sources/hors-carte/`.
 
-| Ressource | Spécification |
-|---|---|
-| **Écran titre / splash** | image maîtresse portrait **1 440 × 2 560 px**, `.webp` ou `.png` sRGB, sujet et titre dans le carré central de 1 080 × 1 080, sans la phrase « Touchez pour jouer » ; recadrage paysage 2 560 × 1 440 |
-| **Illustrations de chronique et de carte** | maîtresse carrée **2 560 × 2 560**, sujet dans le carré central de 1 440 × 1 440 ; `.webp`. Même caméra de trois-quarts et même composition que la carte en jeu (art bible 6) |
-| **Icône du lanceur (Android)** | premier plan 432 × 432 px transparent, sujet dans le disque central de 288 px ; arrière-plan 432 × 432 px opaque ; monochrome 432 × 432 px |
-| **Icône classique** | 192 × 192 px, PNG |
-| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, moins de 1 Mo |
-| **Graphique de présentation** | 1 024 × 500 px, PNG ou JPEG sans transparence |
-| **Captures d'écran** | 2 à 8, en 9:16 ou 16:9 (suggestion : 1 080 × 1 920), sans cadre de téléphone, **prises sur le Pixel 8** |
+| Ressource | Spécification | État |
+|---|---|---|
+| **Écran titre / splash** | portrait **1 440 × 2 560 px**, sans la phrase « Touchez pour jouer » (le jeu l'écrit) ; paysage 2 560 × 1 440 | **Installé** : `assets/ui/splash.png` (portrait, aussi l'image de démarrage du moteur) et `assets/ui/splash_landscape.png`. Le titre « DOGS OF GODS » est peint dans l'image |
+| **Illustrations de chronique** | carrées **2 560 × 2 560**, `.webp` | **Rangées, pas branchées** : trois (`introduction`, `briefing`, `revelation`) dans `design/art/illustrations/`. Aucun écran ne les montre encore ; installées, elles pèseraient environ 26 Mo de mémoire graphique chacune |
+| **Icône du lanceur (Android)** | premier plan 432 × 432 transparent, fond 432 × 432 opaque, monochrome 432 × 432 | **Installés** (`assets/ui/icon_adaptive_*_432.png`) ; le monochrome (icônes thématiques d'Android 13) est ajouté au préréglage d'export |
+| **Icône classique** | 192 × 192 px, PNG, coins arrondis transparents | **Installée** (`assets/ui/icon_192.png`), mais **sans coins arrondis** (carrée, opaque) |
+| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, moins de 1 Mo | **Installée** (`assets/ui/icon_512.png`, aussi l'icône du projet) |
+| **Graphique de présentation** | 1 024 × 500 px, sans transparence | Rangé dans `design/art/store/` (fiche du Play Store, pas dans le jeu) |
+| **Captures d'écran** | 2 à 8, 9:16 ou 16:9, sans cadre de téléphone, prises sur le Pixel 8 | **Pas livrées** : à enregistrer depuis le jeu sur le téléphone |
+
+**Comment le jeu les montre.** L'écran titre prend l'image portrait ou paysage selon l'orientation de l'écran et écrit lui-même « Touchez pour jouer » dessus. Les menus (principal, fin de partie) gardent **le haut de l'image seulement** (58 % en portrait, 50 % en paysage) : le titre peint est plus bas, et les boutons seraient posés dessus.
+
+**Limites signalées par l'artiste.** Les illustrations sont des découpes d'une composition générée de 1 536 × 1 024, recadrées et suréchantillonnées : les dimensions sont bonnes, pas le détail. À retoucher ou repeindre à l'échelle avant une livraison finale.
+
+**Écarts relevés à l'intégration** (rien n'est modifié, décisions d'art) :
+- L'**identité de l'icône change** : l'ancienne (visage, loup « D.o.G », robots) devient un écusson gris avec un losange rouge.
+- Le **fond de l'icône adaptative** porte un anneau décoratif de 330 px de diamètre ; la zone sûre fait 288 px : sur un masque circulaire l'anneau est coupé.
+- Les illustrations, bleu ardoise avec une marque rouge sur le visage, ne reprennent pas la palette chaude que l'art bible (section 1) réserve à la mémoire.
+- Les illustrations viennent d'une génération d'image : à valider côté droits avant la publication.
 
 ## 8. Contrôle à la réception
 

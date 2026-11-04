@@ -20,6 +20,19 @@ func _initialize() -> void:
 	if mode == "gallery":
 		await _gallery(catalog, out)
 		return
+	if mode == "title" or mode == "menu":
+		root.content_scale_factor = 2.0
+		var screen: Control = TitleScreen.new() if mode == "title" else MainMenu.new()
+		root.add_child(screen)
+		if mode == "menu":
+			(screen as MainMenu).configure(true, 120)
+		for i in 6:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(out)
+		print("saved ", out)
+		quit()
+		return
 	if mode == "maps":
 		root.content_scale_factor = 2.0
 		await _maps_screen(out)

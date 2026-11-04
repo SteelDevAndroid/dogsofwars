@@ -37,6 +37,47 @@ static func button(parent: Control, text: String, action: Callable, icon_name: S
 	return button
 
 
+const ARTWORK_PORTRAIT := "res://assets/ui/splash.png"
+const ARTWORK_LANDSCAPE := "res://assets/ui/splash_landscape.png"
+## The share of the artwork's height above its title ("DOGS OF GODS" is painted in it, below the
+## face). A menu keeps that part only: its buttons would sit on the title.
+const ABOVE_TITLE_PORTRAIT := 0.58
+const ABOVE_TITLE_LANDSCAPE := 0.50
+
+
+## The artwork that fits a screen: the portrait picture, or the landscape one when the screen is
+## wider than tall; whole (the title screen) or only above its title (the menus).
+static func artwork(landscape: bool, above_title_only: bool) -> Texture2D:
+	var full: Texture2D = load(ARTWORK_LANDSCAPE if landscape else ARTWORK_PORTRAIT)
+	if not above_title_only:
+		return full
+	var atlas := AtlasTexture.new()
+	atlas.atlas = full
+	atlas.region = Rect2(0, 0, full.get_width(), full.get_height() * (ABOVE_TITLE_LANDSCAPE if landscape else ABOVE_TITLE_PORTRAIT))
+	return atlas
+
+
+## A picture of the artwork that fills `screen` and changes with its orientation (a phone turned).
+static func artwork_picture(screen: Control, above_title_only: bool) -> TextureRect:
+	var picture := TextureRect.new()
+	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.texture = artwork(false, above_title_only)
+	picture.resized.connect(func() -> void:
+		var landscape := picture.size.x > picture.size.y
+		var wanted := artwork(landscape, above_title_only)
+		if picture.texture == null or _source_of(picture.texture) != _source_of(wanted):
+			picture.texture = wanted)
+	screen.add_child(picture)
+	return picture
+
+
+static func _source_of(texture: Texture2D) -> Texture2D:
+	return (texture as AtlasTexture).atlas if texture is AtlasTexture else texture
+
+
 ## The artwork of the title screen behind a menu, dimmed so the buttons read.
 static func illustrated_backdrop(screen: Control, dim: float = 0.62) -> void:
 	var base := ColorRect.new()
@@ -44,27 +85,12 @@ static func illustrated_backdrop(screen: Control, dim: float = 0.62) -> void:
 	base.set_anchors_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen.add_child(base)
-	var picture := TextureRect.new()
-	picture.texture = _artwork_without_caption()
-	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
-	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(picture)
+	artwork_picture(screen, true)
 	var veil := ColorRect.new()
 	veil.color = Color(0.055, 0.078, 0.133, dim)
 	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen.add_child(veil)
-
-
-## The splash without its bottom caption ("Touchez pour jouer" belongs to the title screen).
-static func _artwork_without_caption() -> Texture2D:
-	var full: Texture2D = load("res://assets/ui/splash.png")
-	var atlas := AtlasTexture.new()
-	atlas.atlas = full
-	atlas.region = Rect2(0, 0, full.get_width(), full.get_height() * 0.9)
-	return atlas
 
 
 ## The main action of a screen: filled with the pack's teal.
