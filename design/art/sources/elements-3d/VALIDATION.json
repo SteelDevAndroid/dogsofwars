@@ -1,0 +1,132 @@
+[
+  {
+    "name": "node_niveau_1.glb",
+    "triangles": 36,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "node_niveau_2.glb",
+    "triangles": 72,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "node_niveau_3.glb",
+    "triangles": 108,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "ruin_arche_brisee_01.glb",
+    "triangles": 120,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "ruin_arche_brisee_02.glb",
+    "triangles": 120,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "ruin_dome_brise_01.glb",
+    "triangles": 108,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_eclaireur.glb",
+    "triangles": 216,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_assaut.glb",
+    "triangles": 180,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_rempart.glb",
+    "triangles": 180,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_ouvrier.glb",
+    "triangles": 216,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_sentinelle.glb",
+    "triangles": 192,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_chasseur.glb",
+    "triangles": 246,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  },
+  {
+    "name": "unit_bastion.glb",
+    "triangles": 246,
+    "glb2": true,
+    "vertex_rgba": true,
+    "triangle_budget": true,
+    "footprint": true,
+    "unit_cylinder": true,
+    "pass_all": true
+  }
+]

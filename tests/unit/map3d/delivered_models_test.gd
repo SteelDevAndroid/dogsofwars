@@ -45,6 +45,57 @@ static func _upward_area(mesh: Mesh) -> float:
 	return total
 
 
+## The share of the near-vertical faces that look toward the middle of their own piece instead of
+## away from it. A solid made right has none; a model written inside out (the walls of the first
+## nodes, ruins and units) has all of them. A piece is a set of faces that share corners; two
+## pieces that touch (the two horns of a Hunter) count as one, so a correct model can show a few.
+static func _inward_share(mesh: Mesh) -> float:
+	var points: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var triangles := points.size() / 3
+	var ids := {}
+	var parent := PackedInt32Array()
+	var corner_id := PackedInt32Array()
+	for corner in points.size():
+		var key := Vector3i((points[corner] * 1000.0).round())
+		if not ids.has(key):
+			ids[key] = parent.size()
+			parent.append(parent.size())
+		corner_id.append(ids[key])
+	for triangle in triangles:
+		for k in [1, 2]:
+			var a := _find(parent, corner_id[triangle * 3])
+			var b := _find(parent, corner_id[triangle * 3 + k])
+			parent[b] = a
+	var centre := {}
+	var count := {}
+	for triangle in triangles:
+		var piece := _find(parent, corner_id[triangle * 3])
+		var middle := (points[triangle * 3] + points[triangle * 3 + 1] + points[triangle * 3 + 2]) / 3.0
+		centre[piece] = centre.get(piece, Vector3.ZERO) + middle
+		count[piece] = count.get(piece, 0) + 1
+	var vertical := 0
+	var inward := 0
+	for triangle in triangles:
+		var a := points[triangle * 3]
+		var facing := (points[triangle * 3 + 2] - a).cross(points[triangle * 3 + 1] - a).normalized()
+		if absf(facing.y) >= 0.5:
+			continue
+		var piece := _find(parent, corner_id[triangle * 3])
+		var middle := (points[triangle * 3] + points[triangle * 3 + 1] + points[triangle * 3 + 2]) / 3.0
+		var from_centre: Vector3 = middle - centre[piece] / count[piece]
+		vertical += 1
+		if Vector2(facing.x, facing.z).dot(Vector2(from_centre.x, from_centre.z)) < 0.0:
+			inward += 1
+	return float(inward) / maxf(vertical, 1.0)
+
+
+static func _find(parent: PackedInt32Array, node: int) -> int:
+	while parent[node] != node:
+		parent[node] = parent[parent[node]]
+		node = parent[node]
+	return node
+
+
 func test_every_delivered_model_has_a_name_the_game_looks_for() -> void:
 	var known := _all_names()
 	for name in _delivered():
@@ -84,6 +135,13 @@ func test_a_terrain_tile_faces_up_stands_at_its_height_and_has_a_slab_of_the_rig
 		assert_float(box.size.x).override_failure_message("%s: the slab is %.3f wide, 0.98 expected" % [name, box.size.x]).is_equal_approx(0.98, 0.011)
 
 
+func test_no_delivered_model_has_its_walls_inside_out() -> void:
+	var library := ModelLibrary.new()
+	for name in _delivered():
+		var share := _inward_share(library.mesh(name))
+		assert_float(share).override_failure_message("%s: %.0f %% of its walls look inward (inside out): reverse the order of the corners of each triangle" % [name, share * 100.0]).is_less(0.25)
+
+
 func test_the_terrain_delivered_so_far_is_complete() -> void:
 	var delivered := _delivered()
 	for kind in [TerrainGrid.PLAIN, TerrainGrid.FOREST, TerrainGrid.MOUNTAIN, TerrainGrid.WATER]:
@@ -102,3 +160,21 @@ func test_an_inside_out_mesh_is_caught_by_the_check() -> void:
 
 	assert_float(_upward_area(mesh)).is_less(0.0)
 	assert_float(_upward_area(ModelLibrary.ready_mesh(mesh))).is_less(0.0)  # making it ready does not flip it
+
+
+func test_a_model_turned_inside_out_is_caught_by_the_check() -> void:
+	var right := ModelLibrary.new().mesh("node_niveau_2")  # delivered right: walls look outward
+	assert_object(right).is_not_null()
+	assert_float(_inward_share(right)).is_less(0.25)
+	var arrays := right.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var flipped := PackedVector3Array()
+	for triangle in points.size() / 3:  # every triangle turned over: (a, c, b)
+		flipped.append_array([points[triangle * 3], points[triangle * 3 + 2], points[triangle * 3 + 1]])
+	var inside_out := []
+	inside_out.resize(Mesh.ARRAY_MAX)
+	inside_out[Mesh.ARRAY_VERTEX] = flipped
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, inside_out)
+
+	assert_float(_inward_share(mesh)).is_greater(0.75)
