@@ -458,6 +458,16 @@ l'horizon.
   (environ 8 colonnes visibles), le HUD doit offrir un moyen de revenir à son départ, en
   plus des puces qui centrent la carte sur une menace, une ruine ou une perte
   (`design/ux/hud.md`).
+- **Choix de la carte** (décision de l'utilisateur, 2026-11-04) : une nouvelle partie commence
+  par un écran où le joueur **choisit sa carte** : une fiche par carte, avec son relief en
+  miniature, son nom, sa taille et une phrase (`title` et `summary` du fichier de carte), et
+  un bouton « Au hasard » qui tire la carte par la graine. La miniature montre **le terrain
+  seulement** (reliefs, masses d'eau : art bible 6, « Illustrations et carte ») : ni nœud, ni
+  ruine, ni départ, ni drone dormant ; la phrase ne nomme aucun de ces points d'intérêt
+  (le pilier 5 ne s'use pas). Le terrain qu'il montre est déjà celui que la bible d'art
+  autorise sur une carte de présentation. La graine ne décide plus que du reste du hasard
+  (tirage des ruines, de l'IA). Ajouter une carte, c'est ajouter son fichier et son nom à la
+  liste du jeu : plus aucun tirage existant ne change de carte.
 - **Aperçu de la portée** : les tuiles atteignables tiennent compte des coûts de
   terrain ; leur affichage appartient au HUD (17).
 - **Information d'une tuile** : un appui long (avec son équivalent en appui simple,

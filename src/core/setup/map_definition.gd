@@ -20,6 +20,8 @@ const GLYPHS := {".": TerrainGrid.PLAIN, "f": TerrainGrid.FOREST, "^": TerrainGr
 const SCHEMA := {
 	"schema_version": {"kind": &"int", "min": SCHEMA_VERSION, "max": SCHEMA_VERSION},
 	"id": {"kind": &"string"},
+	"title": {"kind": &"string"},
+	"summary": {"kind": &"string"},
 	"width": {"kind": &"int", "min": 4, "max": MAX_SIZE},
 	"height": {"kind": &"int", "min": 4, "max": MAX_SIZE},
 	"terrain": {"kind": &"array", "min": 4, "max": MAX_SIZE, "item": {"kind": &"string"}},
@@ -53,6 +55,10 @@ const SCHEMA := {
 }
 
 var id := ""
+## What the map choice screen shows (provisional French, like the other texts): a name and one
+## sentence. The summary never names a node, a ruin or a start: the screen shows no secret.
+var title := ""
+var summary := ""
 var width := 0
 var height := 0
 var symmetric := false
@@ -100,6 +106,8 @@ func terrain_at_tile(t: int) -> int:
 
 func _copy(data: Dictionary) -> void:
 	id = data["id"]
+	title = data["title"]
+	summary = data["summary"]
 	width = data["width"]
 	height = data["height"]
 	symmetric = data["symmetry"] == 1
@@ -128,6 +136,8 @@ func _copy(data: Dictionary) -> void:
 ## Every validity error, one message each (GDD 2 rule 17); empty when the map can be played.
 func check(catalog: DataCatalog) -> PackedStringArray:
 	var errors := PackedStringArray()
+	if title.strip_edges().is_empty() or summary.strip_edges().is_empty():
+		errors.append("title and summary must not be empty (the map choice screen shows them)")
 	if _rows.size() != height:
 		errors.append("terrain has %d rows, height is %d" % [_rows.size(), height])
 		return errors

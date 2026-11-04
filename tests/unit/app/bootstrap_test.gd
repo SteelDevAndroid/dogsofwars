@@ -24,6 +24,12 @@ func _boot(files: FaultInjectingFileStore = null, broken: bool = false, dpi: int
 	return boot
 
 
+## "Nouvelle partie" then "Au hasard": the map is the one the seed points at, as before the choice screen.
+func _start_random(boot: Bootstrap) -> void:
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	(boot.screen as MapChoiceScreen).random_button.pressed.emit()
+
+
 func _finish(boot: Bootstrap) -> void:
 	boot.free()
 	await await_idle_frame()
@@ -50,7 +56,7 @@ func test_a_data_error_stops_everything_but_the_error_screen() -> void:
 func test_a_new_game_opens_a_match_at_the_first_turn_of_the_player() -> void:
 	var boot := _boot()
 
-	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	_start_random(boot)
 
 	assert_object(boot.match_screen).is_not_null()
 	var state := boot.match_screen.session.state
@@ -264,7 +270,7 @@ func test_a_match_starts_with_the_stored_settings_and_changes_apply_to_it_at_onc
 	await _finish(first)
 
 	var boot := _boot(files.restarted())
-	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	_start_random(boot)
 	var screen := boot.match_screen
 	assert_bool(screen.sequencer.reduced_motion).is_true()
 	assert_int(screen.clock.speed).is_equal(PresentationClock.Speed.FAST)
@@ -337,7 +343,7 @@ func test_a_schema_two_match_in_the_player_phase_resumes_from_the_menu() -> void
 
 func test_the_menus_are_drawn_above_the_hud_of_the_match() -> void:
 	var boot := _boot()
-	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	_start_random(boot)
 
 	assert_int(boot._ui.layer).is_greater(boot.match_screen.hud_layer.layer)
 	await _finish(boot)
@@ -446,7 +452,7 @@ func test_a_new_game_takes_the_map_its_seed_points_at() -> void:
 	for seed_value in [0, 1]:
 		var boot := _boot()
 		boot.forced_seed = seed_value
-		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		_start_random(boot)
 		sizes.append(boot.match_screen.session.state.width())
 		await _finish(boot)
 
@@ -474,7 +480,7 @@ func test_the_volumes_of_the_profile_reach_the_sound_bank_and_every_button_taps(
 
 func test_a_new_game_plays_its_sounds_and_the_end_screen_wins_or_loses() -> void:
 	var boot := _boot()
-	(boot.screen as MainMenu).new_game_button.pressed.emit()
+	_start_random(boot)
 	assert_object(boot.match_screen.sounds).is_same(boot.sounds)
 	for frame in 40:  # the opening of the match plays out before a tap counts
 		if boot.match_screen.is_idle():
@@ -491,7 +497,7 @@ func test_the_end_screen_wins_loses_or_stays_silent_for_an_abandon() -> void:
 	var cues := {}
 	for status in [HeaderSlice.END_TURNS_WON, HeaderSlice.END_DOMINATION, HeaderSlice.END_ELIMINATED, HeaderSlice.END_TURNS_LOST, HeaderSlice.END_ABANDONED]:
 		var boot := _boot()
-		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		_start_random(boot)
 		TurnWrites.finish(boot.match_screen.session.state, status)
 		boot.sounds.played.clear()
 		boot._show_end()
@@ -503,3 +509,48 @@ func test_the_end_screen_wins_loses_or_stays_silent_for_an_abandon() -> void:
 	assert_array(cues[HeaderSlice.END_ELIMINATED]).is_equal([&"defeat"])
 	assert_array(cues[HeaderSlice.END_TURNS_LOST]).is_equal([&"defeat"])
 	assert_array(cues[HeaderSlice.END_ABANDONED]).is_empty()
+
+
+func test_a_new_game_asks_for_the_map_first_and_back_returns_to_the_menu() -> void:
+	var boot := _boot()
+
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+
+	assert_object(boot.screen).is_instanceof(MapChoiceScreen)
+	assert_object(boot.match_screen).is_null()  # nothing started yet
+	var choice := boot.screen as MapChoiceScreen
+	assert_int(choice.play_buttons.size()).is_equal(Bootstrap.MAP_FILES.size())
+	choice.back_button.pressed.emit()
+	await await_idle_frame()
+	assert_object(boot.screen).is_instanceof(MainMenu)
+	await _finish(boot)
+
+
+func test_the_player_plays_the_map_they_chose_whatever_the_seed() -> void:
+	var sizes := []
+	for index in Bootstrap.MAP_FILES.size():
+		var boot := _boot()
+		boot.forced_seed = 0  # the seed alone would give the first map each time
+		(boot.screen as MainMenu).new_game_button.pressed.emit()
+		(boot.screen as MapChoiceScreen).play_buttons[index].pressed.emit()
+		sizes.append(boot.match_screen.session.state.width())
+		assert_int(boot.match_screen.session.state.header.value(HeaderSlice.SEED)).is_equal(0)
+		await _finish(boot)
+
+	assert_array(sizes).is_equal([12, 14])
+
+
+func test_a_map_that_fails_its_checks_is_not_offered() -> void:
+	var texts := _texts(false)
+	texts[Bootstrap.MAP_FILES[1]] = texts[Bootstrap.MAP_FILES[1]].replace('"title": "Le Marais"', '"title": ""')
+	var boot := Bootstrap.new()
+	boot.show_title = false
+	boot.data_source = MemoryDataSource.new(texts)
+	boot.file_store = FaultInjectingFileStore.new()
+	add_child(boot)
+
+	(boot.screen as MainMenu).new_game_button.pressed.emit()
+
+	assert_object(boot.screen).is_instanceof(DataErrorScreen)
+	assert_bool((boot.screen as DataErrorScreen).errors_label.text.contains("marais.json")).is_true()
+	await _finish(boot)

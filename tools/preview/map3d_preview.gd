@@ -20,6 +20,10 @@ func _initialize() -> void:
 	if mode == "gallery":
 		await _gallery(catalog, out)
 		return
+	if mode == "maps":
+		root.content_scale_factor = 2.0
+		await _maps_screen(out)
+		return
 	if mode == "match":
 		root.content_scale_factor = 2.0  # what UiScale sets on a 320 dpi screen
 		await _match(out, rounds)
@@ -107,6 +111,24 @@ func _gallery(catalog: DataCatalog, out: String) -> void:
 	map.show_snapshot(s)
 	map.set_selection(9, PackedInt32Array([2, 16]))
 	map.frame_camera(Rect2(Vector2.ZERO, Vector2(root.size)), Vector2(root.size), 7.4, Vector2(3.5, 1.5))
+	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out)
+	print("saved ", out)
+	quit()
+
+
+## The map choice screen, as the app builds it from the shipped files.
+func _maps_screen(out: String) -> void:
+	var catalog := CatalogFactory.standard()
+	var maps: Array[MapDefinition] = []
+	for file in Bootstrap.MAP_FILES:
+		var errors: Array[DataError] = []
+		maps.append(MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/" + file), file, catalog, errors))
+	var screen := MapChoiceScreen.new()
+	root.add_child(screen)
+	screen.configure(maps)
 	for i in 6:
 		await process_frame
 	await RenderingServer.frame_post_draw

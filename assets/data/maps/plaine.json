@@ -1,6 +1,8 @@
 {
  "schema_version": 1,
  "id": "plaine",
+ "title": "La Plaine",
+ "summary": "Un terrain ouvert, quelques bois et des crêtes. Les routes sont courtes : on se voit vite, on se bat tôt.",
  "width": 12,
  "height": 12,
  "terrain": [

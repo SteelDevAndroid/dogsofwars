@@ -25,6 +25,8 @@ Garder les deux, c'est garder du code mort et deux GDD contradictoires.
 ### D3. Choix de la carte par la graine
 `graine % nombre de cartes` choisit la carte d'une nouvelle partie (ADR-0008, note du 2026-11-02). C'est une règle de jeu : le joueur ne choisit pas sa carte, et l'ajout d'une carte change la carte de toutes les graines existantes. Elle n'est écrite dans aucun GDD (2, 3 ou 21). À confirmer par le game-designer, puis à écrire dans le GDD 2.
 
+**Décidé le 2026-11-04** : le joueur choisit sa carte sur un écran de choix, « Au hasard » garde le tirage par graine. Écrit dans le GDD 2 (UI Requirements) ; ADR-0008, note du 2026-11-04.
+
 ---
 
 ## 2. Documentation à aligner
@@ -77,7 +79,8 @@ Garder les deux, c'est garder du code mort et deux GDD contradictoires.
 
 | Point | État |
 |---|---|
-| D1, D3 | **Ouverts**, décision de l'utilisateur et du game-designer |
+| D1 | **Ouvert**, décision de l'utilisateur et du game-designer |
+| D3 | **Décidé le 2026-11-04** : écran de choix de la carte (`MapChoiceScreen`), « Au hasard » garde `graine % nombre de cartes` |
 | D2 | **Décidé le 2026-11-04** : Pixel 8, Android 15+. Relevé par tour dans le journal (`PerfProbe`), protocole et seuils dans `mesures-appareil-de-reference.md`. Les mesures restent à faire sur l'appareil |
 | N1 | Fait : ADR-0013 « Audio » (bus, jeu de lecteurs, `SoundHandler`, accessibilité) ; registre : API `audio_cues`, motif `sound_as_only_signal`. ADR-0008 garde un renvoi et la composition ; les notes d'art sont déplacées dans `design/art/integration-2026-11-02.md`. Les notes d'équilibrage, de deuxième carte et de résumé restent dans ADR-0008 en attendant D3 |
 | N2 | Fait : `TileTimeSource` retiré des listes d'ADR-0002 et d'ADR-0008 (−10 libre) |
