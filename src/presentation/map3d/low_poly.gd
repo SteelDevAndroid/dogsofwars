@@ -145,6 +145,48 @@ static func _unit_parts(st: SurfaceTool, key: String, side_color: Color, guardia
 
 
 
+## The edge of the fog on a discovered tile (art bible 6: a fade over half a tile), for its up
+## side (-z); turned for the others. Opaque at the edge, clear at the middle of the tile.
+static func fog_fade_side() -> ArrayMesh:
+	var st := _begin()
+	var dark := Color(LowPoly.DARK, 1.0)
+	var clear := Color(LowPoly.DARK, 0.0)
+	_tri_colors(st, [Vector3(-0.5, 0, -0.5), Vector3(0.5, 0, -0.5), Vector3(0.5, 0, 0)], [dark, dark, clear])
+	_tri_colors(st, [Vector3(-0.5, 0, -0.5), Vector3(0.5, 0, 0), Vector3(-0.5, 0, 0)], [dark, clear, clear])
+	return _end(st)
+
+
+## The outer corner of the fog (only the diagonal neighbour is unknown): opaque at the top-left
+## corner, clear half a tile away; turned for the other corners.
+static func fog_fade_corner() -> ArrayMesh:
+	var st := _begin()
+	var dark := Color(LowPoly.DARK, 1.0)
+	var clear := Color(LowPoly.DARK, 0.0)
+	_tri_colors(st, [Vector3(-0.5, 0, -0.5), Vector3(0, 0, -0.5), Vector3(0, 0, 0)], [dark, clear, clear])
+	_tri_colors(st, [Vector3(-0.5, 0, -0.5), Vector3(0, 0, 0), Vector3(-0.5, 0, 0)], [dark, clear, clear])
+	return _end(st)
+
+
+## The hatching of a threat (art bible 4: orange-red at 135 degrees), thin bands across the tile.
+static func hatch(color: Color) -> ArrayMesh:
+	var st := _begin()
+	var h := 0.46
+	var width := 0.045
+	for k in range(-3, 4):
+		var c := k * 0.26  # the band x - z = c ("\" on the screen, 135 degrees), cut to the square
+		var a := Vector2(maxf(-h, c - h), 0.0)
+		a.y = a.x - c
+		var b := Vector2(minf(h, c + h), 0.0)
+		b.y = b.x - c
+		if a.distance_to(b) < 0.05:
+			continue
+		var across := Vector2(1, -1).normalized() * width / 2.0
+		var p := [Vector3(a.x - across.x, 0, a.y - across.y), Vector3(b.x - across.x, 0, b.y - across.y),
+				Vector3(b.x + across.x, 0, b.y + across.y), Vector3(a.x + across.x, 0, a.y + across.y)]
+		_quad(st, p[0], p[1], p[2], p[3], color)
+	return _end(st)
+
+
 ## The mark of a unit that has not played: a small light disc.
 static func idle_mark() -> ArrayMesh:
 	var st := _begin()
@@ -254,6 +296,14 @@ static func _frustum(st: SurfaceTool, base: Vector3, r0: float, r1: float, sides
 static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, color: Color) -> void:
 	_tri(st, a, b, c, color)
 	_tri(st, a, c, d, color)
+
+
+## A triangle with one colour per corner (alpha kept: the fades).
+static func _tri_colors(st: SurfaceTool, points: Array, colors: Array) -> void:
+	for i in 3:
+		var color: Color = colors[i]
+		st.set_color(Color(color.srgb_to_linear(), color.a))
+		st.add_vertex(points[i])
 
 
 static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, color: Color) -> void:

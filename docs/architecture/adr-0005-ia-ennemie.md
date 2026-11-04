@@ -25,7 +25,7 @@ Le tour de l'IA est une fonction déterministe de l'état au début de la phase 
 | **Knowledge Risk** | HIGH (prudence : aucune API postérieure à la connaissance du modèle n'est utilisée) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `docs/engine-reference/godot/current-best-practices.md`, `design/gdd/ia-ennemie.md`, `design/gdd/modele-etat-partie.md`, ADR-0002 à 0004 |
 | **Post-Cutoff APIs Used** | Aucune |
-| **Verification Required** | (0) **`WorkerThreadPool` sur Android** (NOT SOURCEABLE, vérifié seulement sur Windows) : tâche postée, interrogée, jetée sur ÉTAT_CHARGÉ ; (1) coût d'une perception (`filtered_copy`) et d'une copie sur Android ; (2) 20 000 évaluations et 2 500 copies tiennent dans le temps de tour sur l'appareil de référence (non nommé) ; (3) une unité par image : latence perçue du tour ennemi ; (4) test de déterminisme sur 100 exécutions ; (5) reprise après arrêt au milieu de la phase ennemie : rejeu identique |
+| **Verification Required** | (0) **`WorkerThreadPool` sur Android** (NOT SOURCEABLE, vérifié seulement sur Windows) : tâche postée, interrogée, jetée sur ÉTAT_CHARGÉ ; (1) coût d'une perception (`filtered_copy`) et d'une copie sur Android ; (2) 20 000 évaluations et 2 500 copies tiennent dans le temps de tour sur l'appareil de référence (Pixel 8, Android 15+, D2 du 2026-11-04) ; (3) une unité par image : latence perçue du tour ennemi ; (4) test de déterminisme sur 100 exécutions ; (5) reprise après arrêt au milieu de la phase ennemie : rejeu identique |
 
 ## ADR Dependencies
 

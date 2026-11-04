@@ -77,7 +77,8 @@ Garder les deux, c'est garder du code mort et deux GDD contradictoires.
 
 | Point | État |
 |---|---|
-| D1, D2, D3 | **Ouverts**, décision de l'utilisateur et du game-designer, mesure sur appareil |
+| D1, D3 | **Ouverts**, décision de l'utilisateur et du game-designer |
+| D2 | **Décidé le 2026-11-04** : Pixel 8, Android 15+. Relevé par tour dans le journal (`PerfProbe`), protocole et seuils dans `mesures-appareil-de-reference.md`. Les mesures restent à faire sur l'appareil |
 | N1 | Fait : ADR-0013 « Audio » (bus, jeu de lecteurs, `SoundHandler`, accessibilité) ; registre : API `audio_cues`, motif `sound_as_only_signal`. ADR-0008 garde un renvoi et la composition ; les notes d'art sont déplacées dans `design/art/integration-2026-11-02.md`. Les notes d'équilibrage, de deuxième carte et de résumé restent dans ADR-0008 en attendant D3 |
 | N2 | Fait : `TileTimeSource` retiré des listes d'ADR-0002 et d'ADR-0008 (−10 libre) |
 | N3 | Fait : ordre caméra, tuiles, HUD, son dans ADR-0002 (§5, diagramme, Écarts 7) et au registre (`presentation_handler`) |

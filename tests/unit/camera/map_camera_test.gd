@@ -127,3 +127,31 @@ func test_a_tile_already_in_view_does_not_move_the_camera() -> void:
 	camera.ensure_visible(5 * 12 + 5)
 
 	assert_vector(camera.center).is_equal(centre)
+
+
+## The tilted 3D map (ADR-0014): a row of screen covers `depth_scale` rows of ground.
+func test_with_a_tilted_ground_a_vertical_drag_covers_more_rows_and_the_clamp_sees_deeper() -> void:
+	var camera := MapCamera.new(12, 20, AREA)
+	camera.depth_scale = 1.5
+	camera.center = Vector2(6, 10)
+
+	camera.scroll(Vector2(48, -48))  # one tile of screen each way
+
+	assert_vector(camera.center).is_equal(Vector2(5, 11.5))  # one column, one and a half rows
+	camera.center = Vector2(6, 0)
+	camera.set_area(AREA)
+	# half the ground seen: 520 / 48 / 2 * 1.5 rows, less the one-tile margin
+	assert_float(camera.center.y).is_equal_approx(520.0 / 48.0 / 2.0 * 1.5 - MapCamera.EDGE_MARGIN_TILES, 0.0001)
+
+
+func test_with_a_tilted_ground_a_pinch_keeps_the_ground_under_the_fingers() -> void:
+	var camera := MapCamera.new(30, 30, AREA)
+	camera.depth_scale = 1.5
+	camera.center = Vector2(15, 15)
+	var anchor := AREA.get_center() + Vector2(40, 60)
+	var before := camera.center + Vector2(40.0, 60.0 * 1.5) / camera.tile_size
+
+	camera.zoom(1.25, anchor)
+
+	var after := camera.center + Vector2(40.0, 60.0 * 1.5) / camera.tile_size
+	assert_vector(after).is_equal_approx(before, Vector2(0.0001, 0.0001))

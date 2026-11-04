@@ -23,6 +23,8 @@ var renderer := TileRenderer.new()
 ## and no longer draws. False shows the 2D drawing (tests of the drawing, a fallback).
 var map3d := MapView3D.new()
 var use_3d := true
+## One line per turn in the log on the device (D2: Pixel 8, Android 15+).
+var probe := PerfProbe.new()
 var hud := Hud.new()
 ## The unit of the player being looked at, -1 for none.
 var selected_unit := -1
@@ -114,8 +116,11 @@ func _ready() -> void:
 	sequencer.idle_reached.connect(func() -> void: refresh(true))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	hud.fragment_panel.tick(clock.current())
+	if session != null and session.state != null:
+		var save := session.post_commit as SaveCoordinator
+		probe.frame(delta * 1000.0, session.state.turn(), save.last_write_usec if save != null else 0, ai_runner.last_advance_usec)
 	if use_3d and session != null:
 		map3d.sync(_screen_size())
 	hud.tick_toast(clock.current())
@@ -182,8 +187,10 @@ func bind(p_session: GameSession) -> void:
 	for type in session.catalog.units.count():
 		types[type] = [session.catalog.units.key(type), session.catalog.units.side(type) != session.catalog.units.side(0)]
 	map3d.set_unit_types(types)
+	probe.header(RenderingServer.get_video_adapter_name(), RenderingServer.get_current_rendering_method(), OS.get_model_name())
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
 	map3d.map_camera = camera
+	camera.depth_scale = MapView3D.depth_scale() if use_3d else 1.0
 	relayout()
 	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
@@ -230,6 +237,9 @@ func on_tap(position: Vector2) -> void:
 ## The 3D map, or the 2D drawing (`on`: false).
 func set_3d(on: bool) -> void:
 	use_3d = on
+	if camera != null:
+		camera.depth_scale = MapView3D.depth_scale() if on else 1.0
+		camera.set_area(camera.area)  # clamp again with the new depth
 	renderer.draw_enabled = not on
 	map3d.visible = on
 	renderer.queue_redraw()
@@ -520,8 +530,7 @@ func _on_pointer(event: PointerEvent) -> void:
 			Gesture.Kind.TAP:
 				on_tap(gesture.position)
 			Gesture.Kind.SCROLL:
-				# in 3D the ground is tilted: a vertical drag covers more rows than pixels / tile
-				camera.scroll(Vector2(gesture.delta.x, gesture.delta.y / sin(deg_to_rad(MapView3D.PITCH_DEGREES))) if use_3d else gesture.delta)
+				camera.scroll(gesture.delta)
 			Gesture.Kind.PINCH_UPDATE:
 				camera.zoom(gesture.factor, gesture.position)
 

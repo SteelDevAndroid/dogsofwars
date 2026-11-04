@@ -380,7 +380,7 @@ performance_budgets:
     status: active
     budget_ms: 1.0
     adr: docs/architecture/adr-0012-rendu-immediat-par-instantane.md
-    notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par redessin, 0 allocation par image au repos ; redessin complet à chaque image d'effet ou de défilement ; NON MESURÉ ; repli si dépassé : couche statique, puis MultiMesh (ADR-0012 §8) ; 60 i/s visées, 30 en plancher ; aucun appareil de référence nommé"
+    notes: "Proposé, à confirmer par l'utilisateur : couche des tuiles au plus 1 ms CPU par redessin, 0 allocation par image au repos ; redessin complet à chaque image d'effet ou de défilement ; NON MESURÉ ; repli si dépassé : couche statique, puis MultiMesh (ADR-0012 §8) ; 60 i/s visées, 30 en plancher  ; appareil de référence : Pixel 8, Android 15+ (D2, 2026-11-04), relevé par PerfProbe"
     referenced_by:
       - docs/architecture/adr-0012-rendu-immediat-par-instantane.md
     added: 2026-10-30
@@ -390,7 +390,7 @@ performance_budgets:
     status: active
     budget_ms: 8.0
     adr: docs/architecture/adr-0006-sauvegarde.md
-    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (non nommé) AVANT les stories du runner de l'IA (chaque commande de l'IA écrit) ; sinon fil d'écriture par amendement d'ADR-0004 §4 et ADR-0006 §7"
+    notes: "Provisoire (SAVE_MAIN_THREAD_BUDGET du GDD 16) : sérialisation plus vérification plus E/S au plus 8 ms **en pic sur l'image du commit**, distinct des budgets par image ; mesurer t_write sur l'appareil de référence (Pixel 8, Android 15+) AVANT les stories du runner de l'IA (chaque commande de l'IA écrit) ; sinon fil d'écriture par amendement d'ADR-0004 §4 et ADR-0006 §7"
     referenced_by:
       - docs/architecture/adr-0006-sauvegarde.md
     added: 2026-10-30
@@ -420,7 +420,7 @@ performance_budgets:
     status: active
     budget_ms: 2.0
     adr: docs/architecture/adr-0005-ia-ennemie.md
-    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; ÉTAT RÉEL AU MVP : la planification tourne sur le fil principal (écart d'ADR-0005 §7, WorkerThreadPool non implémenté), donc elle compte dans l'image, avec l'application, le recalcul de vue et la sauvegarde synchrone de la commande (SaveCoordinator.worst_write_usec, AiRunner.worst_advance_usec : à lire sur appareil, spike A3) ; cible après le spike : planification hors du fil principal si la pire image dépasse le budget ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état ; 1 par construction au MVP) ; APPELS_MAX = N_IA + N_NŒUDS + 2 (AiPlanner.max_calls_per_turn) et APPELS_MAX × evals_per_call ≤ evals_max (20 000), APPELS_MAX + 1 ≤ 2 500 copies, vérifiés au chargement de chaque carte (MapDefinition) ; T_ai 2 000 ms est une cible mesurée, jamais une coupure ; aucun appareil de référence nommé"
+    notes: "Proposé : coût du runner sur le FIL PRINCIPAL au plus 2 ms par image (perception, soumission, interrogation de la tâche) ; ÉTAT RÉEL AU MVP : la planification tourne sur le fil principal (écart d'ADR-0005 §7, WorkerThreadPool non implémenté), donc elle compte dans l'image, avec l'application, le recalcul de vue et la sauvegarde synchrone de la commande (SaveCoordinator.worst_write_usec, AiRunner.worst_advance_usec : à lire sur appareil, spike A3) ; cible après le spike : planification hors du fil principal si la pire image dépasse le budget ; budget par appel à plan_next, au plus APPELS_PAR_UNITÉ_MAX appels par unité (indice déduit de l'état ; 1 par construction au MVP) ; APPELS_MAX = N_IA + N_NŒUDS + 2 (AiPlanner.max_calls_per_turn) et APPELS_MAX × evals_per_call ≤ evals_max (20 000), APPELS_MAX + 1 ≤ 2 500 copies, vérifiés au chargement de chaque carte (MapDefinition) ; T_ai 2 000 ms est une cible mesurée, jamais une coupure  ; appareil de référence : Pixel 8, Android 15+ (D2, 2026-11-04), relevé par PerfProbe"
     referenced_by:
       - docs/architecture/adr-0005-ia-ennemie.md
     added: 2026-10-30
@@ -430,7 +430,7 @@ performance_budgets:
     status: active
     budget_ms: 0.3
     adr: docs/architecture/adr-0004-pipeline-de-commandes.md
-    notes: "Provisoire (formule 3 du GDD 23) : validation plus application au plus 0,3 ms par commande sur l'appareil de référence (non nommé) ; si dépassé, l'IA évalue moins de candidates"
+    notes: "Provisoire (formule 3 du GDD 23) : validation plus application au plus 0,3 ms par commande sur l'appareil de référence (Pixel 8, Android 15+) ; si dépassé, l'IA évalue moins de candidates"
     referenced_by:
       - docs/architecture/adr-0004-pipeline-de-commandes.md
     added: 2026-10-30
@@ -440,7 +440,7 @@ performance_budgets:
     status: active
     budget_ms: 0.3
     adr: docs/architecture/adr-0002-evenements-de-presentation.md
-    notes: "Proposé, à confirmer : séquenceur et file au plus 0,3 ms CPU par image, 0 allocation par image au repos ; aucun appareil de référence nommé"
+    notes: "Proposé, à confirmer : séquenceur et file au plus 0,3 ms CPU par image, 0 allocation par image au repos  ; appareil de référence : Pixel 8, Android 15+ (D2, 2026-11-04), relevé par PerfProbe"
     referenced_by:
       - docs/architecture/adr-0002-evenements-de-presentation.md
     added: 2026-10-30
