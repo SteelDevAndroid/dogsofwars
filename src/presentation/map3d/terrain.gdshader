@@ -8,6 +8,9 @@ uniform vec3 tint : source_color = vec3(1.0);
 uniform float strength : hint_range(0.0, 1.0) = 0.0;
 uniform float memory : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 memory_color : source_color = vec3(0.306, 0.345, 0.384);
+// An artist's model carries its faction mask in the vertex alpha (1 = takes the side's tint,
+// design/art/asset-specs.md); the shapes built in code tint the whole tile or bake the colour.
+uniform bool use_mask = false;
 
 void fragment() {
 	vec3 base = COLOR.rgb;
@@ -15,7 +18,8 @@ void fragment() {
 	// the side's hue at the value of the terrain: relief and shade stay readable under the colour
 	float tint_luma = max(dot(tint, vec3(0.2126, 0.7152, 0.0722)), 0.02);
 	vec3 owned = clamp(tint * (luma / tint_luma) * 1.15, 0.0, 1.0);
-	vec3 shown = mix(base, owned, strength * 0.65);
+	float mask = use_mask ? COLOR.a : 1.0;
+	vec3 shown = mix(base, owned, strength * (use_mask ? 0.9 : 0.65) * mask);
 	shown = mix(shown, memory_color * (0.4 + 2.0 * luma), memory * 0.6) * (1.0 - 0.4 * memory);
 	ALBEDO = shown;
 	ROUGHNESS = 1.0;

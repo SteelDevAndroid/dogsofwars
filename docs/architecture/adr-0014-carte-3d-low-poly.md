@@ -63,6 +63,8 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **8. Caméra et inclinaison (2026-11-04).** `MapCamera.depth_scale` (1 en 2D, 1 / sin(42°) en 3D) compte les rangées de sol par rangée d'écran : le défilement vertical, le serrage aux bords, le pincement et la mise en vue d'une case en tiennent compte. La correction du défilement faite dans `MatchScreen` disparaît.
 
+**9. Modèles livrés (2026-11-04).** `ModelLibrary` charge `assets/art/3d/<nom>.glb` (ressource importée, ou glTF brut lu par `GLTFDocument`), garde le premier maillage, et le met en cache par nom ; sans modèle, la forme de `LowPoly` reste. Les noms suivent `design/art/asset-specs.md`. Le shader lit le masque de camp dans l'alpha de la couleur de sommet (`use_mask`) pour les modèles livrés ; unité endormie, ruine lue et pièce de mémoire passent par `memory`.
+
 **Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure sur l'appareil de référence le demande (D2).
 
 ## Alternatives Considered

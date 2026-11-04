@@ -15,7 +15,7 @@
 
 Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presentation/map3d/low_poly.gd`) avec des formes simples. Elles suffisent à jouer et à juger la direction. Un artiste les **remplace à nom égal** par des modèles `.glb`, sans toucher au reste du jeu.
 
-**Ce n'est pas encore possible** : le jeu ne charge pas encore de fichier `.glb`. Le chargement est à écrire, avec une règle simple : si `assets/art/3d/<nom>.glb` existe, on l'utilise, sinon on garde la forme du code. C'est une petite tâche de code, à faire avant de livrer le premier modèle.
+**Comment le jeu les charge** (`ModelLibrary`, 2026-11-04) : si `assets/art/3d/<nom>.glb` existe, le jeu prend le premier maillage du modèle ; sinon il garde la forme du code. On peut donc livrer les modèles un par un, dans n'importe quel ordre. Godot importe les `.glb` déposés dans ce dossier ; un `.glb` non importé est aussi lu, avec `GLTFDocument`.
 
 | Catégorie | Pièces | Construit dans le code | Livré par un artiste |
 |---|---|---|---|
@@ -55,7 +55,13 @@ Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presen
 | Contour | Ne pas le modéliser : le jeu ajoute une coque inversée (sombre `#1E2329` pour la meute, violet `#B07CE0` pour les Gardiens) |
 | Nommage | Minuscules, sans accents : `terrain_plaine_01.glb`, `unit_eclaireur.glb`, `node_niveau_2.glb`, `ruin_arche_brisee_01.glb` |
 
-Le masque de camp dans l'alpha n'est pas encore lu par le shader du jeu. Pour l'instant, les formes du code portent la couleur du camp directement. C'est à ajouter avec le chargement des `.glb`.
+Le shader du jeu lit ce masque pour les modèles livrés (`use_mask`). Les formes du code, elles, portent la couleur du camp directement.
+
+**Ce que le jeu fait d'un modèle livré** :
+- **Unités et nœuds** : la teinte du camp va là où l'alpha vaut 1, un nœud libre reste gris. Un nœud vu mais hors de vue est assombri.
+- **Unité endormie** : le jeu prend `unit_<type>_endormi.glb` s'il existe. Sinon, il prend le modèle éveillé, sans teinte, assombri et enfoncé de 0,03.
+- **Ruine lue** : assombrie par le shader, il n'y a pas de second modèle à livrer.
+- **Contour** : les unités gardent la coque de contour du jeu.
 
 ## 3. Palette en jeu (valeurs du code)
 
@@ -145,7 +151,7 @@ Sans changement. Les illustrations restent peintes : c'est le registre de la mé
 À faire dans le jeu, avec sa caméra, avant d'accepter un modèle :
 
 1. Nom, format `.glb`, échelle, origine et axes conformes : le modèle posé sur une tuile ne déborde pas du carré et son avant regarde la caméra.
-2. **Budget de triangles** respecté. Le test `tests/unit/map3d/map_view_3d_test.gd` vérifie les formes du code ; il faudra l'étendre aux `.glb` avec le chargement.
+2. **Budget de triangles** respecté. Le test `tests/unit/map3d/map_view_3d_test.gd` vérifie les formes du code ; `model_library_test.gd` vérifie qu'un `.glb` se charge avec son masque. Un test des budgets sur les modèles livrés reste à ajouter quand le premier arrivera.
 3. **Galerie** : `tools/preview/map3d_preview.gd -- gallery` montre côte à côte tous les terrains, les 7 unités, les nœuds et les ruines. Les silhouettes doivent se reconnaître à 31 pt, et les quatre types de la meute se distinguer côte à côte.
 4. **Test en gris** : sur une capture désaturée, chaque élément se détache de ses voisins par la valeur et la forme, y compris sur une case teintée par un camp.
 5. **En partie** : le mode `match` du même outil donne le vrai écran (portrait et paysage). Une crête ne doit pas cacher une unité sur la case derrière.
@@ -163,7 +169,6 @@ Sans changement. Les illustrations restent peintes : c'est le registre de la mé
 
 | Question | Qui décide |
 |---|---|
-| Écrire le chargement des `.glb` (repli sur les formes du code) et la lecture du masque de camp dans l'alpha : avant le premier modèle livré | équipe technique |
 | Faut-il des modèles d'unité endormie distincts (trait replié) ou le même modèle enfoncé suffit-il ? | art-director |
 | Faut-il un dôme brisé en plus des deux arches (le code n'en fait pas) ? | art-director |
 | Les PNG 2D de la carte sont-ils gardés pour le repli 2D ou retirés du paquet pour l'alléger ? | utilisateur |
