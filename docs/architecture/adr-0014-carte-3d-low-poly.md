@@ -69,6 +69,8 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **11. Nœuds, ruines et unités livrés (2026-11-04).** Le deuxième lot (3 nœuds, 3 ruines, 7 unités) avait les **murs** à l'envers et les dessus à l'endroit : le sens des faces dépendait du sens de chaque polygone, que le générateur ne vérifiait pas. Corrigé à la source (chaque mur et chaque dessus suit le sens de son polygone) et dans les fichiers. `delivered_models_test` mesure désormais, pour chaque modèle, la part des faces verticales qui regardent vers l'intérieur de leur pièce (100 % pour un modèle à l'envers, au plus 15 % pour un modèle juste ; seuil à 25 %). Le masque de camp (alpha de `COLOR_0`) est lu par le shader : la plateforme et l'œil des unités prennent la teinte du camp, vérifié sur une capture. Les formes du code ne servent plus que de repli (unités endormies, modèles absents).
 
+**12. Unités endormies (2026-11-04).** Le lot « unités manquantes » apporte les 7 unités endormies (trait replié, plus basses) et remplace les 7 éveillées (niche de commande vide à l'arrière de la meute). Les murs étaient de nouveau à l'envers (206 faces sur 210) : le générateur (`design/art/sources/units-3d/generate_units.py`) retourne maintenant toute face qui regarde le centre de sa pièce (pièces convexes), et les 14 fichiers sont régénérés à l'identique. `delivered_models_test` les contrôle (14 fichiers, 150 à 400 triangles).
+
 **Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure sur l'appareil de référence le demande (D2).
 
 ## Alternatives Considered

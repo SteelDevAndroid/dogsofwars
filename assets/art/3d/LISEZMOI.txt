@@ -11,7 +11,7 @@ triangles : design/art/asset-specs.md.
   ruin_arche_brisee_01.glb   ruin_arche_brisee_02.glb   ruin_dome_brise_01.glb
   unit_eclaireur.glb   unit_assaut.glb   unit_rempart.glb   unit_ouvrier.glb
   unit_sentinelle.glb   unit_chasseur.glb   unit_bastion.glb
-  unit_<type>_endormi.glb (facultatif : sinon le modèle éveillé, gris et enfoncé)
+  unit_<type>_endormi.glb (livrés ; sans eux, le modèle éveillé gris et enfoncé)
 
 Livré à ce jour (2026-11-04) : les 12 modèles de terrain, les 3 nœuds, les 3 ruines et les 7 unités (25 fichiers). Leurs sources (générateur Python, aperçus,
 manifeste) sont dans design/art/sources/terrain-3d/ et design/art/sources/elements-3d/. Les deux générateurs d'origine écrivaient des faces
