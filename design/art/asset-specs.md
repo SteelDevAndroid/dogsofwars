@@ -1,132 +1,169 @@
 # Spécifications techniques des ressources graphiques
 
-> **Statut** : proposition de l'équipe technique du 2026-11-02, à valider par l'art-director.
-> Elle complète `design/art/art-bible.md` (palette, silhouettes, règles de lecture) et ne
-> les remplace pas : en cas de conflit sur le *style*, la bible gagne ; sur le *format*, ce
-> document gagne.
+> **Statut** : mis à jour le 2026-11-04 pour la carte en 3D (ADR-0014, direction confirmée par
+> l'utilisateur). À valider par l'art-director. Ce document complète
+> `design/art/art-bible.md` (palette, silhouettes, règles de lecture) sans la remplacer : la
+> bible gagne sur le *style*, ce document gagne sur le *format*.
+>
+> **Historique.** Le 2026-11-02, la voie A (sprites 2D en PNG) avait été retenue. Le
+> 2026-11-04, l'utilisateur a choisi la voie B (tuiles 3D low-poly), décrite par l'art bible.
+> La carte du jeu est maintenant en 3D. Les PNG de terrain, d'unités, de nœuds, de ruines et
+> d'effets restent dans le dépôt pour le dessin 2D de secours (`MatchScreen.set_3d(false)`),
+> mais **on n'en produit plus**.
 
-## 0. Une décision à prendre avant de produire
+## 0. Ce qui existe aujourd'hui et ce qu'un artiste remplace
 
-La bible d'art (section 4, « production hybride ») prévoit des **tuiles 3D low-poly** (`.glb`,
-couleurs par sommet). Le moteur de rendu **réellement écrit** est en **2D** : il dessine la
-carte à plat, vue de dessus, sur une **grille carrée**, avec des formes provisoires.
+Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presentation/map3d/low_poly.gd`) avec des formes simples. Elles suffisent à jouer et à juger la direction. Un artiste les **remplace à nom égal** par des modèles `.glb`, sans toucher au reste du jeu.
 
-| Voie | Ce que l'artiste livre | Effort côté code | Quand la choisir |
+**Ce n'est pas encore possible** : le jeu ne charge pas encore de fichier `.glb`. Le chargement est à écrire, avec une règle simple : si `assets/art/3d/<nom>.glb` existe, on l'utilise, sinon on garde la forme du code. C'est une petite tâche de code, à faire avant de livrer le premier modèle.
+
+| Catégorie | Pièces | Construit dans le code | Livré par un artiste |
 |---|---|---|---|
-| **A. Sprites 2D** (proposée, détaillée ci-dessous) | PNG en gris + masque de faction | Faible : le moteur a déjà tout le reste (brouillard, camera, effets) | Production à une personne, sortie rapide, Android d'entrée de gamme |
-| **B. Tuiles 3D** (bible d'art) | `.glb`, 150 à 400 triangles par unité | Fort : un rendu 3D complet à écrire et à mesurer sur appareil (prototype prévu section 8 de la bible) | Si le rendu 3D est un choix de direction artistique assumé |
+| Terrain | plaine, forêt, montagne, eau, 3 variantes chacun | oui | **oui** (`.glb`) |
+| Nœuds | niveaux 1, 2, 3 | oui | **oui** |
+| Ruines | arche brisée (2 variantes), dôme brisé | oui (arches seulement) | **oui** |
+| Unités | 7 types | oui | **oui** |
+| Brouillard, lisière du brouillard, portée, sélection, cibles, hachures de menace, « ! », jauge de PV, pastille d'unité en attente, flèche des premiers tours, marques de possession | — | oui | **non** : le jeu les dessine en aplats |
+| Effets (trait d'attaque, nombres, fantôme d'une unité détruite, anneau) | — | oui | **non** |
+| Icônes d'interface, polices, illustrations, icône du lanceur, magasin | — | — | **oui**, inchangés (sections 6 et 7) |
 
-Les sections 1 à 7 décrivent la voie A. La section 8 résume la voie B. Les règles de
-couleur, de silhouette et de lecture valent pour les deux.
+## 1. Ce que le jeu affiche, et sous quel angle
 
-## 1. Ce que le jeu affiche, et à quelle taille
+- **Grille carrée.** Cartes de 12 × 12 aujourd'hui, jusqu'à 16 × 16.
+- **Caméra orthographique**, inclinée à **42° sous l'horizontale**, **sans rotation autour de la verticale** : les colonnes restent droites à l'écran.
+  - Le joueur voit le **dessus** et la **face avant** (vers la caméra, +Z) de chaque pièce.
+  - Il ne voit **jamais** l'arrière (−Z) ni le dessous.
+- **Taille à l'écran.** Une tuile fait **24 à 64 pt** de large (pt = dp Android) ; au zoom de départ, la carte montre 8 colonnes, soit environ **48 pt**. La lisibilité se juge **à 31 pt** : un détail de moins de 3 pt à l'écran n'est pas modélisé.
+- **Lumière** : une seule lumière directionnelle, venant de la gauche et un peu de devant, avec des **ombres en temps réel**, plus une lumière ambiante.
+  - **Ne cuisez pas de lumière directionnelle** dans les couleurs : le jeu éclaire déjà.
+  - Une **occlusion ambiante légère** cuite dans les couleurs de sommet est la bienvenue (creux, pieds des volumes).
+- **Appareil de référence : Pixel 8, Android 15 ou plus** (décision D2), renderer Mobile de Godot 4.7.
 
-- **Grille carrée**, vue de dessus. Cartes de 12 × 12 aujourd'hui, jusqu'à 16 × 16.
-- Une tuile mesure **24 à 64 pt** à l'écran (pt = dp Android) ; au départ, la carte montre 8 colonnes, soit **environ 48 pt** sur un téléphone de 390 pt de large en portrait. La lisibilité se juge **à 31 pt**.
-- Le jeu s'affiche jusqu'à **4 pixels par pt** (écrans xxxhdpi). Une tuile peut donc mesurer **256 px** au maximum : c'est la **taille source**.
-- Toute chose doit se reconnaître à 31 pt : un détail de moins de 3 pt n'est pas dessiné.
-- Lumière **à 45° depuis le haut à gauche**, cuite dans l'image, ombres douces courtes.
-- **Grille indépendante du dessin** : le jeu trace lui-même les bords de tuile, le territoire, le brouillard et les sélections ; ne dessinez ni cadre ni grille dans les tuiles.
-
-## 2. Règles communes à tous les PNG
+## 2. Règles communes à tous les modèles
 
 | Point | Règle |
 |---|---|
-| Format | PNG 8 bits par canal, RGBA, sRGB, sans profil exotique, sans compression destructive |
-| Taille d'une tuile ou d'une unité | **256 × 256 px**, la tuile occupe tout le carré |
-| Marge | Une unité ou un décor garde **16 px** de marge transparente (le moteur y ajoute le contour de 1 pt) |
-| Ancre | Le centre du carré est le centre de la tuile ; un élément plus haut que la tuile (ruine) garde son pied au centre bas du carré |
-| Couleur | **Valeurs de gris seulement** pour tout ce qui change de faction ; la couleur de faction est appliquée par le jeu |
-| Teintes fixes | Uniquement : ruines (ocre/sépia `#C8955A`), menace (`#FF6A3D`), eau (froid sombre `#2B323A`) |
-| Nuancier | Les couleurs viennent de `palette_lmo.gpl` (à créer depuis la section 3) ; aucune teinte hors nuancier |
-| Textures photographiques | Aucune en jeu (aplats, dégradés et grain léger) : le grain « peint » est réservé aux illustrations hors jeu |
-| Poids | Pas de limite par fichier ; **budget total des tuiles et unités : 8 Mo en PNG**, 4 Mo une fois compressées pour le GPU |
-| Sources | `.kra`, `.psd` (calques conservés) ou `.svg` livrés avec l'export |
-| Nommage | `[catégorie]_[nom]_[variante]_[taille].[ext]`, minuscules, sans accents (voir la bible) ; ex. `terrain_foret_02.png` |
+| Format | **glTF 2.0 binaire (`.glb`)**, un modèle par fichier, source `.blend` livrée à côté |
+| Échelle | **1 unité = 1 tuile.** Une tuile occupe le carré de −0,5 à +0,5 en X et en Z |
+| Origine | Au **centre de la tuile**, le **dessus du terrain à Y = 0** (voir les hauteurs, section 4) |
+| Axes | **+Y en haut, +Z vers la caméra** (le bas de l'écran), +X à droite. L'avant d'une unité (son œil, sa lame) regarde **+Z** ; le jeu tourne les Gardiens de 180° |
+| Faces | Faces **plates** (pas de lissage), aplats, **aucune texture**, aucun matériau autre que la couleur de sommet |
+| Couleur | **Couleurs de sommet** (attribut `COLOR_0`), en **valeurs de gris** pour tout ce qui change de camp. Teintes fixes permises seulement pour les ruines (ocre `#C8955A`) |
+| Masque de camp | Dans l'**alpha** de la couleur de sommet : **1 = prend la teinte du camp**, 0 = garde son gris. La silhouette ne change jamais d'un camp à l'autre |
+| Triangles | **Unité : 150 à 400.** Tuile de terrain : au plus 300. Nœud, ruine : au plus 200. Un seul niveau de détail |
+| Faces cachées | L'arrière et le dessous peuvent être omis : ils ne sont jamais vus |
+| Contour | Ne pas le modéliser : le jeu ajoute une coque inversée (sombre `#1E2329` pour la meute, violet `#B07CE0` pour les Gardiens) |
+| Nommage | Minuscules, sans accents : `terrain_plaine_01.glb`, `unit_eclaireur.glb`, `node_niveau_2.glb`, `ruin_arche_brisee_01.glb` |
 
-**Masque de faction.** Pour chaque élément qui change de faction (unités, nœuds), livrer deux fichiers de même taille : `xxx.png` (gris, avec son alpha) et `xxx_mask.png` (blanc là où la couleur de faction s'applique, noir ailleurs, sans alpha). Le jeu teinte le masque ; la silhouette ne change jamais d'une faction à l'autre, seuls la palette et le motif changent.
+Le masque de camp dans l'alpha n'est pas encore lu par le shader du jeu. Pour l'instant, les formes du code portent la couleur du camp directement. C'est à ajouter avec le chargement des `.glb`.
 
-## 3. Palette de référence (codée dans le jeu)
+## 3. Palette en jeu (valeurs du code)
+
+Les gris du terrain sont un cran plus clairs que ceux de la 2D, parce que la lumière et l'ombre les assombrissent.
 
 | Usage | Couleur |
 |---|---|
-| Brouillard (jamais vu) | `#1E2329` |
-| Plaine / forêt / montagne / eau | `#4E5862` / `#66717C` / `#808B96` / `#2B323A` |
+| Fond (hors carte) | `#1E2329` |
+| Dalle de brouillard (jamais vu), dessinée par le jeu | `#323A44` |
+| Plaine / forêt (sol) / prismes de forêt / montagne / eau | `#7A848E` / `#68737E` / `#5A6772` / `#98A2AC` / `#34495C` |
+| Flancs des volumes | la couleur du dessus assombrie d'environ 28 % |
+| Corps des unités | `#B4BBC3` ; unité endormie : `#4E5862` |
 | Meute | `#1FA38F` (variante daltonienne `#3A8EE6`) |
-| Gardiens | `#C49BEA`, contour `#B07CE0` fixe (daltonienne : `#F0DC6E`) |
-| Non revendiqué | `#A3ACB5` (daltonienne : `#5F6266`) |
-| Menace | `#FF6A3D` |
+| Gardiens | `#C49BEA`, contour `#B07CE0` fixe (variante daltonienne `#F0DC6E`) |
+| Menace (hachures, « ! ») | `#FF6A3D` |
 | Ruine | `#C8955A` |
-| Sélection | `#EADFC8` |
-| Contour sombre | `#1E2329` |
+| Sélection, portée, jauge de PV | `#EADFC8` |
 
-## 4. Terrain (le contenu de la carte)
+**Couleur d'une case possédée.** Le jeu donne à la case la teinte de son camp **à la valeur du terrain** (shader `terrain.gdshader`). La valeur d'un modèle compte donc plus que sa teinte : chaque terrain doit rester reconnaissable une fois teinté. Faites un test en gris.
 
-Chaque type existe en **3 variantes** (`_01`, `_02`, `_03`) pour casser la répétition. Opaques, **raccordables** sur leurs quatre côtés (bords identiques entre variantes d'un même type), **sans marge**.
+## 4. Terrain
 
-| Fichier | Rôle | Remarque |
-|---|---|---|
-| `terrain_plaine_0N.png` | terrain de base, coût 1 | le plus calme : c'est le fond |
-| `terrain_foret_0N.png` | couvert, coût 2 | masse plus sombre et plus dense, **pas de contour d'arbre fin** |
-| `terrain_montagne_0N.png` | défense, coût 3 | plus clair, relief marqué par les ombres |
-| `terrain_eau_0N.png` | infranchissable | plus sombre, surface plate |
-| `terrain_brouillard_01.png` | tuile jamais vue | aplat `#1E2329` avec un très léger grain, aucun glyphe |
-| `fog_lisiere_bord.png`, `fog_lisiere_angle_ext.png`, `fog_lisiere_angle_int.png` | lisière douce entre brouillard et terrain | transparente, 256 × 256, optionnelle (sinon le jeu fait un fondu) |
+Chaque type existe en **3 variantes** (`_01`, `_02`, `_03`). Le jeu choisit la variante d'après la case, toujours la même pour une case donnée.
 
-L'écart de **valeur** (et non de teinte) doit distinguer les quatre terrains : test en gris obligatoire.
+| Fichier | Rôle | Hauteurs (Y) | Ce qu'il faut |
+|---|---|---|---|
+| `terrain_plaine_0N.glb` | base, coût 1 | dessus à **0 / +0,05 / +0,025** selon la variante (terrasses légères) | une dalle, au plus un élément plat en gris (sillon droit, cratère net) |
+| `terrain_foret_0N.glb` | couvert, coût 2 | sol à 0, prismes **au plus +0,30** | 3 à 5 prismes ou cônes facettés, pas d'arbre fin. Les coins restent dégagés pour une unité posée au centre |
+| `terrain_montagne_0N.glb` | défense, coût 3 | pics **au plus +0,42** ; une unité se pose à **+0,12** | pics facettés, un sommet aplati au centre pour l'unité. La crête ne doit pas cacher plus de la moitié de ce qui se trouve sur la case derrière (art bible 6) |
+| `terrain_eau_0N.glb` | infranchissable | surface à **−0,10** | dalle plus basse, une seule ride fixe |
+
+**Pour tous** : une **dalle de 0,98 × 0,98** (2 % de jour entre deux tuiles, pour que la grille se lise), épaisse de **0,22** sous le dessus. Bords droits, sans biseau qui sorte du carré. Le brouillard et sa lisière ne sont pas à livrer : le jeu les dessine.
 
 ## 5. Éléments posés sur la carte
 
-**Nœuds** (plateformes des drones : hexagones concentriques, angles droits, intacts, gris tant qu'aucune faction ne les tient) : `node_niveau_1.png`, `node_niveau_2.png`, `node_niveau_3.png`, plus `_mask`. Le niveau se lit à la **taille et au nombre d'anneaux**, pas seulement à un chiffre. Le motif de faction (chevron, deux barres, deux hexagones) est dessiné par le jeu.
+**Nœuds** (`node_niveau_1.glb` à `node_niveau_3.glb`) :
+- plateformes hexagonales **concentriques**, à angles droits, intactes ;
+- une marche de **0,05** de haut par niveau, rayon extérieur **0,42** ;
+- le niveau se lit au **nombre de marches**, pas seulement à un chiffre ;
+- gris tant qu'aucun camp ne tient le nœud (alpha = 1 sur les dessus des marches).
 
-**Ruines** (le seul ocre/sépia, les seules formes plus hautes que les montagnes, courbes brisées) : `ruin_arche_brisee_01.png`, `ruin_arche_brisee_02.png`, `ruin_dome_brise_01.png`. Taille **256 × 384 px** (la partie haute déborde sur la tuile du dessus), transparent. Un état « lue » est obtenu par le jeu (assombrissement) : ne pas le livrer.
+**Ruines** (`ruin_arche_brisee_01.glb`, `ruin_arche_brisee_02.glb`, `ruin_dome_brise_01.glb`) :
+- le seul ocre et sépia de la carte, des **courbes brisées** ;
+- les seules formes **plus hautes que les montagnes** : environ **+0,70** ;
+- pied au centre de la tuile ;
+- l'état « lue » (assombri) et la **lueur** d'une ruine non lue sont faits par le jeu : ne pas les livrer.
 
-**Unités** (7 types) : `unit_eclaireur`, `unit_assaut`, `unit_rempart`, `unit_ouvrier` (meute) ; `unit_sentinelle`, `unit_chasseur`, `unit_bastion` (Gardiens). Un fichier gris + un `_mask` chacun, 256 × 256, **une seule orientation** (vue de dessus, tête vers le haut ; le jeu fait pivoter par paliers de 45°). Silhouette pleine reconnaissable à 31 pt, quatre types de la meute distincts côte à côte, aucun ne ressemble à un mât, une lame ou une carapace. Un drone endormi est la même image : le jeu dessine la barre « dormant ». Pas de contour : le jeu l'ajoute.
-
-**Effets** (blancs, une couleur, teintés par le jeu), 256 × 256 : `fx_selection.png` (cadre), `fx_cible_crochets.png` (crochets d'angle), `fx_portee_point.png`, `fx_menace.png` (hachures + « ! »), `fx_debris.png` (glyphe de débris d'une unité détruite), `fx_ruine_lueur.png` (halo, 256 × 384). Pas de feuille d'animation : le jeu anime par déplacement et fondu. Animation de réveil : 6 images 256 × 256 en bande horizontale (1 536 × 256) si l'art-director la veut.
+**Unités** (`unit_eclaireur`, `unit_assaut`, `unit_rempart`, `unit_ouvrier` pour la meute ; `unit_sentinelle`, `unit_chasseur`, `unit_bastion` pour les Gardiens) :
+- **Proportions** : le jeu les affiche à **1,25 ×** leur taille de modèle. Modélisez-les pour qu'elles tiennent dans un cylindre de **rayon 0,30** et de **hauteur 0,50** (environ 0,62 avec le trait).
+- **Volumes** (art bible 5) : au plus trois, un socle, un corps et le trait du type, plus un œil.
+  - **Socle** : hexagonal pour la meute, en losange pour les Gardiens. Alpha = 1 sur son dessus.
+  - **Œil** : à l'avant (+Z), alpha = 1.
+  - **Niche de commande vide** : à l'arrière, pour la meute.
+  - Corps des Gardiens environ 10 % plus haut et plus étroit.
+- **Traits** :
+  - meute : **mât** (éclaireur), **lame vers l'avant** (assaut), **carapace plate** (rempart), **fourche à deux pointes** (ouvrier) ;
+  - Gardiens : un vocabulaire à angles aigus, distinct de celui de la meute (pointe, cornes, créneaux dans la version du code).
+- **Unité endormie** : le jeu utilise **le même modèle**, recoloré en gris-bleu et enfoncé. Si le trait doit se replier à mi-course, livrer `unit_<type>_endormi.glb` ; sinon rien.
+- **Pas d'animation squelettique** : le jeu fait glisser, affaisser et estomper les unités.
 
 ## 6. Interface
 
-- **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale 20 pt. Liste : tour, énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour. Trois sont déjà en place en version provisoire dans `assets/art/ui/` (`ui_icon_tour.svg`, `ui_icon_energie.svg`, `ui_icon_ruine.svg`, dessinées par l'équipe technique) : à remplacer à nom égal.
-- **Polices** : fournies en `.ttf` ou `.otf` avec licence, au plus 3 graisses (régulière, moyenne, 700), accents français complets, chiffres tabulaires pour le score et les compteurs.
-- **Boutons et panneaux** : le jeu les dessine ; livrer seulement un **9-patch** (`ui_panneau.png`, 96 × 96 px, marges de 24 px) si un style papier ou métal est voulu pour le panneau de fragment.
+Sans changement. L'interface reste en 2D par-dessus la carte.
+
+- **Icônes** : `.svg`, `viewBox` 24 × 24, trait de 2, extrémités carrées, une seule couleur blanche, taille affichée minimale de 20 pt.
+  - 21 icônes sont en place dans `assets/art/ui/`. Ce sont des versions provisoires dessinées par l'équipe technique, à remplacer à nom égal.
+  - La liste : tour, énergie, recherche, ruine, nœud, attaque, réveil, montée de niveau, pause, zoom +, zoom −, recentrer, réglages, chronique, menace, perte, vitesse, retour, mouvement, défense, vue.
+- **Polices** : `.ttf` ou `.otf` avec leur licence, au plus 3 graisses, accents français complets, chiffres tabulaires.
+- **Panneau papier du fragment** : un 9-patch `ui_panneau.png`, 96 × 96 px, marges de 24 px (déjà livré).
 
 ## 7. Hors carte : illustrations, icône, magasin
 
+Sans changement. Les illustrations restent peintes : c'est le registre de la mémoire (art bible 1).
+
 | Ressource | Spécification |
 |---|---|
-| **Écran titre / splash** | image maîtresse portrait **1 440 × 2 560 px** (livré aujourd'hui : 941 × 1 672, à refaire à cette taille), `.webp` ou `.png` sRGB, sujet et titre dans le carré central de 1 080 × 1 080 ; version **sans** la phrase « Touchez pour jouer » (le jeu l'écrit) ; recadrage paysage 2 560 × 1 440 si le jeu se joue en paysage |
-| **Illustrations de chronique / de carte** | maîtresse carrée **2 560 × 2 560**, sujet dans le carré central de 1 440 × 1 440, d'où l'on tire un portrait 1 440 × 2 560 et un paysage 2 560 × 1 440 ; `.webp`, pas de 4K |
-| **Icône du lanceur (Android)** | **premier plan 432 × 432 px**, PNG transparent, sujet dans le **disque central de 288 px** (zone sûre de 66 %) ; **arrière-plan 432 × 432 px**, PNG opaque (uni ou dégradé) ; **monochrome 432 × 432 px**, silhouette blanche sur transparent (icônes thématiques d'Android 13) |
-| **Icône classique** | 192 × 192 px, PNG, coins arrondis transparents |
-| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, sans coins arrondis (Google les applique), moins de 1 Mo |
+| **Écran titre / splash** | image maîtresse portrait **1 440 × 2 560 px**, `.webp` ou `.png` sRGB, sujet et titre dans le carré central de 1 080 × 1 080, sans la phrase « Touchez pour jouer » ; recadrage paysage 2 560 × 1 440 |
+| **Illustrations de chronique et de carte** | maîtresse carrée **2 560 × 2 560**, sujet dans le carré central de 1 440 × 1 440 ; `.webp`. Même caméra de trois-quarts et même composition que la carte en jeu (art bible 6) |
+| **Icône du lanceur (Android)** | premier plan 432 × 432 px transparent, sujet dans le disque central de 288 px ; arrière-plan 432 × 432 px opaque ; monochrome 432 × 432 px |
+| **Icône classique** | 192 × 192 px, PNG |
+| **Icône du Play Store** | 512 × 512 px, PNG 32 bits, moins de 1 Mo |
 | **Graphique de présentation** | 1 024 × 500 px, PNG ou JPEG sans transparence |
-| **Captures d'écran** | 2 à 8, 16:9 ou 9:16, côtés entre 320 et 3 840 px (suggestion : 1 080 × 1 920), sans cadre de téléphone |
+| **Captures d'écran** | 2 à 8, en 9:16 ou 16:9 (suggestion : 1 080 × 1 920), sans cadre de téléphone, **prises sur le Pixel 8** |
 
-## 8. Voie B : tuiles 3D (rappel de la bible d'art)
+## 8. Contrôle à la réception
 
-`.glb` (glTF 2.0 binaire), un asset par fichier, source `.blend` ; **couleurs par sommet** sans texture, valeurs de gris, lumière et occlusion cuites ; masque de faction dans l'alpha de la couleur de sommet (1 = prend la teinte) ; **150 à 400 triangles par unité**, un seul niveau de détail ; origine au centre de la tuile, échelle 1 unité = 1 tuile ; contour des unités par coque inversée. Un prototype de rendu sur Android d'entrée de gamme (60 unités, carte 16 × 16) doit confirmer ces budgets **avant** de modéliser quoi que ce soit.
+À faire dans le jeu, avec sa caméra, avant d'accepter un modèle :
 
-**Décision (2026-11-02) : voie A retenue.** La voie B reste documentée ci-dessus mais n'est pas lancée ; le pack de préparation du chapitre 8 (porte de validation, benchmark, validateur `.glb`) n'est pas intégré. Rouvrir la question seulement si le benchmark Android est un jour demandé.
+1. Nom, format `.glb`, échelle, origine et axes conformes : le modèle posé sur une tuile ne déborde pas du carré et son avant regarde la caméra.
+2. **Budget de triangles** respecté. Le test `tests/unit/map3d/map_view_3d_test.gd` vérifie les formes du code ; il faudra l'étendre aux `.glb` avec le chargement.
+3. **Galerie** : `tools/preview/map3d_preview.gd -- gallery` montre côte à côte tous les terrains, les 7 unités, les nœuds et les ruines. Les silhouettes doivent se reconnaître à 31 pt, et les quatre types de la meute se distinguer côte à côte.
+4. **Test en gris** : sur une capture désaturée, chaque élément se détache de ses voisins par la valeur et la forme, y compris sur une case teintée par un camp.
+5. **En partie** : le mode `match` du même outil donne le vrai écran (portrait et paysage). Une crête ne doit pas cacher une unité sur la case derrière.
+6. **Mesure** sur le Pixel 8 (`docs/architecture/mesures-appareil-de-reference.md`) : pas d'image au-delà de 33 ms au repos.
+7. Captures conservées dans `production/qa/evidence/`.
 
-## 9. Contrôle à la réception
+## 9. Livraison
 
-Fait dans le jeu, avec la caméra du jeu, avant d'accepter une ressource :
-
-1. Nom, taille, format et marges conformes (un script les relève dans `tools/`).
-2. Silhouette noire reconnaissable à 31 pt ; les types d'unités se distinguent côte à côte.
-3. Test en gris : sur une capture désaturée, chaque élément se détache de ses voisins par la valeur et la forme.
-4. Aucune couleur hors nuancier (écarts relevés, jamais corrigés d'office).
-5. Raccord sans couture entre variantes de terrain, sur une carte de 12 × 12.
-6. Capture conservée dans `production/qa/evidence/`.
-
-## 10. Livraison
-
-Un dossier par catégorie (`terrain/`, `nodes/`, `ruins/`, `units/`, `fx/`, `ui/`, `illus/`, `store/`), les sources à côté, un `LISEZMOI` qui liste les fichiers et les écarts au présent document. Les fichiers prêts vont dans `assets/art/<catégorie>/` ; Godot les importe avec la compression pour Android (ETC2/ASTC) déjà activée.
+- Un dossier par catégorie : `terrain/`, `nodes/`, `ruins/`, `units/`, `ui/`, `illus/`, `store/`.
+- Les sources (`.blend`, `.kra`, `.psd`, `.svg`) à côté des fichiers exportés.
+- Un `LISEZMOI` qui liste les fichiers et les écarts au présent document.
+- Les modèles prêts vont dans `assets/art/3d/` ; les autres ressources gardent leur dossier actuel sous `assets/art/`.
 
 ## Questions ouvertes
 
 | Question | Qui décide |
 |---|---|
-| Unités en vue de dessus pure ou en trois quarts (le moteur actuel est de dessus) ? | art-director |
-| Faut-il 8 orientations dessinées plutôt qu'une rotation par paliers de 45° ? | art-director |
+| Écrire le chargement des `.glb` (repli sur les formes du code) et la lecture du masque de camp dans l'alpha : avant le premier modèle livré | équipe technique |
+| Faut-il des modèles d'unité endormie distincts (trait replié) ou le même modèle enfoncé suffit-il ? | art-director |
+| Faut-il un dôme brisé en plus des deux arches (le code n'en fait pas) ? | art-director |
+| Les PNG 2D de la carte sont-ils gardés pour le repli 2D ou retirés du paquet pour l'alléger ? | utilisateur |
