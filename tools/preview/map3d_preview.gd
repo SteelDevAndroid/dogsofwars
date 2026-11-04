@@ -26,7 +26,7 @@ func _initialize() -> void:
 		return
 	if mode == "match":
 		root.content_scale_factor = 2.0  # what UiScale sets on a 320 dpi screen
-		await _match(out, rounds)
+		await _match(out, rounds, args[4] if args.size() > 4 else "")
 		return
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_size = Vector2i(points)
@@ -139,12 +139,16 @@ func _maps_screen(out: String) -> void:
 
 ## The real match screen (3D) on a new game of the shipped map: its first unit selected, then
 ## `step` frames of presentation after a move (0: none), to see a slide or a wave under way.
-func _match(out: String, step: int) -> void:
+func _match(out: String, step: int, map_id: String = "") -> void:
 	var t := TestSessionFactory.new()
 	var screen: MatchScreen = load("res://src/app/match_screen.tscn").instantiate()
 	root.add_child(screen)
 	await process_frame  # the scene is ready (its @onready nodes)
-	var session := SessionFactory.new_game(t.app, t.map(), SEED, screen.ports(t.sink), screen.runner_port())
+	var map := t.map()
+	if map_id != "":
+		var errors: Array[DataError] = []
+		map = MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/%s.json" % map_id), map_id, t.app.catalog, errors)
+	var session := SessionFactory.new_game(t.app, map, SEED, screen.ports(t.sink), screen.runner_port())
 	screen.bind(session)
 	for i in 10:
 		await process_frame

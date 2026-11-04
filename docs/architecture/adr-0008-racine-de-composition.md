@@ -293,6 +293,20 @@ Palette daltonienne : joueur #3A8EE6, ennemi #F0DC6E, non revendiqué #5F6266 (b
 
 **Choix de la carte (2026-11-04, D3 de la revue du 2026-11-03).** « Nouvelle partie » (après la confirmation si une partie est en cours) ouvre `MapChoiceScreen` à la place du menu : une fiche par carte de `Bootstrap.MAP_FILES`, dans cet ordre, avec `MapThumbnail` (le terrain en miniature, rien d'autre), `title`, la taille et `summary` du fichier. `Bootstrap.show_map_choice` lit et valide **toutes** les cartes d'abord : une carte qui échoue ses contrôles n'est pas proposée, l'écran d'erreur de données s'affiche. « Jouer » appelle `start_new_game(index)` ; « Au hasard » appelle `start_new_game()`, qui garde l'ancienne règle `graine % nombre de cartes` (même graine, même carte : les tests et les rejeux). `title` et `summary` sont deux champs obligatoires du schéma de carte (`MapDefinition`, chaînes non vides). Pour ajouter une carte : son fichier, son entrée dans `MAP_FILES`.
 
+**Cinq cartes de 16 × 16 (2026-11-04).** Sept cartes en tout, avec une ambiance chacune. Les cinq nouvelles sont écrites par `tools/maps/make_maps.py` : une moitié dessinée à la main (huit rangées), tournée de 180° pour l'autre, donc la symétrie que `MapDefinition` vérifie est vraie par construction. Les points d'intérêt sont donnés par des ancres, que le script pose sur la tuile valide la plus proche (nœuds en plaine à 4 tuiles au moins les uns des autres, dormants à 3 des départs et jamais voisins d'un nœud, trois zones de ruines de trois candidats). Il vérifie aussi ce que le jeu ne vérifie pas : chaque nœud et chaque dormant est atteignable depuis le départ du joueur, et il relève la part de chaque terrain. `--check` (en CI) refuse un fichier qui ne serait pas ce que le script écrit.
+
+| Carte | Taille | Ambiance | Terrain (plaine / forêt / montagne / eau) | Victoires du joueur scripté (30 graines) |
+|---|---|---|---|---|
+| La Plaine | 12 × 12 | ouverte, courte | — | 47 % |
+| Le Marais | 14 × 14 | bassin central | — | 70 % |
+| Les Crêtes | 16 × 16 | couloirs, cols | 81 / 8 / 11 / 0 % | 50 % |
+| La Forêt | 16 × 16 | bois épais, clairières | 66 / 31 / 0 / 3 % | 33 % |
+| L'Archipel | 16 × 16 | îles et gués | 78 / 6 / 0 / 16 % | 37 % |
+| Les Mesas | 16 × 16 | plateaux de roche, canyons | 79 / 6 / 16 / 0 % | 37 % |
+| Les Landes | 16 × 16 | terrain ouvert, presque nu | 93 / 4 / 2 / 2 % | 63 % |
+
+Lecture des taux : le joueur scripté est un joueur glouton qui ne contourne rien, pas un joueur humain ; sur une carte symétrique ces taux mesurent surtout ce que l'IA et lui font du terrain. Les deux premières versions de La Forêt (0 %, puis 7 %) et de L'Archipel (93 %) étaient aux extrêmes : le bois a été regroupé en massifs (couloirs libres entre eux) et l'eau réduite, ce qui les ramène entre 33 % et 37 %. Le budget de l'IA tient sur chaque carte (6 unités, 8 nœuds neutres et 2 départs : 18 appels, 18 000 évaluations sur 20 000). Les écarts au GDD 2 : parts de terrain hors de la recette de 12 × 12 (voulu : une ambiance), et des crêtes de 2 tuiles au plus (la recette tolère 4).
+
 **Résumé du tour ennemi** : au début du tour du joueur, `HudPresenter` dit en une ligne ce qu'il a vu de la phase ennemie (« Tour ennemi : 2 drones perdus · 1 nœud pris par l'ennemi · 1 menace annoncée », ou « rien à signaler »), sur la bannière de refus, 4 secondes ; rien au premier tour. Il ne compte que les événements que le brouillard laisse passer.
 
 **Écarts à confirmer** : (1) la cible de 40 à 60 % est ma proposition ; (2) les séries de 100 graines donnent une bande d'environ ±8 points : l'équilibre fin se fera avec des joueurs ; (3) la meute commence à cinq unités sur « plaine » (quatre côté Gardiens) : à valider avec le GDD 6 ; (4) la carte est tirée par la graine, sans choix du joueur ; (5) le résumé ne dit pas où : un toucher pour recentrer sur l'événement serait un ajout.

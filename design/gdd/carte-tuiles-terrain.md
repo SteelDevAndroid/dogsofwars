@@ -468,6 +468,14 @@ l'horizon.
   autorise sur une carte de présentation. La graine ne décide plus que du reste du hasard
   (tirage des ruines, de l'IA). Ajouter une carte, c'est ajouter son fichier et son nom à la
   liste du jeu : plus aucun tirage existant ne change de carte.
+- **Cartes livrées** (2026-11-04) : sept, dont cinq de 16 × 16 (la taille maximale), chacune
+  avec une ambiance : Les Crêtes (couloirs et cols), La Forêt (bois épais, clairières),
+  L'Archipel (îles et gués), Les Mesas (plateaux de roche, canyons), Les Landes (terrain
+  ouvert). Elles sortent de `tools/maps/make_maps.py` ; leur détail est dans
+  `docs/architecture/adr-0008-racine-de-composition.md`. Leurs parts de terrain s'écartent
+  volontairement de la recette de la règle 15 (qui vaut pour la carte équitable de 12 × 12)
+  pour que l'ambiance se lise ; la symétrie, les distances et les couvertures restent
+  celles des règles 10 à 14.
 - **Aperçu de la portée** : les tuiles atteignables tiennent compte des coûts de
   terrain ; leur affichage appartient au HUD (17).
 - **Information d'une tuile** : un appui long (avec son équivalent en appui simple,

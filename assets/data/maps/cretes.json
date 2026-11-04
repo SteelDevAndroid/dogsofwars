@@ -1,0 +1,303 @@
+{
+ "schema_version": 1,
+ "id": "cretes",
+ "title": "Les Crêtes",
+ "summary": "Des crêtes coupent le terrain en couloirs. On s'y bat aux cols, et celui qui tient la hauteur voit loin.",
+ "width": 16,
+ "height": 16,
+ "terrain": [
+  "......^^....f...",
+  "...f.........^^.",
+  ".....f...f......",
+  ".....^^.....f...",
+  "f.......^^..f...",
+  "..^^.......^^...",
+  "....f.......f...",
+  ".f........^^....",
+  "....^^........f.",
+  "...f.......f....",
+  "...^^.......^^..",
+  "...f..^^.......f",
+  "...f.....^^.....",
+  "......f...f.....",
+  ".^^.........f...",
+  "...f....^^......"
+ ],
+ "symmetry": "rotation180",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 2,
+   "y": 2
+  },
+  {
+   "faction": "gardiens",
+   "x": 13,
+   "y": 13
+  }
+ ],
+ "nodes": [
+  {
+   "x": 7,
+   "y": 2,
+   "level": 1
+  },
+  {
+   "x": 8,
+   "y": 13,
+   "level": 1
+  },
+  {
+   "x": 1,
+   "y": 6,
+   "level": 1
+  },
+  {
+   "x": 14,
+   "y": 9,
+   "level": 1
+  },
+  {
+   "x": 11,
+   "y": 4,
+   "level": 1
+  },
+  {
+   "x": 4,
+   "y": 11,
+   "level": 1
+  },
+  {
+   "x": 5,
+   "y": 7,
+   "level": 1
+  },
+  {
+   "x": 10,
+   "y": 8,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 3,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 3,
+   "y": 4,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 4,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 9,
+   "y": 9,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 5,
+   "y": 4,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 7,
+   "y": 4,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 3,
+   "y": 7,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 12,
+   "y": 6,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 10,
+   "y": 11,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": 0
+  },
+  {
+   "x": 8,
+   "y": 11,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 1
+  },
+  {
+   "x": 12,
+   "y": 8,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 2
+  },
+  {
+   "x": 3,
+   "y": 9,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 3
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 5,
+     "y": 0
+    },
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 7,
+     "y": 3
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 10,
+     "y": 15
+    },
+    {
+     "x": 14,
+     "y": 10
+    },
+    {
+     "x": 8,
+     "y": 12
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 8,
+     "y": 7
+    },
+    {
+     "x": 9,
+     "y": 2
+    },
+    {
+     "x": 13,
+     "y": 7
+    }
+   ]
+  }
+ ]
+}

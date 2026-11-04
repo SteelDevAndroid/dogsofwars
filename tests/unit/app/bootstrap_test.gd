@@ -537,7 +537,7 @@ func test_the_player_plays_the_map_they_chose_whatever_the_seed() -> void:
 		assert_int(boot.match_screen.session.state.header.value(HeaderSlice.SEED)).is_equal(0)
 		await _finish(boot)
 
-	assert_array(sizes).is_equal([12, 14])
+	assert_array(sizes).is_equal([12, 14, 16, 16, 16, 16, 16])  # the sizes of MAP_FILES, in order
 
 
 func test_a_map_that_fails_its_checks_is_not_offered() -> void:

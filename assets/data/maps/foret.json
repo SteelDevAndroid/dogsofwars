@@ -1,0 +1,303 @@
+{
+ "schema_version": 1,
+ "id": "foret",
+ "title": "La Forêt",
+ "summary": "Un bois épais, des clairières. On ne voit presque rien : chaque clairière peut cacher un ennemi.",
+ "width": 16,
+ "height": 16,
+ "terrain": [
+  "...ffff....fff..",
+  "...fff......ff..",
+  ".....f.....ff...",
+  "..........fff...",
+  "fff.....ff......",
+  "fff....fff..~~..",
+  "ff.....ff...~~.f",
+  "......fff....ff.",
+  ".ff....fff......",
+  "f.~~...ff.....ff",
+  "..~~..fff....fff",
+  "......ff.....fff",
+  "...fff..........",
+  "...ff.....f.....",
+  "..ff......fff...",
+  "..fff....ffff..."
+ ],
+ "symmetry": "rotation180",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 2,
+   "y": 2
+  },
+  {
+   "faction": "gardiens",
+   "x": 13,
+   "y": 13
+  }
+ ],
+ "nodes": [
+  {
+   "x": 6,
+   "y": 1,
+   "level": 1
+  },
+  {
+   "x": 9,
+   "y": 14,
+   "level": 1
+  },
+  {
+   "x": 2,
+   "y": 6,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 9,
+   "level": 1
+  },
+  {
+   "x": 11,
+   "y": 1,
+   "level": 1
+  },
+  {
+   "x": 4,
+   "y": 14,
+   "level": 1
+  },
+  {
+   "x": 6,
+   "y": 5,
+   "level": 1
+  },
+  {
+   "x": 9,
+   "y": 10,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 3,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 3,
+   "y": 4,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 4,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 9,
+   "y": 7,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 5,
+   "y": 3,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 8,
+   "y": 5,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 4,
+   "y": 7,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 12,
+   "y": 4,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 10,
+   "y": 12,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": 0
+  },
+  {
+   "x": 7,
+   "y": 10,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 1
+  },
+  {
+   "x": 11,
+   "y": 8,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 2
+  },
+  {
+   "x": 3,
+   "y": 11,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 3
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 5,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 5
+    },
+    {
+     "x": 7,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 10,
+     "y": 15
+    },
+    {
+     "x": 15,
+     "y": 10
+    },
+    {
+     "x": 8,
+     "y": 11
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 8,
+     "y": 7
+    },
+    {
+     "x": 9,
+     "y": 3
+    },
+    {
+     "x": 12,
+     "y": 7
+    }
+   ]
+  }
+ ]
+}
