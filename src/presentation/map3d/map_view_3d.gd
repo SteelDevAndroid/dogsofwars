@@ -17,6 +17,10 @@ const UNIT_SCALE := 1.25
 const TERRAIN_SHADER := preload("res://src/presentation/map3d/terrain.gdshader")
 const OUTLINE_SHADER := preload("res://src/presentation/map3d/outline.gdshader")
 const OVERLAY_SHADER := preload("res://src/presentation/map3d/overlay.gdshader")
+const FADE_SHADER := preload("res://src/presentation/map3d/fade.gdshader")
+## The quarter turns of the fog's sides and corners from the up side (-z) and the top-left corner.
+const SIDE_TURNS := {TileRenderer.SIDE_UP: 0.0, TileRenderer.SIDE_RIGHT: -PI / 2.0, TileRenderer.SIDE_DOWN: PI, TileRenderer.SIDE_LEFT: PI / 2.0}
+const CORNER_TURNS := {TileRenderer.CORNER_TL: 0.0, TileRenderer.CORNER_TR: -PI / 2.0, TileRenderer.CORNER_BR: PI, TileRenderer.CORNER_BL: PI / 2.0}
 ## An undiscovered tile: a flat dark slab, a step above the background so the map edge reads.
 const FOG_SLAB := Color("323A44")
 
@@ -112,6 +116,12 @@ func show_snapshot(p_snapshot: TileSnapshot) -> void:
 	for threat: Array in snapshot.threats:
 		var marker := _place(_mesh("threat", func() -> ArrayMesh: return LowPoly.threat(TilePalette.THREAT)), threat[2], 0.0, false)
 		marker.material_override = _overlay(TilePalette.THREAT, 1.0)
+		marker.set_meta(&"threat", true)
+		var hatch := _place(_mesh("hatch", func() -> ArrayMesh: return LowPoly.hatch(Color.WHITE)), threat[2], _top(threat[2]) + 0.01, false)
+		hatch.material_override = _overlay(TilePalette.THREAT, 0.55)  # under the units: the target still reads
+		hatch.set_meta(&"threat", true)
+	for tile in snapshot.columns * snapshot.rows:
+		_add_fog_edge(tile)
 
 
 ## Copies the model to the scene: a new snapshot (only when its content changed: a tap makes a
@@ -270,6 +280,31 @@ func _add_tile(tile: int) -> void:
 					tile, _top(tile), level == VisionService.FOG_EXPLORED)
 			mark.position += Vector3(0.3, 0, 0.3)  # in a corner, out of the way of what stands on the tile
 	tiles[tile] = instance
+
+
+## Where a discovered tile meets the unknown, its edge fades into the fog over half a tile; a
+## fog only on the diagonal fades from the corner. The edge of the map is not fog.
+func _add_fog_edge(tile: int) -> void:
+	var sides := TileRenderer.sides_of(snapshot, tile)
+	var corners := TileRenderer.corners_of(snapshot, tile)
+	if sides == 0 and corners == 0:
+		return
+	var material := ShaderMaterial.new()
+	material.shader = FADE_SHADER
+	material.set_shader_parameter(&"color", FOG_SLAB)
+	for side: int in SIDE_TURNS:
+		if sides & side:
+			_fade_piece(_mesh("fog_side", func() -> ArrayMesh: return LowPoly.fog_fade_side()), tile, SIDE_TURNS[side], material)
+	for corner: int in CORNER_TURNS:
+		if corners & corner:
+			_fade_piece(_mesh("fog_corner", func() -> ArrayMesh: return LowPoly.fog_fade_corner()), tile, CORNER_TURNS[corner], material)
+
+
+func _fade_piece(mesh: ArrayMesh, tile: int, turn: float, material: ShaderMaterial) -> void:
+	var piece := _place(mesh, tile, _top(tile) + 0.008, false)
+	piece.rotation.y = turn
+	piece.material_override = material
+	piece.set_meta(&"fog_edge", true)
 
 
 func _add_unit(unit: Array) -> void:

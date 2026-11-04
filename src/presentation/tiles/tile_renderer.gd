@@ -300,9 +300,14 @@ func _draw_fog_edges(tile: int) -> void:
 
 ## The corners of a tile where only the diagonal neighbour is fog (CORNER_* bits).
 func fog_corners(tile: int) -> int:
+	return corners_of(snapshot, tile)
+
+
+## fog_corners for any snapshot (the 3D map shares it).
+static func corners_of(snapshot: TileSnapshot, tile: int) -> int:
 	if snapshot == null or snapshot.fog_at(tile) == VisionService.FOG_UNDISCOVERED:
 		return 0
-	var sides := fog_sides(tile)
+	var sides := sides_of(snapshot, tile)
 	var x := tile % snapshot.columns
 	var y := tile / snapshot.columns
 	var corners := 0
@@ -319,6 +324,11 @@ func fog_corners(tile: int) -> int:
 
 ## The sides of a tile that touch undiscovered ground (SIDE_* bits); 0 for an undiscovered tile.
 func fog_sides(tile: int) -> int:
+	return sides_of(snapshot, tile)
+
+
+## fog_sides for any snapshot (the 3D map shares it).
+static func sides_of(snapshot: TileSnapshot, tile: int) -> int:
 	if snapshot == null or snapshot.fog_at(tile) == VisionService.FOG_UNDISCOVERED:
 		return 0
 	var x := tile % snapshot.columns

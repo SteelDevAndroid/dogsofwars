@@ -93,3 +93,49 @@ func test_the_tile_under_the_centre_of_the_area_is_the_focused_one() -> void:
 	assert_int(view.tile_at(viewport / 2.0 + Vector2(viewport.x / 3.0, 0))).is_equal(2)  # one column to the right
 	assert_int(view.tile_at(Vector2(-5000, -5000))).is_equal(-1)
 	view.free()
+
+
+func _metas(view: MapView3D, key: StringName) -> Array:
+	return view.get_child(0).get_children().filter(func(node: Node) -> bool: return node.has_meta(key))
+
+
+func test_a_tile_beside_the_unknown_fades_into_it_and_the_edge_of_the_map_does_not() -> void:
+	var view := _view()
+
+	view.show_snapshot(_snapshot())
+
+	var edges := _metas(view, &"fog_edge").map(func(node: Node3D) -> Vector3: return node.position.round())
+	# tile 1 is unknown: tiles 0 and 2 fade on one side each, tile 4 below it on one side, tiles 3
+	# and 5 from a corner; no fade toward the map's edge
+	assert_int(edges.size()).is_equal(5)
+	for tile in [0, 2, 3, 4, 5]:
+		assert_bool(edges.has(MapView3D.center_of_tile(tile, 3).round())).override_failure_message("tile %d" % tile).is_true()
+	assert_int(TileRenderer.sides_of(view.snapshot, 0)).is_equal(TileRenderer.SIDE_RIGHT)
+	assert_int(TileRenderer.corners_of(view.snapshot, 3)).is_equal(TileRenderer.CORNER_TR)
+	view.free()
+
+
+func test_a_threat_is_hatched_and_marked_on_its_target() -> void:
+	var view := _view()
+	var s := _snapshot()
+	s.threats = [[0, 0, 5, -1, 0]]
+
+	view.show_snapshot(s)
+
+	var marks := _metas(view, &"threat")
+	assert_int(marks.size()).is_equal(2)  # the "!" and the hatching
+	for mark: Node3D in marks:
+		assert_float(mark.position.x).is_equal_approx(2.5, 0.001)
+		assert_float(mark.position.z).is_equal_approx(1.5, 0.001)
+	view.free()
+
+
+func test_the_hatching_runs_at_135_degrees_inside_the_tile() -> void:
+	var mesh := LowPoly.hatch(Color.WHITE)
+	var points := mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+
+	assert_int(points.size()).is_greater(12)
+	for p in points:
+		assert_bool(absf(p.x) <= 0.5 and absf(p.z) <= 0.5).is_true()
+	# along a band x - z stays the same: "\" on the screen (z toward the bottom)
+	assert_float((points[1] - points[0]).x).is_equal_approx((points[1] - points[0]).z, 0.001)

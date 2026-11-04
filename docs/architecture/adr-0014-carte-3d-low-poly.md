@@ -59,7 +59,9 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **6. Branchement (2026-11-04).** `MatchScreen` crée la vue 3D (`use_3d`, vrai par défaut ; `set_3d(false)` remet le dessin 2D). La caméra logique reste `MapCamera` (centre, zoom, zone, recentrage) ; la vue 3D s'y cadre à chaque image. Un appui passe par `tile_under` (la projection orthographique de `MapView3D.tile_at`) ; un défilement vertical est divisé par sin(42°), parce que le sol incliné défile plus vite que l'écran. Jauge de PV blanche au-dessus de l'unité, pastille des unités qui n'ont pas joué, cadres orange-rouge des cibles, flèche des premiers tours qui oscille sauf en animations réduites.
 
-**Reste à faire** : la lisière du brouillard en fondu d'une demi-tuile ; les hachures de menace (le « ! » en tient lieu) ; `MultiMeshInstance3D` par terrain si la mesure le demande ; le serrage de `MapCamera` qui ignore l'inclinaison (la vue 3D recadre elle-même, avec une demi-tuile de marge).
+**7. Lisière et menaces (2026-11-04).** Une case découverte qui touche l'inconnu se fond dans le brouillard sur une demi-tuile : un dégradé de la couleur de la dalle de brouillard, opaque au bord, transparent au milieu (`fade.gdshader`, opacité par sommet), par côté et par coin extérieur, calculés par `TileRenderer.sides_of` et `corners_of` (partagés avec la 2D). Le bord de la carte n'est pas du brouillard. Une menace annoncée hachure sa case cible en orange-rouge à 135° (art bible 4), sous les unités, en plus du « ! ».
+
+**Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure le demande ; le serrage de `MapCamera` qui ignore l'inclinaison (la vue 3D recadre elle-même, avec une demi-tuile de marge).
 
 ## Alternatives Considered
 - **Garder la 2D et refaire les textures** : moins de code, mais l'art bible demande la 3D et un artiste 2D pour tout redessiner ; rejeté par la demande de l'utilisateur.
