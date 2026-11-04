@@ -12,6 +12,11 @@ extends Node3D
 
 ## Camera pitch: a three-quarter view, low enough for the relief, high enough to read the grid.
 const PITCH_DEGREES := 42.0
+## Rows of ground per row of screen under the tilted camera (MapCamera.depth_scale).
+static func depth_scale() -> float:
+	return 1.0 / sin(deg_to_rad(PITCH_DEGREES))
+
+
 ## Units a little larger than their tile slot in the art bible's 31 pt, so the trait reads.
 const UNIT_SCALE := 1.25
 const TERRAIN_SHADER := preload("res://src/presentation/map3d/terrain.gdshader")
@@ -194,7 +199,7 @@ func frame_camera(area: Rect2, viewport: Vector2, columns: float, focus: Vector2
 	_viewport = viewport
 	camera.size = columns * viewport.x / maxf(area.size.x, 1.0)
 	if snapshot != null:
-		focus = clamp_focus(focus, columns, area.size.y / area.size.x * columns / sin(deg_to_rad(PITCH_DEGREES)), snapshot.columns, snapshot.rows)
+		focus = clamp_focus(focus, columns, area.size.y / area.size.x * columns * depth_scale(), snapshot.columns, snapshot.rows)
 	var target := Vector3(focus.x, 0.0, focus.y)
 	camera.position = target + camera.transform.basis.z * 30.0
 	var per_pixel := camera.size / viewport.x

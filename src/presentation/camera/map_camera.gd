@@ -21,6 +21,10 @@ var tile_size: float
 var center: Vector2
 ## True after a change the renderer has not drawn yet.
 var dirty := true
+## Rows of ground per row of screen: 1 for the flat 2D map, 1 / sin(pitch) for the tilted 3D
+## one (ADR-0014), whose ground runs deeper than the screen. Scrolling, clamping, zooming and
+## bringing a tile into view count rows with it.
+var depth_scale := 1.0
 
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
@@ -55,7 +59,7 @@ func screen_to_tile(point: Vector2) -> int:
 ## The finger drags the map: it follows by `delta` pixels.
 func scroll(delta: Vector2) -> void:
 	_animating = false
-	center -= delta / tile_size
+	center -= Vector2(delta.x, delta.y * depth_scale) / tile_size
 	_clamp()
 	dirty = true
 
@@ -63,9 +67,9 @@ func scroll(delta: Vector2) -> void:
 ## Pinch: the zoom changes by `factor`, the point under `anchor` stays under it.
 func zoom(factor: float, anchor: Vector2) -> void:
 	_animating = false
-	var anchored := (anchor - layout().origin) / tile_size
+	var anchored := center + _ground_offset(anchor)
 	tile_size = clampf(tile_size * factor, MIN_TILE, MAX_TILE)
-	center = anchored - (anchor - area.get_center()) / tile_size
+	center = anchored - _ground_offset(anchor)
 	_clamp()
 	dirty = true
 
@@ -81,7 +85,7 @@ func can_zoom_out() -> bool:
 ## The smallest shift that brings `tile` fully into the area, with `margin_tiles` around it.
 func ensure_visible(tile: int, margin_tiles: float = 1.0) -> void:
 	var at := Vector2(tile % columns, tile / columns) + Vector2(0.5, 0.5)
-	var half := area.size / (2.0 * tile_size) - Vector2(margin_tiles, margin_tiles)
+	var half := _half_view() - Vector2(margin_tiles, margin_tiles)
 	half = Vector2(maxf(half.x, 0.0), maxf(half.y, 0.0))
 	center = Vector2(clampf(center.x, at.x - half.x, at.x + half.x), clampf(center.y, at.y - half.y, at.y + half.y))
 	_clamp()
@@ -144,9 +148,21 @@ func set_area(p_area: Rect2) -> void:
 
 ## The map keeps its edge margin; a map smaller than the area stays centred on that axis.
 func _clamp() -> void:
-	var half := area.size / (2.0 * tile_size)
+	var half := _half_view()
 	center.x = _clamp_axis(center.x, half.x, columns)
 	center.y = _clamp_axis(center.y, half.y, rows)
+
+
+## Half the ground seen, in tiles.
+func _half_view() -> Vector2:
+	var half := area.size / (2.0 * tile_size)
+	return Vector2(half.x, half.y * depth_scale)
+
+
+## How far, in tiles of ground, a point of the screen is from the middle of the area.
+func _ground_offset(point: Vector2) -> Vector2:
+	var offset := (point - area.get_center()) / tile_size
+	return Vector2(offset.x, offset.y * depth_scale)
 
 
 static func _clamp_axis(value: float, half: float, extent: int) -> float:

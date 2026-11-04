@@ -184,6 +184,7 @@ func bind(p_session: GameSession) -> void:
 	map3d.set_unit_types(types)
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
 	map3d.map_camera = camera
+	camera.depth_scale = MapView3D.depth_scale() if use_3d else 1.0
 	relayout()
 	get_viewport().size_changed.connect(relayout)
 	sequencer.handlers = [CameraHandler.new(camera, session.catalog.presentation),
@@ -230,6 +231,9 @@ func on_tap(position: Vector2) -> void:
 ## The 3D map, or the 2D drawing (`on`: false).
 func set_3d(on: bool) -> void:
 	use_3d = on
+	if camera != null:
+		camera.depth_scale = MapView3D.depth_scale() if on else 1.0
+		camera.set_area(camera.area)  # clamp again with the new depth
 	renderer.draw_enabled = not on
 	map3d.visible = on
 	renderer.queue_redraw()
@@ -520,8 +524,7 @@ func _on_pointer(event: PointerEvent) -> void:
 			Gesture.Kind.TAP:
 				on_tap(gesture.position)
 			Gesture.Kind.SCROLL:
-				# in 3D the ground is tilted: a vertical drag covers more rows than pixels / tile
-				camera.scroll(Vector2(gesture.delta.x, gesture.delta.y / sin(deg_to_rad(MapView3D.PITCH_DEGREES))) if use_3d else gesture.delta)
+				camera.scroll(gesture.delta)
 			Gesture.Kind.PINCH_UPDATE:
 				camera.zoom(gesture.factor, gesture.position)
 

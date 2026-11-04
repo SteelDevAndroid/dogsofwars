@@ -61,7 +61,9 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 **7. Lisière et menaces (2026-11-04).** Une case découverte qui touche l'inconnu se fond dans le brouillard sur une demi-tuile : un dégradé de la couleur de la dalle de brouillard, opaque au bord, transparent au milieu (`fade.gdshader`, opacité par sommet), par côté et par coin extérieur, calculés par `TileRenderer.sides_of` et `corners_of` (partagés avec la 2D). Le bord de la carte n'est pas du brouillard. Une menace annoncée hachure sa case cible en orange-rouge à 135° (art bible 4), sous les unités, en plus du « ! ».
 
-**Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure le demande ; le serrage de `MapCamera` qui ignore l'inclinaison (la vue 3D recadre elle-même, avec une demi-tuile de marge).
+**8. Caméra et inclinaison (2026-11-04).** `MapCamera.depth_scale` (1 en 2D, 1 / sin(42°) en 3D) compte les rangées de sol par rangée d'écran : le défilement vertical, le serrage aux bords, le pincement et la mise en vue d'une case en tiennent compte. La correction du défilement faite dans `MatchScreen` disparaît.
+
+**Reste à faire** : `MultiMeshInstance3D` par terrain si la mesure sur l'appareil de référence le demande (D2).
 
 ## Alternatives Considered
 - **Garder la 2D et refaire les textures** : moins de code, mais l'art bible demande la 3D et un artiste 2D pour tout redessiner ; rejeté par la demande de l'utilisateur.
