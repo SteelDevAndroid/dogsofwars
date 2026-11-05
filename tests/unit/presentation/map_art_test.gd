@@ -90,3 +90,14 @@ func test_the_thumbnail_takes_the_illustrations_colours_when_it_has_them() -> vo
 	await await_idle_frame()
 
 	thumbnail.free()
+
+
+func test_the_ravines_are_a_symmetric_map_with_its_own_art() -> void:
+	var errors: Array[DataError] = []
+	var map := MapDefinition.parse(FileAccess.get_file_as_string("res://assets/data/maps/ravines.json"), "ravines.json",
+			CatalogFactory.standard(), errors)
+
+	assert_array(errors).is_empty()
+	assert_bool(map.symmetric).is_true()
+	assert_object(MapArt.colors_for(map.cells)).is_not_null()
+	assert_bool(MapArt.signature(map.cells) != MapArt.signature(_canyon().cells)).is_true()
