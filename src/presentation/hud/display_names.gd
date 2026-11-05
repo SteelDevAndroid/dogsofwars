@@ -13,6 +13,13 @@ const PROTOCOLS := {
 }
 
 
+## The active abilities (UnitTypes.ABILITY_*).
+const ABILITIES := {
+	UnitTypes.ABILITY_SPRINT: "Sprint", UnitTypes.ABILITY_CHARGE: "Charge",
+	UnitTypes.ABILITY_HOLD: "Tenir", UnitTypes.ABILITY_REPAIR: "Réparer",
+}
+
+
 static func unit(key: String) -> String:
 	return UNITS.get(key, key.replace("_", " ").capitalize())
 

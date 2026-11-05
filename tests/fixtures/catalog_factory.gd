@@ -29,7 +29,8 @@ static func load_documents(docs: Dictionary) -> DataCatalogResult:
 ## File name -> document; a fresh copy on every call.
 static func documents() -> Dictionary:
 	return {
-		"units.json": {"schema_version": 1, "rest_heal": 2, "node_rest_bonus": 2, "node_passive_heal": 1, "types": [
+		"units.json": {"schema_version": 1, "rest_heal": 2, "node_rest_bonus": 2, "node_passive_heal": 1,
+			"sprint_bonus": 2, "charge_bonus": 2, "hold_bonus": 2, "repair_amount": 3, "types": [
 			_unit(0, "eclaireur", "meute", 6, 1, 0, 4, 4),
 			_unit(1, "assaut", "meute", 8, 3, 1, 3, 2),
 			_unit(2, "rempart", "meute", 14, 1, 2, 2, 2),
@@ -51,7 +52,7 @@ static func documents() -> Dictionary:
 		"presentation.json": {"schema_version": 1, "move_step_ms": 120, "attack_line_ms": 250, "hit_ms": 350, "destroy_ms": 400,
 			"recolor_ms": 400, "wave_ring_ms": 200, "wave_rings_max": 3, "wave_total_max_ms": 1000, "panel_delay_ms": 400, "close_delay_ms": 500, "attack_lock_ms": 1600, "damage_number_ms": 800,
 			"enemy_action_ms": 500, "recenter_ms": 300, "reduced_slot_ms": 334, "queue_max": 256},
-		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1},
+		"combat.json": {"schema_version": 1, "dmg_scale": 2, "def_base": 4, "dmg_min": 1, "def_per_tile_class": 1, "ambush_attack_bonus": 1},
 		"energie.json": {"schema_version": 1, "max": 99, "start": 6, "income_by_level": [3, 4, 5]},
 		"protocoles.json": {"schema_version": 1, "protocols": [
 			_protocol(0, "veille_elargie", "reseau", 1, 15, 2, "vision", 1, LOURDS),
@@ -79,7 +80,9 @@ static func _protocol(id: int, key: String, branch: String, level: int, price: i
 static func _unit(id: int, key: String, side: String, hp: int, attack: int, defense: int,
 		move: int, vision: int) -> Dictionary:
 	return {"id": id, "key": key, "side": side, "hp": hp, "attack": attack, "defense": defense,
-		"move": move, "range": 1, "vision": vision, "captures": 1 if key in ["ouvrier", "bastion"] else 0}
+		"move": move, "range": 1, "vision": vision, "captures": 1 if key in ["ouvrier", "bastion"] else 0,
+		"ability": {"eclaireur": "sprint", "assaut": "charge", "rempart": "hold", "ouvrier": "repair"}.get(key, "none"),
+		"cooldown": 3 if key in ["eclaireur", "assaut", "rempart", "ouvrier"] else 0}
 
 
 static func _fragment(id: int, act: int, link: String, text: String) -> Dictionary:

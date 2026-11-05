@@ -157,6 +157,13 @@ jouer en test.*
     sans calcul « Inflige −N », « Riposte −M » (ou « Pas de riposte »), les PV restants, « Détruit » et
     « Votre unité sera détruite ». Aucun tirage, aucune modification de l'état réel ; un ordre refusé ne
     produit pas d'aperçu.
+13. **Embuscade (2026-11-05).** Une unité de la meute qu'aucune unité ni aucun nœud ennemi ne voit au
+    début de son tour (la tuile est hors de la vue du camp adverse) frappe à `ATQ + AMBUSH_ATTACK_BONUS`
+    (1 au départ) pendant ce tour. Le drapeau est posé par COMMENCER_LE_TOUR et levé au début du tour de
+    l'autre camp. Il n'existe que pour la meute : les frappes annoncées de l'IA restent celles que le
+    marqueur « létale » promet (règle 11). L'aperçu (règle 12) le contient, puisque c'est la même fonction.
+    Une unité sans ATQ n'en gagne pas. La **Charge** (`unites-drones.md`, règle 13) s'ajoute à l'ATQ de
+    la même façon, et **Tenir** s'ajoute à la DÉF effective (F1) de la cible.
 
 ### Exemples chiffrés
 

@@ -105,3 +105,6 @@ Le rendu 2D (textures de terrain, sprites teintés) est jugé mauvais par l'util
 
 ## Related
 ADR-0012 (rendu 2D en mode immédiat, à remplacer si retenu), `design/art/art-bible.md`, `tools/preview/map3d_preview.gd` (captures).
+
+**13. Cartes illustrées (2026-11-05).** Une illustration peinte ne sert pas de surface de jeu (sa perspective n'est pas celle de la caméra) : elle donne ses couleurs à la carte 3D. `tools/maps/from_illustration.py` lit `design/art/maps/<id>/` (l'image et un `spec.json` dessiné à la main), écrit le fichier de carte (symétrie `none`, un scénario), une image de 16 × 16 couleurs moyennes par case et `art_index.json` (SHA-256 du terrain, pour retrouver l'art d'une partie reprise sans toucher à la sauvegarde). `MapArt` en tire un multiplicateur par tuile (`ground`) que le shader du terrain applique au gris avant la teinte du camp ; la vignette de l'écran de choix reprend les couleurs. Première carte : « Le Canyon ».
+

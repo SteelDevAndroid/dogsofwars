@@ -31,6 +31,8 @@ const FOG_SLAB := Color("323A44")
 
 var snapshot: TileSnapshot
 var colorblind := false
+## One multiplier per tile from the map's illustration (MapArt.ground), empty for a map without art.
+var ground := PackedColorArray()
 var camera := Camera3D.new()
 var light := DirectionalLight3D.new()
 ## tile -> its MeshInstance3D (terrain or fog slab).
@@ -290,6 +292,8 @@ func _add_tile(tile: int) -> void:
 		material.set_shader_parameter(&"tint", TilePalette.owner(owner, colorblind))
 		material.set_shader_parameter(&"strength", 1.0 if owner != Faction.NONE else 0.0)
 		material.set_shader_parameter(&"memory", 1.0 if level == VisionService.FOG_EXPLORED else 0.0)
+		if tile < ground.size():
+			material.set_shader_parameter(&"ground", Vector3(ground[tile].r, ground[tile].g, ground[tile].b))
 		instance.material_override = material
 		if owner == Faction.PLAYER or owner == Faction.AI:  # a shape besides the colour (accessibility)
 			var mark_color := TilePalette.owner(owner, colorblind).darkened(0.35)

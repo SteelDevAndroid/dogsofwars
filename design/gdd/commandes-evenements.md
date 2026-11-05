@@ -82,6 +82,7 @@ les tours (3) ou l'IA (9), que le joueur ne voit jamais.
 | CAPTURER | J, IA | unité | PAS_SUR_UN_NŒUD, NŒUD_DÉJÀ_POSSÉDÉ, DÉJÀ_AGI, AUCUNE_INTENTION (émetteur IA hors d'une exécution d'intention) |
 | RÉVEILLER | J, IA | unité qui réveille, drone endormi | AUCUN_DRONE_ADJACENT, ÉNERGIE_INSUFFISANTE (besoin, disponible), MEUTE_COMPLÈTE |
 | RECHERCHER | J (l'IA reçoit ses protocoles par un calendrier en données : `arbre-protocoles.md`, règle 15) | protocole | Dans l'ordre : PARTIE_TERMINÉE / PAS_VOTRE_TOUR, PROTOCOLE_INCONNU, PROTOCOLE_ACQUIS, RECHERCHE_EN_COURS, PRÉREQUIS_MANQUANT, ÉNERGIE_INSUFFISANTE (besoin, disponible) |
+| CAPACITÉ | J | unité | UNITÉ_INCONNUE, UNITÉ_ENDORMIE, AUCUNE_CAPACITÉ, CAPACITÉ_EN_RECHARGE (tours restants), DÉJÀ_AGI, DÉJÀ_DÉPLACÉE (Sprint seulement) ; événement CAPACITÉ_UTILISÉE (`unites-drones.md`, règle 13) |
 | FINIR_LE_TOUR | J | — | PAS_VOTRE_TOUR, COMMANDES_VERROUILLÉES |
 | ABANDONNER | J | — | PARTIE_TERMINÉE (après confirmation dans le menu pause, 18 ; `design/gdd/tours-conditions-victoire.md`) |
 | ANNULER_LE_DÉPLACEMENT | J | — | RIEN_À_ANNULER, DÉPLACEMENT_A_RÉVÉLÉ, AUTRE_ACTION_DEPUIS |

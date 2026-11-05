@@ -13,7 +13,25 @@ static func distance(width: int, tile_a: int, tile_b: int) -> int:
 ## GDD 8 F1: the defender's DÉF (protocols of its owner included) plus the defense
 ## class of the tile it stands on.
 static func defense_effective(view: StateView, unit_id: int, catalog: DataCatalog) -> int:
-	return defense_on(view, view.unit_faction(unit_id), view.unit_type(unit_id), view.unit_tile(unit_id), catalog)
+	var type := view.unit_type(unit_id)
+	var defense := defense_on(view, view.unit_faction(unit_id), type, view.unit_tile(unit_id), catalog)
+	if view.unit_ability_on(unit_id) and catalog.units.ability(type) == UnitTypes.ABILITY_HOLD:
+		defense += catalog.units.hold_bonus()
+	return defense
+
+
+## The striker's ATQ for this strike (GDD 8 rule 12): the effective stat, plus the ambush bonus
+## and a running CHARGE. A unit without attack stays without.
+static func attack_effective(view: StateView, unit_id: int, catalog: DataCatalog) -> int:
+	var type := view.unit_type(unit_id)
+	var attack := ProtocolEffects.unit_stat(view, view.unit_faction(unit_id), type, ProtocolEffects.ATTACK, catalog)
+	if attack == 0:
+		return 0
+	if view.unit_ambush(unit_id):
+		attack += catalog.combat.ambush_attack_bonus()
+	if view.unit_ability_on(unit_id) and catalog.units.ability(type) == UnitTypes.ABILITY_CHARGE:
+		attack += catalog.units.charge_bonus()
+	return attack
 
 
 ## The same defense for a unit of `faction` and `type` standing on `tile` (the AI planner
@@ -28,8 +46,8 @@ static func defense_on(view: StateView, faction: int, type: int, tile: int, cata
 @warning_ignore("integer_division")
 static func damage(view: StateView, striker_id: int, defender_id: int, catalog: DataCatalog) -> int:
 	var type := view.unit_type(striker_id)
-	var attack := ProtocolEffects.unit_stat(view, view.unit_faction(striker_id), type, ProtocolEffects.ATTACK, catalog)
-	return damage_of(attack, view.unit_hp(striker_id), catalog.units.hp(type), defense_effective(view, defender_id, catalog), catalog.combat)
+	return damage_of(attack_effective(view, striker_id, catalog), view.unit_hp(striker_id), catalog.units.hp(type),
+			defense_effective(view, defender_id, catalog), catalog.combat)
 
 
 ## F2 on plain numbers: `attack` and `defense` already effective.

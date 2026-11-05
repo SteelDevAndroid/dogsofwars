@@ -211,7 +211,7 @@ func test_every_implemented_type_is_registered() -> void:
 	var catalog := CatalogFactory.standard()
 	var rules := RuleTable.standard(catalog, VisionContext.for_map(catalog, StateFactory.minimal()))
 
-	assert_array(rules.registered_types()).is_equal(PackedInt32Array([CommandType.MOVE, CommandType.ATTACK, CommandType.CAPTURE, CommandType.WAKE, CommandType.UPGRADE_NODE, CommandType.RESEARCH, CommandType.END_TURN, CommandType.ABANDON, CommandType.BEGIN_TURN, CommandType.ANNOUNCE_INTENTIONS, CommandType.EXECUTE_INTENTION, CommandType.VALIDATE_RUIN_READ]))
+	assert_array(rules.registered_types()).is_equal(PackedInt32Array([CommandType.MOVE, CommandType.ATTACK, CommandType.CAPTURE, CommandType.WAKE, CommandType.UPGRADE_NODE, CommandType.RESEARCH, CommandType.END_TURN, CommandType.ABANDON, CommandType.BEGIN_TURN, CommandType.ANNOUNCE_INTENTIONS, CommandType.EXECUTE_INTENTION, CommandType.VALIDATE_RUIN_READ, CommandType.ABILITY]))
 	assert_bool(rules.simulation().has_handler(CommandType.MOVE)).is_true()
 
 

@@ -25,7 +25,17 @@ static func for_selection(state: GameState, catalog: DataCatalog, pipeline: Comm
 		var upgrade := pipeline.check(UpgradeNodeCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, node_id))
 		var price := catalog.nodes.upgrade_price(view.node_level(node_id))
 		actions.append(ContextAction.new(&"upgrade", "Monter (%d)" % price, upgrade.permitted, "" if upgrade.permitted else RefusalText.of(upgrade)))
+	if unit_id >= 0 and view.unit_faction(unit_id) == Faction.PLAYER and catalog.units.ability(view.unit_type(unit_id)) != UnitTypes.ABILITY_NONE:
+		var use := pipeline.check(AbilityCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit_id))
+		actions.append(ContextAction.new(&"ability", ability_label(catalog, view.unit_type(unit_id), view.unit_cooldown(unit_id)),
+				use.permitted, "" if use.permitted else RefusalText.of(use)))
 	return actions
+
+
+## The button of a type's ability: its name, and the turns left while it recharges.
+static func ability_label(catalog: DataCatalog, type: int, cooldown: int) -> String:
+	var name: String = DisplayNames.ABILITIES.get(catalog.units.ability(type), "Capacité")
+	return name if cooldown == 0 else "%s (%d)" % [name, cooldown]
 
 
 ## Dormant units next to a unit (distance 1, visible), with `any` the ones the pipeline accepts

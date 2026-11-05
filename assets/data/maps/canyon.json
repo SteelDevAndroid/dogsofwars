@@ -1,0 +1,258 @@
+{
+ "schema_version": 1,
+ "id": "canyon",
+ "title": "Le Canyon",
+ "summary": "Un canyon rouge coupe la carte en deux. On ne le traverse qu'aux gués, et celui qui les tient choisit où se battre.",
+ "width": 16,
+ "height": 16,
+ "terrain": [
+  "..^..^^^..^^^...",
+  ".....^.ff.^.....",
+  ".~^^...^..^^...^",
+  ".~~~..^..^.^..^.",
+  "..^~~.^.f..^....",
+  "....~~...^..^.^.",
+  "^...~~...f..f.^.",
+  "^.~~~~.......^^.",
+  "..^~~...^..f..^^",
+  "..f.~~~.^.f.....",
+  "^^.^.^~~~~..^.^.",
+  "..f.f...f~~..^..",
+  "......^...~.....",
+  "....^.^.f.....^.",
+  "..^...^^f..f.^^.",
+  "^.^^^.....f.^.^."
+ ],
+ "symmetry": "none",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 2,
+   "y": 12
+  },
+  {
+   "faction": "gardiens",
+   "x": 13,
+   "y": 1
+  }
+ ],
+ "nodes": [
+  {
+   "x": 3,
+   "y": 1,
+   "level": 1
+  },
+  {
+   "x": 1,
+   "y": 5,
+   "level": 1
+  },
+  {
+   "x": 7,
+   "y": 6,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 5,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 9,
+   "level": 1
+  },
+  {
+   "x": 7,
+   "y": 11,
+   "level": 1
+  },
+  {
+   "x": 12,
+   "y": 13,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 3,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 3,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 1,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 1,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 14,
+   "y": 1,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 3,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 0,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 5,
+   "y": 11,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 7,
+   "y": 8,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 10,
+   "y": 3,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 12,
+   "y": 7,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 5,
+     "y": 2
+    },
+    {
+     "x": 8,
+     "y": 5
+    },
+    {
+     "x": 10,
+     "y": 7
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 1,
+     "y": 9
+    },
+    {
+     "x": 5,
+     "y": 14
+    },
+    {
+     "x": 8,
+     "y": 12
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 15,
+     "y": 5
+    },
+    {
+     "x": 11,
+     "y": 9
+    },
+    {
+     "x": 14,
+     "y": 12
+    }
+   ]
+  }
+ ]
+}

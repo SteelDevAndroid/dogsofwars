@@ -27,7 +27,11 @@ class Search:
 static func remaining_points(view: StateView, unit_id: int, catalog: DataCatalog) -> int:
 	if view.unit_moved(unit_id):
 		return 0
-	return ProtocolEffects.unit_stat(view, view.unit_faction(unit_id), view.unit_type(unit_id), ProtocolEffects.MOVE, catalog)
+	var type := view.unit_type(unit_id)
+	var points := ProtocolEffects.unit_stat(view, view.unit_faction(unit_id), type, ProtocolEffects.MOVE, catalog)
+	if view.unit_ability_on(unit_id) and catalog.units.ability(type) == UnitTypes.ABILITY_SPRINT:
+		points += catalog.units.sprint_bonus()
+	return points
 
 
 static func search(view: StateView, unit_id: int, catalog: DataCatalog) -> Search:

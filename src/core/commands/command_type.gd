@@ -16,4 +16,5 @@ const BEGIN_TURN := 9
 const ANNOUNCE_INTENTIONS := 10
 const EXECUTE_INTENTION := 11
 const VALIDATE_RUIN_READ := 12
-const COUNT := 13
+const ABILITY := 13
+const COUNT := 14

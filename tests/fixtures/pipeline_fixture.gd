@@ -88,5 +88,10 @@ func undo_move() -> ValidationResult:
 	return pipeline.submit(UndoMoveCommand.new())
 
 
+func ability(unit_id: int, faction: int = Faction.PLAYER) -> ValidationResult:
+	var emitter := Command.EMITTER_PLAYER if faction == Faction.PLAYER else Command.EMITTER_AI
+	return pipeline.submit(AbilityCommand.new(faction, emitter, unit_id))
+
+
 func last_events() -> Array[PresentationEvent]:
 	return sink.batches[-1].events

@@ -1,0 +1,8 @@
+{
+ "maps": {
+  "canyon": {
+   "colors": "canyon_colors.png",
+   "sha256": "5d2ddb998734a524734ec8ff17881476daad199196ba2d5885a1c1747a1306a4"
+  }
+ }
+}

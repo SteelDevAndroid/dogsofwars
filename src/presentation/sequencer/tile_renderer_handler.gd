@@ -40,6 +40,10 @@ func handle(event: PresentationEvent, context: SequenceContext) -> PresentationH
 		var healed := event as UnitHealedEvent
 		_float(healed.tile, "+%d" % (healed.hp_after - healed.hp_before), TilePalette.owner(Faction.PLAYER, _renderer.colorblind), context)
 		return PresentationHold.new(0)
+	if event is AbilityUsedEvent:
+		var used := event as AbilityUsedEvent
+		_float(used.tile, DisplayNames.ABILITIES.get(used.ability, "Capacité"), TilePalette.owner(used.faction, _renderer.colorblind), context)
+		return PresentationHold.new(0)
 	if event is UnitDestroyedEvent:
 		var destroyed := event as UnitDestroyedEvent
 		var ghost := _effect(TileEffect.Kind.GHOST, context, _params.value("destroy_ms"))

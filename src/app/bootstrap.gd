@@ -9,7 +9,7 @@ extends Node
 ## The maps of the game, in the order of the choice screen. A new game plays the one the player
 ## chose; "Au hasard" takes the one its seed points at (the same seed, the same map).
 const MAP_FILES := ["maps/plaine.json", "maps/marais.json", "maps/cretes.json", "maps/foret.json", "maps/archipel.json",
-		"maps/mesas.json", "maps/landes.json"]
+		"maps/mesas.json", "maps/landes.json", "maps/canyon.json"]
 
 var data_source: DataSource
 var file_store: FileStore

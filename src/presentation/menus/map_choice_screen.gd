@@ -72,7 +72,7 @@ func _card(map: MapDefinition, index: int) -> PanelContainer:
 	thumbnail.custom_minimum_size = THUMBNAIL
 	thumbnail.size = THUMBNAIL
 	thumbnail.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	thumbnail.show_map(map)
+	thumbnail.show_map(map, MapArt.colors_for(map.cells))
 	row.add_child(thumbnail)
 	thumbnails.append(thumbnail)
 	var text := VBoxContainer.new()

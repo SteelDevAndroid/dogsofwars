@@ -45,12 +45,20 @@ func test_the_migration_changes_only_the_cursor_column() -> void:
 
 	var migrated: Array = bytes_to_var(SaveMigrations.migrate(envelope.payload, 2))
 
+	# schema 4 inserted three unit columns after the ninth of the units: map them back
+	var units_at := 1
+	var probe := GameState.new()
+	for slice in probe.slices():
+		if slice == probe.units:
+			break
+		units_at += slice.columns().size()
 	var differing := []
 	for k in old.size():
-		if old[k] != migrated[k]:
+		var shifted := k if k < units_at + 9 else k + SaveMigrations.V4_UNIT_COLUMNS
+		if old[k] != migrated[shifted]:
 			differing.append(k)
 	assert_int(differing.size()).is_equal(1)
-	assert_array(Array(migrated[differing[0]])).is_equal([0, -1])
+	assert_array(Array(migrated[differing[0] + SaveMigrations.V4_UNIT_COLUMNS])).is_equal([0, -1])
 	assert_array(Array(old[differing[0]])).is_equal([0])
 	assert_bool(envelope.payload == SaveEnvelope.decode(FileAccess.get_file_as_bytes(PLAYER_V2), [SaveEnvelope.OK]).payload).is_true()  # input untouched
 
@@ -158,3 +166,22 @@ func test_too_old_and_damaged_together_read_as_damaged() -> void:
 	files.write("user://match.bak", PackedByteArray([1, 2, 3]))
 
 	assert_str(_store(files).load_match().code).is_equal(LoadResult.CORRUPT)
+
+
+func test_schema_three_gains_the_ability_columns_and_nothing_else() -> void:
+	var state := MapBuilder.ready(MapBuilder.state(PackedStringArray(["...."])))
+	MapBuilder.unit(state, 1, Faction.PLAYER, 0, 0)
+	MapBuilder.unit(state, 4, Faction.AI, 3, 0)
+	var current: Array = bytes_to_var(state.to_bytes())
+	var offset := 1
+	for slice in state.slices():
+		if slice == state.units:
+			break
+		offset += slice.columns().size()
+	var v3 := current.slice(0, offset + 9)  # the layout before schema 4: the three added columns left out
+	v3.append_array(current.slice(offset + 12))
+
+	var migrated: Array = bytes_to_var(SaveMigrations.migrate(var_to_bytes(v3), 3))
+
+	assert_bool(migrated == current).is_true()
+	assert_object(GameState.from_bytes(var_to_bytes(migrated), GameState.SCHEMA_VERSION)).is_not_null()

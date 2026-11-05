@@ -11,9 +11,11 @@ uniform vec3 memory_color : source_color = vec3(0.306, 0.345, 0.384);
 // An artist's model carries its faction mask in the vertex alpha (1 = takes the side's tint,
 // design/art/asset-specs.md); the shapes built in code tint the whole tile or bake the colour.
 uniform bool use_mask = false;
+// What the map's illustration says of this tile (MapArt): the grey of the terrain is multiplied by it.
+uniform vec3 ground = vec3(1.0);
 
 void fragment() {
-	vec3 base = COLOR.rgb;
+	vec3 base = COLOR.rgb * ground;
 	float luma = dot(base, vec3(0.2126, 0.7152, 0.0722));
 	// the side's hue at the value of the terrain: relief and shade stay readable under the colour
 	float tint_luma = max(dot(tint, vec3(0.2126, 0.7152, 0.0722)), 0.02);

@@ -151,6 +151,24 @@ func unit_acted(unit_id: int) -> bool:
 	return row >= 0 and _state.units.has_acted(row)
 
 
+## Turns left before the unit's active ability is ready (0: ready).
+func unit_cooldown(unit_id: int) -> int:
+	var row := _live_unit_row(unit_id)
+	return 0 if row < 0 else _state.units.cooldown_of(row)
+
+
+## True while an ability effect of the unit is running.
+func unit_ability_on(unit_id: int) -> bool:
+	var row := _live_unit_row(unit_id)
+	return row >= 0 and _state.units.ability_is_on(row)
+
+
+## True for a pack unit that began its turn unseen by the enemy.
+func unit_ambush(unit_id: int) -> bool:
+	var row := _live_unit_row(unit_id)
+	return row >= 0 and _state.units.has_ambush(row)
+
+
 func unit_asleep(unit_id: int) -> bool:
 	var row := _live_unit_row(unit_id)
 	return row >= 0 and _state.units.is_asleep(row)
