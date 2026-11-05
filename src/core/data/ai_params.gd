@@ -38,6 +38,14 @@ var _track_ttl := 0
 var _planner := {}
 var _calendar_turn := PackedInt32Array()
 var _calendar_protocol := PackedInt32Array()
+var _difficulty := NORMAL
+
+## Difficulty levels (a player setting). EASY: the AI weighs damage, kills and nodes at half
+## and receives no calendar protocol; HARD: those weights at 150 %. NORMAL is the tuned data.
+const EASY := 0
+const NORMAL := 1
+const HARD := 2
+const AGGRESSION_KEYS := ["w_damage", "w_lethal", "w_node"]
 
 
 static func build(data: Dictionary, file: String, errors: Array[DataError]) -> AiParams:
@@ -56,7 +64,16 @@ static func build(data: Dictionary, file: String, errors: Array[DataError]) -> A
 
 ## A planner tuning value by name (see the `planner` object of ai.json).
 func planner(name: String) -> int:
-	return _planner[name]
+	var value: int = _planner[name]
+	if name in AGGRESSION_KEYS and _difficulty != NORMAL:
+		return value / 2 if _difficulty == EASY else value * 3 / 2
+	return value
+
+
+## Sets the difficulty from the player's setting; the next AI decisions use it. A stored match
+## keeps working: the AI's choices are the only thing that changes, the state is saved as is.
+func set_difficulty(level: int) -> void:
+	_difficulty = clampi(level, EASY, HARD)
 
 
 ## PISTES_TTL (GDD 9 rule 9): turns a track survives without being seen again.
@@ -67,6 +84,8 @@ func track_ttl() -> int:
 ## Protocols the AI receives at the start of its phase of `turn`, in calendar order.
 func calendar_protocols(turn: int) -> PackedInt32Array:
 	var ids := PackedInt32Array()
+	if _difficulty == EASY:
+		return ids
 	for k in _calendar_turn.size():
 		if _calendar_turn[k] == turn:
 			ids.append(_calendar_protocol[k])

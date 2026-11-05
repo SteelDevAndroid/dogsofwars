@@ -10,9 +10,11 @@ signal back_requested
 
 const SCALES := [100, 125, 150]
 const SPEEDS := ["Normale", "Rapide", "Instantanée"]
+const DIFFICULTIES := ["Facile", "Normale", "Difficile"]
 
 var scale_option := OptionButton.new()
 var speed_option := OptionButton.new()
+var difficulty_option := OptionButton.new()
 var reduced_motion_check := CheckButton.new()
 var show_range_check := CheckButton.new()
 var colorblind_check := CheckButton.new()
@@ -57,6 +59,10 @@ func _init() -> void:
 	for speed in SPEEDS:
 		speed_option.add_item(speed)
 	speed_option.item_selected.connect(func(index: int) -> void: _emit(GameSettings.ENEMY_SPEED, index))
+	_row(box, "Difficulté de l'IA", difficulty_option)
+	for level in DIFFICULTIES:
+		difficulty_option.add_item(level)
+	difficulty_option.item_selected.connect(func(index: int) -> void: _emit(GameSettings.DIFFICULTY, index))
 	_flag(box, reduced_motion_check, "Réduire les animations", GameSettings.REDUCED_MOTION)
 	_flag(box, show_range_check, "Afficher la portée de déplacement", GameSettings.SHOW_RANGE)
 	_flag(box, colorblind_check, "Palette daltonienne", GameSettings.COLORBLIND)
@@ -79,6 +85,7 @@ func configure(settings: Dictionary) -> void:
 	_loading = true
 	scale_option.select(maxi(SCALES.find(settings[GameSettings.TEXT_SCALE]), 0))
 	speed_option.select(settings[GameSettings.ENEMY_SPEED])
+	difficulty_option.select(settings[GameSettings.DIFFICULTY])
 	reduced_motion_check.button_pressed = settings[GameSettings.REDUCED_MOTION] == 1
 	show_range_check.button_pressed = settings[GameSettings.SHOW_RANGE] == 1
 	colorblind_check.button_pressed = settings[GameSettings.COLORBLIND] == 1

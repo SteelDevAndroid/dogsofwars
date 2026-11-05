@@ -94,7 +94,7 @@ sont des **valeurs de départ [PROP]**, à jouer en test (voir Tuning Knobs).*
    |---|---|---|---|---|---|---|
    | Éclaireur (mât) | 6 | 1 | 0 | 4 | 1 | 4 |
    | Assaut (lame) | 8 | 3 | 1 | 3 | 1 | 2 |
-   | Rempart (carapace) | 14 | 1 | 2 | 2 | 1 | 2 |
+   | Rempart (carapace) | 14 | 2 | 2 | 2 | 2 | 2 |
    | Ouvrier (fourche) | 7 | 1 | 0 | 3 | 1 | 2 |
 
    Le sens de ATQ et de DÉF, et le calcul des dégâts, appartiennent au combat (8). La vision
@@ -118,11 +118,11 @@ sont des **valeurs de départ [PROP]**, à jouer en test (voir Tuning Knobs).*
 
    | Type (trait) | PV | ATQ | DÉF | MVT | Portée | Vision (5) |
    |---|---|---|---|---|---|---|
-   | Sentinelle (Croc : deux pointes en V ouvert) | 10 | 0 | 2 | 0 | 1 | 3 |
+   | Sentinelle (Croc : deux pointes en V ouvert) | 10 | 1 | 2 | 0 | 2 | 3 |
    | Chasseur (Faille : deux ailerons en Λ renversé) | 8 | 3 | 0 | 3 | 1 | 3 |
    | Bastion (Crête : trois à quatre dents de scie sur le dos) | 14 | 2 | 2 | 1 | 1 | 2 |
 
-   Phrase du joueur : Sentinelle : « Immobile et inoffensif : il garde sa tuile et surveille. »
+   Phrase du joueur : Sentinelle : « Immobile, mais sa portée de deux tuiles protège sa zone. »
    Chasseur : « Rapide et dangereux : il s'élance sur les drones isolés. » Bastion : « Lent et
    massif : il tient son terrain, capture les nœuds et frappe ce qui s'approche. » La Sentinelle ne bouge ni
    n'attaque jamais : sa vue nourrit l'IA et elle garde un point d'intérêt. Le **Bastion** est
@@ -152,7 +152,7 @@ sont des **valeurs de départ [PROP]**, à jouer en test (voir Tuning Knobs).*
 6. **Soin au repos.** Une unité est « au repos » quand ses deux drapeaux étaient faux pendant
    son dernier tour. Le contrôle a lieu au début du tour de sa faction, **avant** la remise à
    zéro des drapeaux : c'est une étape de plus dans l'ordre de `tours` §2. Le soin est de
-   `REST_HEAL` = 2 PV, plus `NODE_REST_BONUS` = 2 si la tuile est un nœud possédé par sa faction
+   `REST_HEAL` = 2 PV, plus `NODE_REST_BONUS` = 2 si la tuile est un nœud possédé par sa faction ; une unité qui n'a pas été au repos mais se tient sur un nœud de sa faction récupère `NODE_PASSIVE_HEAL` = 1 PV (données, 0..2)
    (propriétaire lu chez 11, indépendant du niveau du nœud). Il passe par « modifier les PV »,
    plafonné à PV_max. Une unité endormie ne se soigne pas ; une unité réveillée ce tour-là a
    les deux drapeaux à vrai (règle 8) et ne se soigne donc pas au tour suivant. **Une unité qui porte une
@@ -456,7 +456,7 @@ puis à équilibrer avec le combat (8).*
 | Paramètre | Valeur | Plage sûre | Trop haut | Trop bas | Interagit avec |
 |---|---|---|---|---|---|
 | PV, ATQ, DÉF, MVT par type (règles 2 et 3) | voir tableaux | PV 6..14 ; ATQ 0..4 ; DÉF 0..3 ; MVT 0..4 | Un type écrase les autres | Un type devient inutile | Combat (8), formule 5 (contrôle de dominance) |
-| Portée par type | 1 partout | 1..2 | Ruine le contact et les embuscades | — | Combat (8), brouillard (5) ; Lancier en Alpha |
+| Portée par type | 1 sauf Rempart et Sentinelle (2) | 1..2 | Ruine le contact et les embuscades | — | Combat (8), brouillard (5) ; Lancier en Alpha |
 | Vision par type | Éclaireur 4 ; Sentinelle et Chasseur 3 ; autres 2 | 1..5 | La carte se révèle trop vite (pilier 5) | Marche à l'aveugle | Brouillard (5) |
 | `REST_HEAL` | 2 PV | 1..3 | Les blessures ne comptent plus (pilier 4) | Une perte est irréparable en pratique | Soin sur nœud, rythme de 30 tours |
 | `NODE_REST_BONUS` | 2 PV | 0..4 | Camper sur un nœud domine | Les nœuds ne servent plus de refuge | Nœuds (11) |

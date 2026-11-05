@@ -5,11 +5,12 @@ extends RefCounted
 const SCHEMA_VERSION := 1
 const MAX_TYPES := 16
 
-## GDD 6: PV_max 6..14, MVT 0..4; GDD 5: view radius 1..5; range 1 everywhere at
-## the MVP; attack and defense bounded by the combat tables [PROP].
+## GDD 6: PV_max 6..14, MVT 0..4; GDD 5: view radius 1..5;
+## range 1 or 2 (distance weapons); attack and defense bounded by the combat tables [PROP].
 const SCHEMA := {
 	"schema_version": {"kind": &"int", "min": SCHEMA_VERSION, "max": SCHEMA_VERSION},
 	"rest_heal": {"kind": &"int", "min": 1, "max": 3},
+	"node_passive_heal": {"kind": &"int", "min": 0, "max": 2},
 	"node_rest_bonus": {"kind": &"int", "min": 0, "max": 4},
 	"types": {"kind": &"array", "min": 1, "max": MAX_TYPES, "item": {"kind": &"object", "fields": {
 		"id": {"kind": &"int", "min": 0, "max": MAX_TYPES - 1},
@@ -19,7 +20,7 @@ const SCHEMA := {
 		"attack": {"kind": &"int", "min": 0, "max": 5},
 		"defense": {"kind": &"int", "min": 0, "max": 5},
 		"move": {"kind": &"int", "min": 0, "max": 4},
-		"range": {"kind": &"int", "min": 1, "max": 1},
+		"range": {"kind": &"int", "min": 1, "max": 2},
 		"vision": {"kind": &"int", "min": 1, "max": 5},
 		"captures": {"kind": &"int", "min": 0, "max": 1},
 	}}},
@@ -27,6 +28,7 @@ const SCHEMA := {
 
 var _rest_heal := 0
 var _node_rest_bonus := 0
+var _node_passive_heal := 0
 var _keys := PackedStringArray()
 var _side := PackedInt32Array()
 var _hp := PackedInt32Array()
@@ -43,6 +45,7 @@ static func build(data: Dictionary, file: String, errors: Array[DataError]) -> U
 	var types := UnitTypes.new()
 	types._rest_heal = data["rest_heal"]
 	types._node_rest_bonus = data["node_rest_bonus"]
+	types._node_passive_heal = data["node_passive_heal"]
 	var rows: Array = data["types"]
 	for k in rows.size():
 		var row: Dictionary = rows[k]
@@ -65,6 +68,11 @@ static func build(data: Dictionary, file: String, errors: Array[DataError]) -> U
 ## GDD 6 formula 3: base rest heal, and the bonus on a node the faction owns.
 func rest_heal() -> int:
 	return _rest_heal
+
+
+## Heal of a unit that did not rest but stands on a node its faction owns.
+func node_passive_heal() -> int:
+	return _node_passive_heal
 
 
 func node_rest_bonus() -> int:
