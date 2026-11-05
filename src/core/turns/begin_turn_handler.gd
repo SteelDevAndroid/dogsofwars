@@ -40,6 +40,7 @@ func apply(state: GameState, command: Command, rules: RuleTable) -> ApplyResult:
 	var healed: Array[PresentationEvent] = []
 	RestRules.heal_faction(state, command.faction, rules.catalog, healed)
 	UnitWrites.start_turn(state, command.faction)
+	UnitWrites.refresh_turn_flags(state, command.faction, rules.catalog)
 	if not player:
 		AiWrites.reset_cursor(state)
 		RecallWrites.clear(state)

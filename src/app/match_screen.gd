@@ -353,6 +353,9 @@ func do_action(id: StringName) -> void:
 	if id == &"capture" and unit >= 0:
 		select_unit(-1)
 		_submit(CaptureCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
+	elif id == &"ability" and unit >= 0:
+		_submit(AbilityCommand.new(Faction.PLAYER, Command.EMITTER_PLAYER, unit))
+		select_unit(unit)  # the move range may have grown (Sprint)
 	elif id == &"upgrade":
 		if unit >= 0:
 			node = FactionView.new(session.state, Faction.PLAYER).node_at(session.state.view().unit_tile(unit))

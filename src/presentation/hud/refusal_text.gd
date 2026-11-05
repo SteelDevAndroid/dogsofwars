@@ -19,6 +19,8 @@ const TEXTS := {
 	Refusal.COMMANDS_LOCKED: "Patientez",
 	Refusal.NOT_YOUR_TURN: "Pas votre tour",
 	Refusal.MATCH_OVER: "Partie terminée",
+	Refusal.NO_ABILITY: "Pas de capacité",
+	Refusal.ALREADY_MOVED: "A déjà bougé",
 	Refusal.MOVE_REVEALED: "Impossible d'annuler : le déplacement a révélé la carte ou lu une ruine",
 }
 
@@ -26,4 +28,6 @@ const TEXTS := {
 static func of(result: ValidationResult) -> String:
 	if result.code == Refusal.NOT_ENOUGH_ENERGY and result.params.size() >= 2:
 		return "Énergie insuffisante (%d requis, %d disponibles)" % [result.params[0], result.params[1]]
+	if result.code == Refusal.ABILITY_RECHARGING and not result.params.is_empty():
+		return "Recharge : %d tour(s)" % result.params[0]
 	return TEXTS.get(result.code, String(result.code))

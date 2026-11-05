@@ -88,6 +88,20 @@ func test_a_blow_draws_a_line_and_the_hit_shows_its_number_for_800_ms() -> void:
 	renderer.free()
 
 
+func test_an_ability_floats_its_name_over_the_unit() -> void:
+	var set_up := _setup()
+	var handler: TileRendererHandler = set_up[0]
+	var renderer: TileRenderer = set_up[1]
+	var clock: FakeClock = set_up[2]
+
+	var hold := handler.handle(AbilityUsedEvent.new(0, 1, UnitTypes.ABILITY_CHARGE, 14), _context(clock))
+
+	assert_str(renderer.effects[0].text).is_equal("Charge")
+	assert_int(renderer.effects[0].tile).is_equal(14)
+	assert_int(hold.duration_ms).is_equal(0)
+	renderer.free()
+
+
 func test_a_destroyed_unit_sags_with_the_silhouette_it_had() -> void:
 	var set_up := _setup()
 	var handler: TileRendererHandler = set_up[0]

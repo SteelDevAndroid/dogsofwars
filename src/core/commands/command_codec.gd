@@ -41,4 +41,6 @@ static func decode(values: PackedInt64Array) -> Command:
 			return AnnounceIntentionsCommand.from_params(values[1], values[2], rest)
 		CommandType.RESEARCH:
 			return ResearchCommand.from_params(values[1], values[2], rest)
+		CommandType.ABILITY:
+			return AbilityCommand.from_params(values[1], values[2], rest)
 	return null

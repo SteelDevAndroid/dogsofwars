@@ -71,6 +71,19 @@ func unit_acted(unit_id: int) -> bool:
 	return super(unit_id) if _sees_unit(unit_id) else false
 
 
+## An enemy's cooldown and ambush are its own business: only a faction's own units show them.
+func unit_cooldown(unit_id: int) -> int:
+	return super(unit_id) if _owns_unit(unit_id) else 0
+
+
+func unit_ambush(unit_id: int) -> bool:
+	return super(unit_id) if _owns_unit(unit_id) else false
+
+
+func unit_ability_on(unit_id: int) -> bool:
+	return super(unit_id) if _sees_unit(unit_id) else false
+
+
 func node_at(tile: int) -> int:
 	var node_id := super(tile)
 	return node_id if node_id >= 0 and VisionService.knows_node(_state, _faction, node_id) else -1
@@ -123,3 +136,7 @@ func ruin_tile(ruin_id: int) -> int:
 
 func _sees_unit(unit_id: int) -> bool:
 	return VisionService.can_see_unit(_state, _state.view_cache, _faction, unit_id)
+
+
+func _owns_unit(unit_id: int) -> bool:
+	return _state.view().unit_faction(unit_id) == _faction

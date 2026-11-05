@@ -7,7 +7,8 @@ extends RefCounted
 ## Content schema of to_bytes; carried by the save envelope only (ADR-0006).
 ## 2: nodes gain since_turn and upgraded_turn (GDD 11 rule 1), 2026-11-01.
 ## 3: the AI cursor slice gains the turn of the last announcement, 2026-11-02.
-const SCHEMA_VERSION := 3
+## 4: units gain the ability cooldown, the ability effect flag and the ambush flag, 2026-11-05.
+const SCHEMA_VERSION := 4
 
 const MAX_MAP_SIZE := 16
 const MAX_UNITS := 60
@@ -185,6 +186,10 @@ func filtered_copy(faction: int) -> GameState:
 		if VisionService.can_see_unit(self, cache, faction, units.id_of(row)):
 			kept_units.append(row)
 	copy.units.keep_rows(kept_units)
+	for row in copy.units.row_count():
+		if copy.units.faction_of(row) != faction:  # another faction's cooldown and ambush stay its own
+			copy.units._unit_cooldown[row] = 0
+			copy.units._unit_ambush[row] = 0
 
 	var kept_nodes := PackedInt32Array()
 	for row in nodes.row_count():

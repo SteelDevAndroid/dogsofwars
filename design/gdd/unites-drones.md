@@ -193,6 +193,13 @@ sont des **valeurs de départ [PROP]**, à jouer en test (voir Tuning Knobs).*
     identifiants est appliquée après la boucle.
 11. **Une seule action de soin visible.** Le soin émet l'événement `UNITÉ_SOIGNÉE` (à ajouter à
     23) : le HUD y lit la variation de la jauge, comme pour un dégât.
+13. **Capacités actives (2026-11-05).** Les quatre types de la meute ont une capacité, utilisée par la
+    commande CAPACITÉ (23) sur une unité éveillée qui n'a pas agi, puis rechargée `cooldown` tours
+    (3 au départ, décompté au début du tour de son camp) : **Sprint** de l'Éclaireur (+2 MVT ce tour,
+    avant tout déplacement), **Charge** de l'Assaut (+2 ATQ ce tour), **Tenir** du Rempart (+2 DÉF jusqu'au
+    début de son prochain tour ; coûte l'action), **Réparer** de l'Ouvrier (+3 PV à lui-même et aux
+    alliés adjacents ; coûte l'action). Les Gardiens n'en ont pas. Les effets en cours et le temps de
+    recharge sont dans la tranche Unités (schéma de sauvegarde 4) ; le camp adverse ne les lit pas.
 12. **Aucune personnalisation.** Les unités n'ont ni nom, ni niveau, ni équipement : deux
     unités du même type sont indiscernables hors position et PV (anti-pilier).
 

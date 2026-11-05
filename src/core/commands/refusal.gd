@@ -38,6 +38,9 @@ const NODE_NOT_OWNED := &"NŒUD_NON_POSSÉDÉ"
 const NODE_ACQUIRED_THIS_TURN := &"NŒUD_ACQUIS_CE_TOUR"
 const MAX_LEVEL := &"NIVEAU_MAX"
 const ALREADY_UPGRADED := &"DÉJÀ_MONTÉ"
+## CAPACITÉ (GDD 6 rule 12): the type has no ability; the ability is recharging (param: turns left).
+const NO_ABILITY := &"AUCUNE_CAPACITÉ"
+const ABILITY_RECHARGING := &"CAPACITÉ_EN_RECHARGE"
 const ATTACKER_WITHOUT_ATTACK := &"ATTAQUANT_SANS_ATTAQUE"
 ## Same code, no parameter, for a hidden, unknown, destroyed or stale target (GDD 5 rule 18).
 const TARGET_NOT_VISIBLE := &"CIBLE_NON_VISIBLE"

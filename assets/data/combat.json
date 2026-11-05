@@ -3,5 +3,6 @@
   "dmg_scale": 2,
   "def_base": 4,
   "dmg_min": 1,
-  "def_per_tile_class": 1
+  "def_per_tile_class": 1,
+  "ambush_attack_bonus": 1
 }

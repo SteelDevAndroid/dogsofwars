@@ -637,7 +637,7 @@ func test_a_worker_on_a_node_that_is_not_the_players_may_capture_it() -> void:
 	_put(screen, state, worker, 5, 2)  # a neutral node
 	screen.on_tap_tile(state.tile_index(5, 2))
 
-	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_array(_extra_labels(screen)).is_equal(["Capturer", "Réparer"])
 	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_false()
 	screen.hud.extra_row.get_child(0).pressed.emit()
 
@@ -657,14 +657,14 @@ func test_capture_is_offered_only_to_a_unit_that_can_capture_and_greys_out_with_
 	var assault := state.view().unit_at(state.tile_index(3, 2))
 	_put(screen, state, assault, 5, 2)
 	screen.on_tap_tile(state.tile_index(5, 2))
-	assert_array(_extra_labels(screen)).is_empty()  # an Assaut cannot capture
+	assert_array(_extra_labels(screen)).is_equal(["Charge"])  # an Assaut cannot capture: only its ability
 
 	var worker := _worker(state)
 	_put(screen, state, worker, 2, 6)
 	UnitWrites.set_acted(state, worker)
 	screen.on_tap_tile(state.tile_index(2, 6))
 
-	assert_array(_extra_labels(screen)).is_equal(["Capturer"])
+	assert_array(_extra_labels(screen)).is_equal(["Capturer", "Réparer"])
 	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
 	assert_str(screen.hud.reason_label.text).is_equal("A déjà agi")
 	screen.shutdown()
@@ -679,7 +679,7 @@ func test_waking_a_dormant_next_to_a_unit_shows_the_price_then_pays_it() -> void
 	var assault := state.view().unit_at(state.tile_index(3, 2))
 	_put(screen, state, assault, 4, 3)  # the dormant Ouvrier is at (4, 4)
 	screen.on_tap_tile(state.tile_index(4, 3))
-	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller", "Charge"])
 
 	screen.hud.extra_row.get_child(0).pressed.emit()
 	assert_int(screen.mode).is_equal(MatchScreen.Mode.TARGETING)
@@ -707,7 +707,7 @@ func test_a_wake_without_enough_energy_is_greyed_out_with_the_amounts() -> void:
 	GameStateSetup.set_energy(state, Faction.PLAYER, 1)
 	screen.on_tap_tile(state.tile_index(4, 3))
 
-	assert_array(_extra_labels(screen)).is_equal(["Réveiller"])
+	assert_array(_extra_labels(screen)).is_equal(["Réveiller", "Charge"])
 	assert_bool((screen.hud.extra_row.get_child(0) as Button).disabled).is_true()
 	assert_str(screen.hud.reason_label.text).is_equal("Énergie insuffisante (5 requis, 1 disponibles)")
 	screen.hud.extra_row.get_child(0).pressed.emit()
@@ -747,7 +747,7 @@ func test_a_unit_standing_on_an_own_node_offers_the_upgrade_too() -> void:
 	_put(screen, state, assault, 1, 2)
 	screen.on_tap_tile(state.tile_index(1, 2))
 
-	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)", "Charge"])
 	screen.hud.extra_row.get_child(0).pressed.emit()
 
 	assert_int(state.view().node_level(0)).is_equal(2)
@@ -828,7 +828,7 @@ func test_a_worker_on_a_node_the_player_already_holds_gets_no_capture_button() -
 	_put(screen, state, worker, 1, 2)  # the player's own starting node
 	screen.on_tap_tile(state.tile_index(1, 2))
 
-	assert_array(_extra_labels(screen)).is_equal(["Monter (12)"])
+	assert_array(_extra_labels(screen)).is_equal(["Monter (12)", "Réparer"])
 	screen.shutdown()
 	started[0].dispose()
 	await await_idle_frame()
