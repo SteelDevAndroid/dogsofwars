@@ -29,7 +29,7 @@ static func load_documents(docs: Dictionary) -> DataCatalogResult:
 ## File name -> document; a fresh copy on every call.
 static func documents() -> Dictionary:
 	return {
-		"units.json": {"schema_version": 1, "rest_heal": 2, "node_rest_bonus": 2, "types": [
+		"units.json": {"schema_version": 1, "rest_heal": 2, "node_rest_bonus": 2, "node_passive_heal": 1, "types": [
 			_unit(0, "eclaireur", "meute", 6, 1, 0, 4, 4),
 			_unit(1, "assaut", "meute", 8, 3, 1, 3, 2),
 			_unit(2, "rempart", "meute", 14, 1, 2, 2, 2),

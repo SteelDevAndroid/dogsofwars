@@ -53,6 +53,7 @@ func _ready() -> void:
 	get_tree().node_added.connect(_on_node_added)
 	get_window().size_changed.connect(_apply_text_scale)
 	app = AppContext.create(data_source, file_store, profile, save_dir)
+	_apply_difficulty()
 	if app.is_ready():
 		if show_title:
 			_show_title()
@@ -253,9 +254,15 @@ func _bind(node: MatchScreen, session: GameSession) -> void:
 
 func _apply_settings() -> void:
 	_apply_text_scale()
+	_apply_difficulty()
 	_apply_volumes()
 	if match_screen != null:
 		match_screen.apply_settings(profile.settings())
+
+
+func _apply_difficulty() -> void:
+	if app != null and app.is_ready():
+		app.catalog.ai.set_difficulty(profile.setting(GameSettings.DIFFICULTY))
 
 
 func _apply_volumes() -> void:

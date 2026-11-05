@@ -170,3 +170,24 @@ func test_the_heal_data_is_bounded() -> void:
 	assert_bool(result.ok).is_false()
 	assert_array(result.errors.map(func(error: DataError) -> String: return error.to_string())).contains([
 		"units.json: rest_heal: 0 outside 1..3", "units.json: node_rest_bonus: 5 outside 0..4"])
+
+
+func test_a_unit_that_moved_still_heals_on_a_node_its_faction_owns() -> void:
+	var fx := _board()
+	UnitWrites.set_moved(fx.state, 0)  # Assaut 0, 3/8, on the player's node
+
+	fx.begin_turn(Faction.PLAYER)
+
+	assert_int(_hp(fx, 0)).is_equal(4)  # NODE_PASSIVE_HEAL, not the rest heal
+	assert_int(_hp(fx, 4)).is_equal(3)  # moved, off any node: nothing
+
+
+func test_no_passive_heal_on_a_node_of_the_other_faction() -> void:
+	var fx := _board()
+	UnitWrites.set_moved(fx.state, 5)  # the AI's Chasseur 5 at (7,0): its node is at (7,1)
+	var catalog := CatalogFactory.standard()
+	var events: Array[PresentationEvent] = []
+
+	RestRules.heal_faction(fx.state, Faction.PLAYER, catalog, events)
+
+	assert_int(_hp(fx, 5)).is_equal(4)
