@@ -10,10 +10,13 @@ func test_scripted_matches_end_without_a_refusal_and_are_reproducible() -> void:
 	for seed_value in [1, 2, 3]:
 		var first := Run.play(seed_value, catalog)
 		var second := Run.play(seed_value, catalog)
+		first.erase("worst_ai_usec")  # a time, not a result
+		second.erase("worst_ai_usec")
 
 		assert_dict(first).is_equal(second)
 		assert_int(first["refusals"]).is_equal(0)
 		assert_int(first["commands"]).is_greater(10)
+		assert_int(first["abilities"]).is_greater(0)
 		assert_bool(first["status"] >= HeaderSlice.END_DOMINATION and first["status"] <= HeaderSlice.END_TURNS_DRAW).is_true()
 
 

@@ -161,20 +161,22 @@ func _best_move(frozen: GameState, unit_id: int, catalog: DataCatalog, budget: A
 	var objective := _objective(frozen, unit_id, catalog)
 	if objective < 0:
 		return null
-	var width := view.width()
+	# The path cost to the objective, not the straight distance: a canyon or a ridge between the
+	# unit and its objective would otherwise hold it against the obstacle.
+	var field := MovementRules.cost_field(view, objective, catalog, true)
 	var candidates := Array(MovementRules.move_range(view, unit_id, catalog))
 	candidates.sort_custom(func(a: int, b: int) -> bool:
-		var da := CombatRules.distance(width, a, objective)
-		var db := CombatRules.distance(width, b, objective)
+		var da := _path_distance(field, a)
+		var db := _path_distance(field, b)
 		return da < db or (da == db and a < b))
 	candidates = candidates.slice(0, catalog.ai.planner("k_dest"))
-	var stay_score := _score(frozen, unit_id, start, start, objective, catalog)
+	var stay_score := _score(frozen, unit_id, start, start, objective, catalog, field)
 	var best_tile := start
 	var best_score := stay_score
 	for tile: int in candidates:
 		if not budget.spend():
 			break
-		var score := _score(frozen, unit_id, tile, start, objective, catalog)
+		var score := _score(frozen, unit_id, tile, start, objective, catalog, field)
 		if score > best_score or (score == best_score and best_tile != start and tile < best_tile):
 			best_score = score
 			best_tile = tile
@@ -183,7 +185,25 @@ func _best_move(frozen: GameState, unit_id: int, catalog: DataCatalog, budget: A
 	return MoveCommand.new(Faction.AI, Command.EMITTER_AI, unit_id, best_tile)
 
 
-## Where the unit wants to be: a capturer heads for the nearest node not held by the AI, an
+## The tile `faction` has never seen with the lowest path cost in `reach` (lowest index on a tie),
+## or -1 when every reachable tile is known. Its own filtered copy is enough: nothing hidden is read.
+static func nearest_unknown(state: GameState, faction: int, reach: PackedInt32Array) -> int:
+	var discovered := VisionService.discovered_row(state, faction)
+	var best := -1
+	for tile in reach.size():
+		if reach[tile] <= 0 or discovered[tile] == 1:
+			continue
+		if best < 0 or reach[tile] < reach[best]:
+			best = tile
+	return best
+
+
+## Path cost from a cost field, a large number where the tile has no path (it never wins).
+static func _path_distance(field: PackedInt32Array, tile: int) -> int:
+	return field[tile] if field[tile] != MovementRules.UNREACHED else 9999
+
+
+## Where the unit wants to be: a capturer heads for the nearest node not held by the AI (by path), an
 ## armed mover for the nearest visible player unit it can engage, else for its post.
 func _objective(frozen: GameState, unit_id: int, catalog: DataCatalog) -> int:
 	var view := frozen.view()
@@ -191,16 +211,18 @@ func _objective(frozen: GameState, unit_id: int, catalog: DataCatalog) -> int:
 	var width := view.width()
 	var type := view.unit_type(unit_id)
 	if catalog.units.can_capture(type):
+		var reach := MovementRules.cost_field(view, start, catalog, false)
 		var best := -1
 		var best_distance := 0
 		for node_id in view.node_ids():
 			if view.node_owner(node_id) == Faction.AI:
 				continue
-			var distance := CombatRules.distance(width, start, view.node_tile(node_id))
+			var distance := _path_distance(reach, view.node_tile(node_id))
 			if best < 0 or distance < best_distance:
 				best = view.node_tile(node_id)
 				best_distance = distance
-		return best
+		# No node known yet (all in the fog): explore toward the nearest tile the AI has never seen.
+		return best if best >= 0 else nearest_unknown(frozen, Faction.AI, reach)
 	var row := frozen.ai_agents.find_row(unit_id)
 	var post := frozen.ai_agents.post_tile_of(row) if row >= 0 and frozen.ai_agents.post_tile_of(row) >= 0 else start
 	var returning := row >= 0 and frozen.ai_agents.role_of(row) == AiAgentsSlice.ROLE_RETURN
@@ -214,7 +236,8 @@ func _objective(frozen: GameState, unit_id: int, catalog: DataCatalog) -> int:
 
 ## F1 of a tile for a unit (GDD 9): the best strike from there, minus the exposure, plus
 ## the node value, minus the leash excess, plus the progress toward the objective.
-func _score(frozen: GameState, unit_id: int, tile: int, start: int, objective: int, catalog: DataCatalog) -> int:
+func _score(frozen: GameState, unit_id: int, tile: int, start: int, objective: int, catalog: DataCatalog,
+		field: PackedInt32Array = PackedInt32Array()) -> int:
 	var view := frozen.view()
 	var params := catalog.ai
 	var width := view.width()
@@ -228,7 +251,9 @@ func _score(frozen: GameState, unit_id: int, tile: int, start: int, objective: i
 	if row >= 0 and frozen.ai_agents.post_tile_of(row) >= 0 and not catalog.units.can_capture(type):
 		var excess := CombatRules.distance(width, tile, frozen.ai_agents.post_tile_of(row)) - params.planner("leash")
 		total -= params.planner("w_leash") * maxi(0, excess)
-	total += params.planner("w_progress") * (CombatRules.distance(width, start, objective) - CombatRules.distance(width, tile, objective))
+	if field.is_empty():
+		field = MovementRules.cost_field(view, objective, catalog, true)
+	total += params.planner("w_progress") * (_path_distance(field, start) - _path_distance(field, tile))
 	return total
 
 

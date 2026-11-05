@@ -204,3 +204,72 @@ func test_the_danger_weight_prices_the_exposure_in_the_score() -> void:
 	var tile := state.tile_index(2, 1)
 
 	assert_int(_planner()._score(_frozen(state), 1, tile, tile, tile, CatalogFactory.standard())).is_equal(-6 * 6)
+
+
+## 9 x 5. A wall of water at x = 4 with one gap on the bottom row. AI Bastion at (2, 0); a neutral
+## node at (5, 0), 3 tiles away as the crow flies but behind the water (path 6); another at (0, 4),
+## 4 tiles away on the Bastion's side (path 4). Two Sentinelles let the AI see both nodes.
+func test_a_capturer_heads_for_the_node_nearest_by_path_not_as_the_crow_flies() -> void:
+	var state := MapBuilder.state(PackedStringArray([
+		"....~....",
+		"....~....",
+		"....~....",
+		"....~....",
+		".........",
+	]))
+	MapBuilder.unit(state, BASTION, Faction.AI, 2, 0)
+	MapBuilder.unit(state, SENTINELLE, Faction.AI, 6, 1)
+	MapBuilder.unit(state, SENTINELLE, Faction.AI, 1, 3)
+	GameStateSetup.add_node(state, state.tile_index(5, 0), Faction.NONE, 1)
+	GameStateSetup.add_node(state, state.tile_index(0, 4), Faction.NONE, 1)
+	GameStateSetup.add_node(state, state.tile_index(8, 4), Faction.AI, 1)
+	TerritoryRules.recompute(state, CatalogFactory.standard().nodes, MapSlice.CAUSE_NONE)
+	GameStateSetup.set_turn(state, 5)
+	GameStateSetup.set_phase(state, HeaderSlice.PHASE_ENEMY_EXECUTION, Faction.AI)
+	MapBuilder.ready(state)
+	var frozen := _frozen(state)
+	assert_int(frozen.view().node_ids().size()).is_equal(3)  # every node is known to the AI
+
+	assert_int(_planner()._objective(frozen, 0, CatalogFactory.standard())).is_equal(state.tile_index(0, 4))
+
+
+func test_a_hunter_goes_around_an_obstacle_instead_of_pressing_against_it() -> void:
+	var state := MapBuilder.state(PackedStringArray([
+		"...~.....",
+		"...~.....",
+		"...~.....",
+		".........",
+	]))
+	MapBuilder.unit(state, CHASSEUR, Faction.AI, 2, 0)
+	GameStateSetup.add_node(state, state.tile_index(0, 3), Faction.AI, 1)
+	TerritoryRules.recompute(state, CatalogFactory.standard().nodes, MapSlice.CAUSE_NONE)
+	GameStateSetup.set_turn(state, 5)
+	GameStateSetup.set_phase(state, HeaderSlice.PHASE_ENEMY_EXECUTION, Faction.AI)
+	MapBuilder.ready(state)
+	var frozen := _frozen(state)
+	var catalog := CatalogFactory.standard()
+	var objective := state.tile_index(5, 0)  # straight across the water
+	var field := MovementRules.cost_field(frozen.view(), objective, catalog, true)
+
+	# pressing against the water (2,0)->(2,1) is no progress by path; going down toward the gap is
+	var against := _planner()._score(frozen, 0, state.tile_index(2, 1), state.tile_index(2, 0), objective, catalog, field)
+	var around := _planner()._score(frozen, 0, state.tile_index(3, 3), state.tile_index(2, 0), objective, catalog, field)
+	assert_int(around).is_greater(against)
+
+
+func test_a_capturer_that_knows_no_node_explores_toward_the_nearest_unseen_tile() -> void:
+	var state := MapBuilder.state(PackedStringArray(["................"]))
+	MapBuilder.unit(state, BASTION, Faction.AI, 0, 0)
+	GameStateSetup.add_node(state, state.tile_index(15, 0), Faction.NONE, 1)  # far in the fog
+	GameStateSetup.set_turn(state, 5)
+	GameStateSetup.set_phase(state, HeaderSlice.PHASE_ENEMY_EXECUTION, Faction.AI)
+	MapBuilder.ready(state)
+	var frozen := _frozen(state)
+	assert_int(frozen.view().node_ids().size()).is_equal(0)
+
+	var objective := _planner()._objective(frozen, 0, CatalogFactory.standard())
+
+	var vision := CatalogFactory.standard().units.vision(BASTION)
+	assert_int(objective).is_equal(state.tile_index(vision + 1, 0))  # the first tile past its view
+	var command := _planner().plan_next(frozen, CatalogFactory.standard(), _budget()) as MoveCommand
+	assert_int(command.tile).is_greater(state.tile_index(0, 0))

@@ -76,6 +76,7 @@ Trois échecs à éviter : l'IA qui triche (elle voit ce qu'elle ne devrait pas)
 
 **E. Tour 1, tour 30, ruines**
 
+14bis. **Distances par chemin et exploration (2026-11-05).** Le choix du nœud visé, le tri des destinations (`K_DEST`) et le terme de progression de F1 se comptent en **coût de chemin** (coûts d'entrée du GDD 2, eau infranchissable, pas de diagonale entre deux tuiles infranchissables), sur le terrain que l'IA connaît, et non à vol d'oiseau : un canyon ou une crête entre une unité et son objectif ne la bloque plus contre l'obstacle. Un Bastion qui ne connaît **aucun** nœud non possédé (tous dans le brouillard) se dirige vers la tuile jamais vue la plus proche par chemin. Il ne lit rien de caché : seulement ce que sa vue filtrée a découvert.
 21. **Tour 1.** La phase ennemie n'exécute rien (3, règle 4). L'IA place ses Gardiens et envoie le Bastion vers le nœud le plus proche.
 22. **Tour 30.** Aucune annonce ; elle exécute seulement les intentions du tour 29 ; seul MONTER_NŒUD compte encore. Le contrôle de fin de partie suit chaque exécution ; les intentions restantes sont abandonnées (3, règle 11).
 23. **Ruines.** L'IA ne les lit ni ne les défend ; elles n'entrent pas dans son état filtré (`ruines-fragments.md`, règle 11). **La comparaison de score du tour 30 se fait hors points de ruine** ; ils restent dans le profil. Pour qu'aucun joueur ne se croie en tête et perde, le HUD montre en permanence le score qui décide de la victoire, séparé des points de ruine (« Victoire : 42 contre 38 » et, à part, « Mémoire : +6 »). Amende 3, 17 et `hud.md`.
