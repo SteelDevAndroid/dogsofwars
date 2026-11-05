@@ -1,0 +1,273 @@
+{
+ "schema_version": 1,
+ "id": "ravines",
+ "title": "Les Ravines",
+ "summary": "Deux ravines se croisent autour d'un bassin central. Aux angles, des plateaux ; au centre, rien pour se cacher.",
+ "width": 16,
+ "height": 16,
+ "terrain": [
+  "..^^^^^^^^^^^^..",
+  "....^^^^^^^^....",
+  "^....~~^^~~....^",
+  "^.~~..ffff..~~.^",
+  "^..~~~....~~~..^",
+  "....^~~..~~^....",
+  "^....~~..~~....^",
+  "^^.~~~f..f~~~.^^",
+  "^^.~~~f..f~~~.^^",
+  "^....~~..~~....^",
+  "....^~~..~~^....",
+  "^..~~~....~~~..^",
+  "^.~~..ffff..~~.^",
+  "^....~~^^~~....^",
+  "....^^^^^^^^....",
+  "..^^^^^^^^^^^^.."
+ ],
+ "symmetry": "rotation180",
+ "memory_faction": "meute",
+ "starts": [
+  {
+   "faction": "meute",
+   "x": 2,
+   "y": 1
+  },
+  {
+   "faction": "gardiens",
+   "x": 13,
+   "y": 14
+  }
+ ],
+ "nodes": [
+  {
+   "x": 2,
+   "y": 5,
+   "level": 1
+  },
+  {
+   "x": 2,
+   "y": 9,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 1,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 10,
+   "level": 1
+  },
+  {
+   "x": 13,
+   "y": 6,
+   "level": 1
+  },
+  {
+   "x": 2,
+   "y": 14,
+   "level": 1
+  }
+ ],
+ "units": [
+  {
+   "type": "ouvrier",
+   "faction": "meute",
+   "x": 3,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "assaut",
+   "faction": "meute",
+   "x": 3,
+   "y": 1,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 2,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "rempart",
+   "faction": "meute",
+   "x": 1,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "eclaireur",
+   "faction": "meute",
+   "x": 4,
+   "y": 2,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "bastion",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "sentinelle",
+   "faction": "gardiens",
+   "x": 12,
+   "y": 14,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 13,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 14,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 11,
+   "y": 13,
+   "post_x": -1,
+   "post_y": -1
+  },
+  {
+   "type": "chasseur",
+   "faction": "gardiens",
+   "x": 11,
+   "y": 12,
+   "post_x": -1,
+   "post_y": -1
+  }
+ ],
+ "dormants": [
+  {
+   "x": 6,
+   "y": 3,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 4,
+   "y": 6,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 7,
+   "y": 6,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": -1
+  },
+  {
+   "x": 9,
+   "y": 12,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 0
+  },
+  {
+   "x": 11,
+   "y": 9,
+   "types": [
+    "eclaireur",
+    "assaut",
+    "rempart"
+   ],
+   "same_as": 1
+  },
+  {
+   "x": 8,
+   "y": 9,
+   "types": [
+    "ouvrier"
+   ],
+   "same_as": 2
+  }
+ ],
+ "ruin_zones": [
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 7,
+     "y": 3
+    },
+    {
+     "x": 6,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 6
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 8,
+     "y": 12
+    },
+    {
+     "x": 9,
+     "y": 11
+    },
+    {
+     "x": 14,
+     "y": 9
+    }
+   ]
+  },
+  {
+   "draw": 1,
+   "candidates": [
+    {
+     "x": 7,
+     "y": 7
+    },
+    {
+     "x": 8,
+     "y": 7
+    },
+    {
+     "x": 7,
+     "y": 8
+    }
+   ]
+  }
+ ]
+}

@@ -3,6 +3,10 @@
   "canyon": {
    "colors": "canyon_colors.png",
    "sha256": "5d2ddb998734a524734ec8ff17881476daad199196ba2d5885a1c1747a1306a4"
+  },
+  "ravines": {
+   "colors": "ravines_colors.png",
+   "sha256": "c9f7a3899cbe77e6bb9f36b154ab4bb67f82f15f4cf017a8c8cf69b4a96b8f31"
   }
  }
 }

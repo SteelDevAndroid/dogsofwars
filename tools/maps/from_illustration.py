@@ -5,7 +5,9 @@ cannot tell a mountain from a painted peak by its colour), and the picture gives
 colours. The script checks what the game checks and what it does not (every point reachable from the
 player's start, with the movement rules of GDD 2), then writes:
 
-  assets/data/maps/<id>.json              the map file (symmetry "none": a scenario)
+  assets/data/maps/<id>.json              the map file (symmetry "none": a scenario; or "rotation180" when
+                                          spec.json says so: then it is checked tile by tile, and a dormant
+                                          that is the image of an earlier one is written with same_as)
   assets/art/maps/<id>_colors.png         one pixel per tile: the mean colour of the tile in the picture
   assets/art/maps/art_index.json          which map file each colour image belongs to (by terrain hash)
 
@@ -88,6 +90,8 @@ def check(spec):
             if any(chebyshev(c, s) < MIN_START_GAP for s in starts.values()):
                 errors.append("ruin candidate %s is closer than %d to a start" % (c, MIN_START_GAP))
             taken.add(c)
+    if spec.get("symmetry", "none") == "rotation180":
+        errors += symmetry_errors(spec, starts, nodes, dormants)
     guardians = []
     for faction in FACTIONS:
         for kind, x, y in spec["units"][faction]:
@@ -107,6 +111,33 @@ def check(spec):
             + [("dormant %s" % (d,), d) for d in dormants]:
         if t not in seen:
             errors.append("%s cannot be reached from the player's start" % name)
+    return errors
+
+
+def turned(t):
+    return (SIZE - 1 - t[0], SIZE - 1 - t[1])
+
+
+def symmetry_errors(spec, starts, nodes, dormants):
+    """GDD 2 rule 14, as the game checks it: terrain, nodes (same level), dormants (same types), and
+    the starts, which the game does not check but fairness needs."""
+    errors = []
+    rows = spec["terrain"]
+    for y in range(SIZE):
+        for x in range(SIZE):
+            if rows[y][x] != rows[SIZE - 1 - y][SIZE - 1 - x]:
+                errors.append("terrain is not symmetric at %s" % ((x, y),))
+                break
+    if turned(starts["meute"]) != starts["gardiens"]:
+        errors.append("the starts are not the image of each other")
+    levels = {tuple(n[:2]): n[2] for n in spec["nodes"]}
+    for t, level in levels.items():
+        if levels.get(turned(t)) != level:
+            errors.append("node %s has no symmetric partner of the same level" % (t,))
+    types = {(d[0], d[1]): d[2] for d in spec["dormants"]}
+    for t, kind in types.items():
+        if types.get(turned(t)) != kind:
+            errors.append("dormant %s has no symmetric partner of the same kind" % (t,))
     return errors
 
 
@@ -131,13 +162,25 @@ def reach(rows, start):
 def document(spec):
     return {
         "schema_version": 1, "id": spec["id"], "title": spec["title"], "summary": spec["summary"],
-        "width": SIZE, "height": SIZE, "terrain": spec["terrain"], "symmetry": "none", "memory_faction": "meute",
+        "width": SIZE, "height": SIZE, "terrain": spec["terrain"], "symmetry": spec.get("symmetry", "none"), "memory_faction": "meute",
         "starts": [dict(faction=f, x=spec["starts"][f][0], y=spec["starts"][f][1]) for f in FACTIONS],
         "nodes": [dict(x=n[0], y=n[1], level=n[2]) for n in spec["nodes"]],
         "units": [dict(type=k, faction=f, x=x, y=y, post_x=-1, post_y=-1) for f in FACTIONS for k, x, y in spec["units"][f]],
-        "dormants": [dict(x=d[0], y=d[1], types=["ouvrier"] if d[2] == "w" else PACK, same_as=-1) for d in spec["dormants"]],
+        "dormants": dormants_of(spec),
         "ruin_zones": [dict(draw=z["draw"], candidates=[dict(x=c[0], y=c[1]) for c in z["candidates"]]) for z in spec["ruins"]],
     }
+
+
+def dormants_of(spec):
+    """In the order of the spec; a dormant whose image comes earlier names it (same_as, GDD 2 rule 13bis)."""
+    listed = [(d[0], d[1]) for d in spec["dormants"]]
+    out = []
+    for k, d in enumerate(spec["dormants"]):
+        same = -1
+        if spec.get("symmetry", "none") == "rotation180" and turned((d[0], d[1])) in listed[:k]:
+            same = listed.index(turned((d[0], d[1])))
+        out.append(dict(x=d[0], y=d[1], types=["ouvrier"] if d[2] == "w" else PACK, same_as=same))
+    return out
 
 
 def terrain_hash(rows):
