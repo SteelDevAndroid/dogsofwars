@@ -1,6 +1,6 @@
 # Spécifications techniques des ressources graphiques
 
-> **Statut** : mis à jour le 2026-11-04 pour la carte en 3D (ADR-0014, direction confirmée par
+> **Statut** : mis à jour le 2026-11-05 (cartes illustrées, section 4 bis), après le 2026-11-04 pour la carte en 3D (ADR-0014, direction confirmée par
 > l'utilisateur). À valider par l'art-director. Ce document complète
 > `design/art/art-bible.md` (palette, silhouettes, règles de lecture) sans la remplacer : la
 > bible gagne sur le *style*, ce document gagne sur le *format*.
@@ -28,6 +28,7 @@ Toutes les pièces de la carte 3D sont **construites dans le code** (`src/presen
 | Brouillard, lisière du brouillard, portée, sélection, cibles, hachures de menace, « ! », jauge de PV, pastille d'unité en attente, flèche des premiers tours, marques de possession | — | oui | **non** : le jeu les dessine en aplats |
 | Effets (trait d'attaque, nombres, fantôme d'une unité détruite, anneau) | — | oui | **non** |
 | Icônes d'interface, polices, illustrations, icône du lanceur, magasin | — | — | **oui**, inchangés (sections 6 et 7) |
+| Cartes illustrées (couleur du sol, vignette de l'écran de choix) | — | — | **oui** : une illustration par carte, section 4 bis ; deux livrées (« Le Canyon », « Les Ravines ») |
 
 ## 1. Ce que le jeu affiche, et sous quel angle
 
@@ -84,6 +85,8 @@ Les gris du terrain sont un cran plus clairs que ceux de la 2D, parce que la lum
 | Ruine | `#C8955A` |
 | Sélection, portée, jauge de PV | `#EADFC8` |
 
+**Sol d'une carte illustrée.** Le gris du terrain est multiplié, case par case, par `couleur de la case dans l'illustration / moyenne de la couleur de son terrain`, borné de 0,6 à 1,5 et appliqué à 70 % (`MapArt`). Le sable ressort chaud, le sel clair, le canyon brun-rouge ; le relief et les aplats ne changent pas. Cette dominante ne vaut que pour ces cartes (art bible 1, « Écart assumé »).
+
 **Couleur d'une case possédée.** Le jeu donne à la case la teinte de son camp **à la valeur du terrain** (shader `terrain.gdshader`). La valeur d'un modèle compte donc plus que sa teinte : chaque terrain doit rester reconnaissable une fois teinté. Faites un test en gris.
 
 ## 4. Terrain
@@ -98,6 +101,28 @@ Chaque type existe en **3 variantes** (`_01`, `_02`, `_03`). Le jeu choisit la v
 | `terrain_eau_0N.glb` | infranchissable | surface à **−0,10** | dalle plus basse, une seule ride fixe |
 
 **Pour tous** : une **dalle de 0,98 × 0,98** (2 % de jour entre deux tuiles, pour que la grille se lise), épaisse de **0,22** sous le dessus. Bords droits, sans biseau qui sorte du carré. Le brouillard et sa lisière ne sont pas à livrer : le jeu les dessine.
+
+## 4 bis. Cartes illustrées (scénarios)
+
+Une carte peut être commandée à partir d'une illustration. L'image ne devient pas le sol du jeu : elle sert à **dessiner le terrain** et à **colorer chaque tuile** (art bible 6, « Cartes illustrées »). Livré le 2026-11-05 : `canyon` (asymétrique) et `ravines` (symétrique par rotation de 180°), dans `design/art/maps/<id>/`.
+
+**Ce que l'artiste livre**
+
+| Fichier | Spécification |
+|---|---|
+| `<id>.png` | image **carrée**, sans texte ni cadre, avec une **grille de 16 × 16 cases égales** en traits fins (les 12 % du bord de chaque case sont ignorés pour sauter les traits : la grille peut rester dans l'image) ; les deux livrées font 1 254 × 1 254 px. Une version sans grille est bienvenue |
+| composition | une masse par terrain, lisible à l'échelle d'une case (78 px) : relief (pics, plateaux, mamelons), eau ou gouffre, plaine ; les sites monumentaux sur des plateaux, un par nœud voulu ; pas de détail plus petit qu'une case |
+| couleur | chaque case doit avoir une **couleur moyenne qui dit son terrain** : l'écart entre sable, sel, roche et canyon se voit déjà sur 16 × 16 pixels. Une image plus contrastée donne un sol plus vif |
+| symétrie | une carte symétrique est symétrique **tuile pour tuile** (les sites, les lacs et les canyons se répondent par rotation de 180°) |
+
+**Ce que nous en tirons** (`tools/maps/from_illustration.py`, `design/art/maps/LISEZMOI.md`)
+
+- `spec.json` : le terrain en 16 lignes (`.` plaine, `f` bois, `^` montagne, `~` eau ou gouffre), les départs, les nœuds, les unités, les drones endormis et les zones de ruines, dessinés à la main d'après l'image ;
+- `assets/data/maps/<id>.json`, `assets/art/maps/<id>_colors.png` (une couleur par tuile, sans perte) et `art_index.json` (l'image est retrouvée par le SHA-256 du terrain, donc aussi pour une partie reprise).
+
+**Comment le jeu les montre.** Le sol de la carte 3D (section 3) et la vignette de l'écran de choix, en miniature aux mêmes couleurs, sans nœud, ruine ni départ. L'illustration elle-même n'est jamais affichée.
+
+**Gabarit de lecture du terrain** (celui des deux cartes livrées) : pics gris → montagne ; plateau orange, salar, plaine gris-bleu → plaine ; mamelons bruns → bois ; canyon rouge et lacs → eau ; au moins deux franchissements de chaque canyon (un gué, une corniche, un passage entre deux pointes).
 
 ## 5. Éléments posés sur la carte
 
@@ -172,6 +197,7 @@ Livré le 2026-11-04 (propositions : voir « Limites » ci-dessous). Sources, sc
 5. **En partie** : le mode `match` du même outil donne le vrai écran (portrait et paysage). Une crête ne doit pas cacher une unité sur la case derrière.
 6. **Mesure** sur le Pixel 8 (`docs/architecture/mesures-appareil-de-reference.md`) : pas d'image au-delà de 33 ms au repos.
 7. Captures conservées dans `production/qa/evidence/`.
+8. **Carte illustrée** : `python3 tools/maps/from_illustration.py --check` (les fichiers sont ceux que le script écrit ; il vérifie aussi les distances, les terrains, la symétrie déclarée et que tout point est atteignable depuis le départ du joueur) ; `tests/unit/presentation/map_art_test.gd` ; une capture de la vignette (`tools/preview/map3d_preview.gd -- maps`) et une de la partie (`-- match portrait <sortie> 0 <id>`) pour juger le sol.
 
 ## 9. Livraison
 
@@ -187,3 +213,5 @@ Livré le 2026-11-04 (propositions : voir « Limites » ci-dessous). Sources, sc
 | Faut-il des modèles d'unité endormie distincts (trait replié) ou le même modèle enfoncé suffit-il ? | art-director |
 | Faut-il un dôme brisé en plus des deux arches (le code n'en fait pas) ? | art-director |
 | Les PNG 2D de la carte sont-ils gardés pour le repli 2D ou retirés du paquet pour l'alléger ? | utilisateur |
+| Le sol chaud des cartes illustrées (art bible 1, « Écart assumé ») est-il accepté ? Mesurer d'abord le contraste de la lueur des ruines et des menaces sur ce sol, et la lecture en deutéranopie | art-director |
+| Provenance et droits des deux illustrations de cartes (images fournies par l'utilisateur) : à confirmer avant la publication, comme pour les illustrations de chronique | utilisateur |
