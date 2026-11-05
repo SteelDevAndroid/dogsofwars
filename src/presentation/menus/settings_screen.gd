@@ -36,6 +36,7 @@ func _init() -> void:
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)  # a finger scrolls the list (no mouse emulation, ADR-0010)
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
