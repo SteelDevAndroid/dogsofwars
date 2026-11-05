@@ -187,6 +187,7 @@ func bind(p_session: GameSession) -> void:
 	for type in session.catalog.units.count():
 		types[type] = [session.catalog.units.key(type), session.catalog.units.side(type) != session.catalog.units.side(0)]
 	map3d.set_unit_types(types)
+	map3d.ground = _ground_of(session.state)
 	probe.header(RenderingServer.get_video_adapter_name(), RenderingServer.get_current_rendering_method(), OS.get_model_name())
 	camera = MapCamera.new(session.state.view().width(), session.state.view().height(), Rect2(Vector2.ZERO, _screen_size()))
 	map3d.map_camera = camera
@@ -617,3 +618,11 @@ func _screen_size() -> Vector2:
 	if screen_size_override.x > 0.0:
 		return screen_size_override
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(390, 844)
+
+
+## The illustration's colours for the terrain of the match (a resumed match finds its art by it).
+static func _ground_of(state: GameState) -> PackedColorArray:
+	var cells := PackedByteArray()
+	for tile in state.tile_count():
+		cells.append(state.terrain.at(tile))
+	return MapArt.ground(MapArt.colors_for(cells), cells)

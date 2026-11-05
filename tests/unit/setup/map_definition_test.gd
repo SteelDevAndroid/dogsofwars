@@ -159,7 +159,7 @@ func test_the_ai_turn_budget_of_the_map_is_checked() -> void:
 	assert_bool(errors.any(func(error: DataError) -> bool: return error.message.contains("AI turn budget"))).is_true()
 
 
-func test_every_shipped_map_is_valid_and_symmetric_with_its_own_size() -> void:
+func test_every_shipped_map_is_valid_with_its_own_size() -> void:
 	var catalog := CatalogFactory.standard()
 	var sizes := {}
 	for file in DirAccess.get_files_at("res://assets/data/maps"):
@@ -172,7 +172,7 @@ func test_every_shipped_map_is_valid_and_symmetric_with_its_own_size() -> void:
 		sizes[file] = Vector2i(map.width, map.height)
 	var full := Vector2i(MapDefinition.MAX_SIZE, MapDefinition.MAX_SIZE)
 	assert_dict(sizes).is_equal({"plaine.json": Vector2i(12, 12), "marais.json": Vector2i(14, 14), "cretes.json": full,
-			"foret.json": full, "archipel.json": full, "mesas.json": full, "landes.json": full})
+			"foret.json": full, "archipel.json": full, "mesas.json": full, "landes.json": full, "canyon.json": full})
 
 
 func test_a_map_needs_a_title_and_a_summary_for_the_choice_screen() -> void:

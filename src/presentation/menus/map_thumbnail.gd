@@ -13,10 +13,13 @@ const WATER := Color("26394A")
 const MARK := Color("1E2329")
 
 var _map: MapDefinition
+## The map's illustration colours (one pixel per tile), or null: then the greys of the world.
+var _colors: Image
 
 
-func show_map(map: MapDefinition) -> void:
+func show_map(map: MapDefinition, colors: Image = null) -> void:
 	_map = map
+	_colors = colors if colors != null and colors.get_width() == map.width and colors.get_height() == map.height else null
 	queue_redraw()
 
 
@@ -37,7 +40,8 @@ func _draw() -> void:
 	for tile in _map.width * _map.height:
 		var rect := Rect2(origin + Vector2(tile % _map.width, tile / _map.width) * cell, Vector2(cell, cell))
 		var terrain := _map.terrain_at_tile(tile)
-		draw_rect(rect.grow(-0.5), _color_of(terrain))
+		var fill := _color_of(terrain) if _colors == null else _colors.get_pixel(tile % _map.width, tile / _map.width)
+		draw_rect(rect.grow(-0.5), fill)
 		_draw_mark(rect, terrain)
 
 
