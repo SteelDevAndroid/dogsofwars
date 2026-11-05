@@ -140,3 +140,52 @@ static func _neighbours(view: StateView, tile: int) -> PackedInt32Array:
 			if nx != x or ny != y:
 				out.append(ny * w + nx)
 	return out
+
+
+## Path cost between `origin` and every tile on the terrain `view` knows (GDD 2: entry costs, no
+## water, no diagonal between two impassable orthogonal tiles), units ignored. `toward` false: the
+## cost of walking from `origin` to the tile; true: from the tile to `origin` (what a unit heading
+## for `origin` still has to pay). UNREACHED where there is no path. Dial's buckets (costs are
+## small integers): linear in the tiles, the same order on every device.
+static func cost_field(view: StateView, origin: int, catalog: DataCatalog, toward: bool) -> PackedInt32Array:
+	var tiles := view.tile_count()
+	var entry := PackedInt32Array()
+	entry.resize(tiles)
+	for tile in tiles:
+		entry[tile] = catalog.terrain.entry_cost(view.terrain_at(tile))
+	var cost := PackedInt32Array()
+	cost.resize(tiles)
+	cost.fill(UNREACHED)
+	if origin < 0 or origin >= tiles or entry[origin] == TerrainParams.IMPASSABLE:
+		return cost
+	var w := view.width()
+	var h := view.height()
+	var buckets: Array[PackedInt32Array] = [PackedInt32Array([origin])]
+	cost[origin] = 0
+	var level := 0
+	while level < buckets.size():
+		var bucket := buckets[level]
+		var k := 0
+		while k < bucket.size():
+			var current := bucket[k]
+			k += 1
+			if cost[current] != level:
+				continue
+			var cx := current % w
+			var cy := current / w
+			for ny in range(maxi(0, cy - 1), mini(h - 1, cy + 1) + 1):
+				for nx in range(maxi(0, cx - 1), mini(w - 1, cx + 1) + 1):
+					var next := ny * w + nx
+					if next == current or entry[next] == TerrainParams.IMPASSABLE:
+						continue
+					if nx != cx and ny != cy and entry[cy * w + nx] == TerrainParams.IMPASSABLE \
+							and entry[ny * w + cx] == TerrainParams.IMPASSABLE:
+						continue
+					var total := level + (entry[current] if toward else entry[next])
+					if cost[next] == UNREACHED or total < cost[next]:
+						cost[next] = total
+						while buckets.size() <= total:
+							buckets.append(PackedInt32Array())
+						buckets[total].append(next)
+		level += 1
+	return cost

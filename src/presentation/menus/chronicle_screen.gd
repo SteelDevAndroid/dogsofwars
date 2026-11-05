@@ -29,6 +29,7 @@ func _init() -> void:
 	MenuLayout.label(column, "Chronique de la meute")
 	bar_label = MenuLayout.label(column)
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)  # a finger scrolls the list (no mouse emulation, ADR-0010)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)

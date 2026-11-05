@@ -55,6 +55,7 @@ func _init() -> void:
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	TouchScroll.attach(scroll)
 	scroll.custom_minimum_size = Vector2(0, 120)
 	scroll.add_child(body_label)
 	box.add_child(scroll)

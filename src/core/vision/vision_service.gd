@@ -180,6 +180,12 @@ static func fog_level(state: GameState, faction: int, tile: int) -> int:
 	return FOG_EXPLORED if _discovered(state, faction, tile) else FOG_UNDISCOVERED
 
 
+## One byte per tile, 1 where `faction` has discovered the tile (what tile_state reads, in bulk).
+static func discovered_row(state: GameState, faction: int) -> PackedByteArray:
+	var tiles := state.tile_count()
+	return state.visibility._vis_discovered.slice(faction * tiles, (faction + 1) * tiles)
+
+
 static func _discovered(state: GameState, faction: int, tile: int) -> bool:
 	return state.visibility._vis_discovered[faction * state.tile_count() + tile] == 1
 
