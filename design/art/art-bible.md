@@ -48,6 +48,11 @@ ruine ou l'illustration, jamais le terrain ordinaire.*
   shader de saturation par tuile (gris → teinte de faction) et le brouillard.
 - **Hors jeu** : illustrations peintes pour l'écran titre, la chronique et la carte de
   présentation de chaque carte fixe. Elles ne sont jamais produites tuile par tuile.
+- **Cartes illustrées (2026-11-05)** : une carte peut venir d'une illustration (« Le
+  Canyon », « Les Ravines »). L'image n'est **pas** la surface de jeu (elle est peinte en
+  perspective oblique, la caméra du jeu est inclinée autrement) : elle sert de **modèle**
+  pour dessiner le terrain à la main et de **source de couleur** pour le sol, une couleur par
+  tuile. Le relief reste le low-poly en aplats ; voir la section 6, « Cartes illustrées ».
 
 #### Réconciliation avec la référence d'ambiance
 
@@ -62,6 +67,16 @@ teinte de sa faction, sinon les ruines perdraient leur rôle de seul canal ocre/
 **Conséquence** : les palettes de faction excluent l'orange-rouge (menaces) **et** l'ocre
 et le sépia (mémoire). Les canyons rouges de la référence ne passent pas tels quels en
 jeu.
+
+**Écart assumé sur les cartes illustrées (2026-11-05, à confirmer par l'art-director).** Le
+sol de ces deux cartes prend une dominante de l'illustration, **atténuée** : sable chaud,
+sel clair, canyon brun-rouge, roche froide. Ce n'est donc plus « l'ocre aux seules ruines »
+sur ces cartes. Ce qui protège les règles de lecture : la couleur reste un aplat par tuile
+(aucune texture) ; l'écart à la moyenne du terrain est borné (0,6 à 1,5) et n'est appliqué
+qu'à 70 % ; une tuile possédée prend la teinte de son camp à la valeur du terrain, comme
+partout ; les ruines gardent leur glyphe et leur lueur. **Non mesuré** : le contraste de la
+lueur des ruines et des menaces (`#FF6A3D`) sur un sol chaud, et la lecture en deutéranopie
+(section 4). À faire avant de généraliser.
 
 *Rédigé par l'art-director.*
 
@@ -331,7 +346,8 @@ souvenir.
 
 ### Textures
 
-Aucune texture en jeu : des couleurs par sommet en aplats. Quatre raisons : la lisibilité
+Aucune texture en jeu : des couleurs par sommet en aplats (le sol d'une carte illustrée est
+lui aussi un aplat : une couleur par tuile, 16 × 16 pixels, jamais une image étirée). Quatre raisons : la lisibilité
 à 31 pt, un shader de saturation qui reste simple, le coût sur le renderer Mobile, et une
 production tenable par une seule personne. Le grain et la touche peinte sont **réservés
 au registre de la mémoire** (illustrations, panneau papier) : le contraste entre texture
@@ -367,6 +383,28 @@ palette chaude de la référence. C'est le lieu tel qu'on s'en souvient. Les rui
 tirées (3 parmi 9 emplacements), l'illustration ne montre **ni les emplacements candidats
 ni les ruines tirées** : les ruines y forment une ligne d'horizon lointaine et générique,
 sinon le pilier 5 s'use.
+
+### Cartes illustrées
+
+Une carte illustrée (`design/art/maps/<id>/`, outil `tools/maps/from_illustration.py`)
+suit ces règles.
+
+- **Le terrain est dessiné, pas détecté.** Une couleur moyenne ne distingue pas un pic peint
+  d'un plateau : le terrain de chaque case est choisi à la main, d'après l'image. Lecture
+  retenue sur les deux cartes : pics gris → montagne ; plateau orange, salar et plaine
+  gris-bleu → plaine ; mamelons bruns → bois (couvert) ; canyon rouge, lacs de cratère →
+  eau (infranchissable). Les gués (lit de rivière, corniche, passages entre deux pointes)
+  restent de la plaine, au moins deux par canyon.
+- **Les sites monumentaux de l'image portent les nœuds** (plateaux à ruines, tours, dômes).
+  Ils ne sont pas dessinés dans le jeu : les ruines du jeu sont celles du tirage.
+- **La vignette de l'écran de choix** est le relief en miniature aux couleurs de
+  l'illustration, avec les marques de terrain (point, triangle, tiret : la couleur n'est
+  jamais le seul signal). Elle ne montre ni nœud, ni ruine, ni départ.
+- **L'illustration source reste hors du jeu** : elle montre des ruines et des sites, que
+  la règle ci-dessus interdit à une présentation. Elle est une référence de production.
+- **Symétrie** : une carte peut être un scénario asymétrique (« Le Canyon ») ou symétrique
+  par rotation de 180° (« Les Ravines ») ; l'illustration d'une carte symétrique doit l'être
+  elle aussi, y compris les sites et les lacs.
 
 ### Brouillard
 
@@ -511,6 +549,7 @@ déterminée.*
 | Modèles 3D | `.blend` | `.glb` (glTF 2.0 binaire), un asset par fichier |
 | Illustrations | `.kra` ou `.psd`, calques gardés | `.webp` sRGB |
 | Icônes | `.svg` | `.svg`, importé par Godot |
+| Cartes illustrées | `.png` carré, grille de 16 × 16 cases | `<id>_colors.png`, 16 × 16, sans perte, généré par `tools/maps/from_illustration.py` |
 | Nuancier | `palette_lmo.gpl` + `palette_lmo.png` | — |
 
 - **Illustrations** : une image maîtresse carrée de 2 560 × 2 560, sujet dans un carré
@@ -526,7 +565,9 @@ déterminée.*
 `unit_`, `terrain_`, `ruin_`, `node_`, `prop_`, `cliff_`, `ui_icon_`, `illus_`. Exemples :
 `unit_lame.glb`, `terrain_foret_02.glb`, `cliff_angle_rentrant.glb`, `ruin_arche_brisee.glb`,
 `ui_icon_noeud_plein.svg`, `illus_carte03_portrait.webp`. La taille n'apparaît que si
-plusieurs tailles existent.
+plusieurs tailles existent. Écart : les couleurs d'une carte illustrée s'appellent
+`<id>_colors.png` (`canyon_colors.png`), le nom de la carte d'abord, parce que l'index
+`assets/art/maps/art_index.json` les range par carte.
 
 ### Le gris d'abord
 
