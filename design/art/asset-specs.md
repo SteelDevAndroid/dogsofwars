@@ -120,6 +120,8 @@ Une carte peut être commandée à partir d'une illustration. L'image ne devient
 - `spec.json` : le terrain en 16 lignes (`.` plaine, `f` bois, `^` montagne, `~` eau ou gouffre), les départs, les nœuds, les unités, les drones endormis et les zones de ruines, dessinés à la main d'après l'image ;
 - `assets/data/maps/<id>.json`, `assets/art/maps/<id>_colors.png` (une couleur par tuile, sans perte) et `art_index.json` (l'image est retrouvée par le SHA-256 du terrain, donc aussi pour une partie reprise).
 
+**Provenance (décision de l'utilisateur, 2026-11-05).** Les illustrations des cartes sont **personnelles** : l'utilisateur en est l'auteur ou en détient les droits. Il n'y a rien à confirmer avant la publication pour elles ; la question reste ouverte pour les illustrations de chronique (section 7).
+
 **Comment le jeu les montre.** Le sol de la carte 3D (section 3) et la vignette de l'écran de choix, en miniature aux mêmes couleurs, sans nœud, ruine ni départ. L'illustration elle-même n'est jamais affichée.
 
 **Gabarit de lecture du terrain** (celui des deux cartes livrées) : pics gris → montagne ; plateau orange, salar, plaine gris-bleu → plaine ; mamelons bruns → bois ; canyon rouge et lacs → eau ; au moins deux franchissements de chaque canyon (un gué, une corniche, un passage entre deux pointes).
@@ -214,4 +216,3 @@ Livré le 2026-11-04 (propositions : voir « Limites » ci-dessous). Sources, sc
 | Faut-il un dôme brisé en plus des deux arches (le code n'en fait pas) ? | art-director |
 | Les PNG 2D de la carte sont-ils gardés pour le repli 2D ou retirés du paquet pour l'alléger ? | utilisateur |
 | Le sol chaud des cartes illustrées (art bible 1, « Écart assumé ») est-il accepté ? Mesurer d'abord le contraste de la lueur des ruines et des menaces sur ce sol, et la lecture en deutéranopie | art-director |
-| Provenance et droits des deux illustrations de cartes (images fournies par l'utilisateur) : à confirmer avant la publication, comme pour les illustrations de chronique | utilisateur |
